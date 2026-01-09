@@ -388,6 +388,7 @@ export type Database = {
     }
     Functions: {
       get_couple_id_by_share_code: { Args: { code: string }; Returns: string }
+      get_current_couple_id: { Args: never; Returns: string }
     }
     Enums: {
       [_ in never]: never
