@@ -2,12 +2,20 @@ import catAvatar1 from '@/assets/cat-avatar-1.png';
 import catAvatar2 from '@/assets/cat-avatar-2.png';
 import catAvatar3 from '@/assets/cat-avatar-3.png';
 import catAvatar4 from '@/assets/cat-avatar-4.png';
+import catAvatar5 from '@/assets/cat-avatar-5.png';
+import catAvatar6 from '@/assets/cat-avatar-6.png';
+import catAvatar7 from '@/assets/cat-avatar-7.png';
+import catAvatar8 from '@/assets/cat-avatar-8.png';
 
 export const CAT_AVATARS = [
   catAvatar1,
   catAvatar2,
   catAvatar3,
   catAvatar4,
+  catAvatar5, // Laranja/Ruivo
+  catAvatar6, // Preto
+  catAvatar7, // Cinza
+  catAvatar8, // Branco
 ];
 
 export const PERSON_COLORS = [
