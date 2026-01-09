@@ -17,37 +17,52 @@ function CoupleLayoutContent() {
   const navigate = useNavigate();
   const { toast } = useToast();
   const { couple, loading, error, isSyncing, updateProfile, refetch } = useCoupleContext();
-  const { loading: authLoading, isValidated, coupleId, validateShareCode } = useAuthContext();
+  const { loading: authLoading, isValidated, coupleId, validateShareCode, joinSpace } = useAuthContext();
   const [showOnboarding, setShowOnboarding] = useState(false);
   const [showReconnect, setShowReconnect] = useState(false);
   const [myPosition, setMyPosition] = useState<number | null>(null);
   const [validating, setValidating] = useState(false);
   const [validationError, setValidationError] = useState<string | null>(null);
+  const [newProfileId, setNewProfileId] = useState<string | null>(null);
 
   // Validate share code when accessing a couple space
   useEffect(() => {
     const doValidation = async () => {
       if (!shareCode || authLoading) return;
       
-      // Check if we need validation
-      const needsValidation = !isValidated || !coupleId;
-      
-      if (needsValidation) {
-        setValidating(true);
-        setValidationError(null);
-        
-        const result = await validateShareCode(shareCode);
-        
-        if (!result.success) {
-          setValidationError(result.error || 'Falha na validação');
-        }
-        
-        setValidating(false);
+      // Check if already validated for this space
+      if (isValidated && coupleId) {
+        // Already validated, just need to load couple data
+        return;
       }
+      
+      setValidating(true);
+      setValidationError(null);
+      
+      // First, try to validate (for existing members)
+      const validateResult = await validateShareCode(shareCode);
+      
+      if (validateResult.success) {
+        // User already has access to this space
+        setValidating(false);
+        return;
+      }
+      
+      // If validation failed, try to join as new member
+      const joinResult = await joinSpace(shareCode);
+      
+      if (!joinResult.success) {
+        setValidationError(joinResult.error || 'Falha ao entrar no espaço');
+      } else if (joinResult.profileId) {
+        // New member joined - store profile ID to show onboarding
+        setNewProfileId(joinResult.profileId);
+      }
+      
+      setValidating(false);
     };
     
     doValidation();
-  }, [shareCode, authLoading, isValidated, coupleId, validateShareCode]);
+  }, [shareCode, authLoading, isValidated, coupleId, validateShareCode, joinSpace]);
 
   // Check for existing device recognition or show appropriate modal
   useEffect(() => {
@@ -64,27 +79,45 @@ function CoupleLayoutContent() {
           checkProfilesAndShowModal();
         }
       } else {
-        // No local storage - check if there are configured profiles
+        // No local storage - check if there are configured profiles or if user just joined
         checkProfilesAndShowModal();
       }
     }
-  }, [couple, shareCode, isValidated, coupleId]);
+  }, [couple, shareCode, isValidated, coupleId, newProfileId]);
 
   const checkProfilesAndShowModal = () => {
     if (!couple) return;
+    
+    // If user just joined (has newProfileId), show onboarding for their new profile
+    if (newProfileId) {
+      const myProfile = couple.profiles.find(p => p.id === newProfileId);
+      if (myProfile && (myProfile.name === 'Pessoa 1' || myProfile.name === 'Pessoa 2' || myProfile.name === 'Pessoa')) {
+        setShowOnboarding(true);
+        setShowReconnect(false);
+        return;
+      }
+    }
     
     const configuredProfiles = couple.profiles.filter(p => 
       p.name !== 'Pessoa 1' && p.name !== 'Pessoa 2' && p.name !== 'Pessoa'
     );
     
-    if (configuredProfiles.length > 0) {
-      // Has configured profiles - show reconnect modal
+    const unconfiguredProfiles = couple.profiles.filter(p => 
+      p.name === 'Pessoa 1' || p.name === 'Pessoa 2' || p.name === 'Pessoa'
+    );
+    
+    if (configuredProfiles.length > 0 && unconfiguredProfiles.length === 0) {
+      // All profiles configured - show reconnect modal
       setShowReconnect(true);
       setShowOnboarding(false);
-    } else {
-      // No configured profiles - show onboarding
+    } else if (unconfiguredProfiles.length > 0) {
+      // Has unconfigured profiles - show onboarding
       setShowOnboarding(true);
       setShowReconnect(false);
+    } else {
+      // Fallback to reconnect
+      setShowReconnect(true);
+      setShowOnboarding(false);
     }
   };
 
@@ -253,6 +286,18 @@ function CoupleLayoutContent() {
     );
   }
 
+  const handleCloseOnboarding = () => {
+    // Only allow closing if there are configured profiles (user can reconnect instead)
+    const configuredProfiles = couple.profiles.filter(p => 
+      p.name !== 'Pessoa 1' && p.name !== 'Pessoa 2' && p.name !== 'Pessoa'
+    );
+    
+    if (configuredProfiles.length > 0) {
+      setShowOnboarding(false);
+      setShowReconnect(true);
+    }
+  };
+
   return (
     <div className="min-h-screen bg-background pb-24">
       <SyncIndicator isSyncing={isSyncing} />
@@ -262,6 +307,7 @@ function CoupleLayoutContent() {
       {/* Onboarding Modal - For first time profile creation */}
       <OnboardingModal
         open={showOnboarding}
+        onClose={handleCloseOnboarding}
         onComplete={handleOnboardingComplete}
         profiles={couple.profiles}
         shareCode={shareCode}
