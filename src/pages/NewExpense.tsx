@@ -71,6 +71,11 @@ export default function NewExpense() {
           : splitValue,
         tag_id: selectedTagId,
         expense_date: new Date().toISOString().split('T')[0],
+        payment_type: 'debit',
+        card_id: null,
+        billing_month: null,
+        installments: 1,
+        installment_number: 1,
       });
       navigate(`/c/${shareCode}`);
     } finally {
