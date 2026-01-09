@@ -8,3 +8,12 @@ verify_jwt = false
 
 [functions.regenerate-share-code]
 verify_jwt = false
+
+[functions.verify-pin]
+verify_jwt = false
+
+[functions.request-pin-recovery]
+verify_jwt = false
+
+[functions.reset-pin]
+verify_jwt = false

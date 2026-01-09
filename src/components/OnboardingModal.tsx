@@ -6,11 +6,11 @@ import { InputOTP, InputOTPGroup, InputOTPSlot } from '@/components/ui/input-otp
 import { cn } from '@/lib/utils';
 import { CAT_AVATARS, PERSON_COLORS } from '@/lib/constants';
 import { Profile } from '@/contexts/CoupleContext';
-import { Check, Heart, Sparkles, Lock, ArrowRight, ArrowLeft } from 'lucide-react';
+import { Check, Heart, Sparkles, Lock, ArrowRight, ArrowLeft, Mail, SkipForward } from 'lucide-react';
 
 interface OnboardingModalProps {
   open: boolean;
-  onComplete: (position: number, name: string, avatarIndex: number, color: string, pinCode: string) => void;
+  onComplete: (position: number, name: string, avatarIndex: number, color: string, pinCode: string, email?: string) => void;
   profiles: Profile[];
   shareCode: string;
 }
@@ -43,12 +43,21 @@ const looksLikeName = (name: string): boolean => {
   return hasVowels && trimmed.length <= 20;
 };
 
+// Validate email format
+const isValidEmail = (email: string): boolean => {
+  if (!email.trim()) return true; // Email is optional
+  const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+  return emailRegex.test(email.trim());
+};
+
 export function OnboardingModal({ open, onComplete, profiles, shareCode }: OnboardingModalProps) {
-  const [step, setStep] = useState<'profile' | 'pin'>('profile');
+  const [step, setStep] = useState<'profile' | 'pin' | 'email'>('profile');
   const [name, setName] = useState('');
   const [avatarIndex, setAvatarIndex] = useState(1);
   const [color, setColor] = useState(PERSON_COLORS[0].value);
   const [pinCode, setPinCode] = useState('');
+  const [email, setEmail] = useState('');
+  const [emailError, setEmailError] = useState('');
   const [compliment, setCompliment] = useState('');
   const [showCompliment, setShowCompliment] = useState(false);
   const [hoveredAvatar, setHoveredAvatar] = useState<number | null>(null);
@@ -100,25 +109,60 @@ export function OnboardingModal({ open, onComplete, profiles, shareCode }: Onboa
     }
   };
 
-  const handleComplete = () => {
-    if (name.trim() && isValidName(name) && pinCode.length === 4) {
-      const position = getAvailablePosition();
-      // Format name - capitalize first letter of each word
-      const formattedName = name.trim()
-        .toLowerCase()
-        .split(' ')
-        .map(word => word.charAt(0).toUpperCase() + word.slice(1))
-        .join(' ');
-      
-      localStorage.setItem(`couple_${shareCode}`, JSON.stringify({
-        position,
-        name: formattedName,
-        avatarIndex,
-        color,
-        timestamp: Date.now()
-      }));
-      onComplete(position, formattedName, avatarIndex, color, pinCode);
+  const handlePinComplete = () => {
+    if (pinCode.length === 4) {
+      setStep('email');
     }
+  };
+
+  const handleEmailChange = (value: string) => {
+    setEmail(value);
+    setEmailError('');
+  };
+
+  const handleComplete = () => {
+    // Validate email if provided
+    if (email.trim() && !isValidEmail(email)) {
+      setEmailError('E-mail inválido');
+      return;
+    }
+
+    const position = getAvailablePosition();
+    // Format name - capitalize first letter of each word
+    const formattedName = name.trim()
+      .toLowerCase()
+      .split(' ')
+      .map(word => word.charAt(0).toUpperCase() + word.slice(1))
+      .join(' ');
+    
+    localStorage.setItem(`couple_${shareCode}`, JSON.stringify({
+      position,
+      name: formattedName,
+      avatarIndex,
+      color,
+      timestamp: Date.now()
+    }));
+    
+    onComplete(position, formattedName, avatarIndex, color, pinCode, email.trim().toLowerCase() || undefined);
+  };
+
+  const handleSkipEmail = () => {
+    const position = getAvailablePosition();
+    const formattedName = name.trim()
+      .toLowerCase()
+      .split(' ')
+      .map(word => word.charAt(0).toUpperCase() + word.slice(1))
+      .join(' ');
+    
+    localStorage.setItem(`couple_${shareCode}`, JSON.stringify({
+      position,
+      name: formattedName,
+      avatarIndex,
+      color,
+      timestamp: Date.now()
+    }));
+    
+    onComplete(position, formattedName, avatarIndex, color, pinCode, undefined);
   };
 
   const handlePinChange = (value: string) => {
@@ -134,10 +178,15 @@ export function OnboardingModal({ open, onComplete, profiles, shareCode }: Onboa
         <DialogHeader>
           <DialogTitle className="text-center flex items-center justify-center gap-2 animate-fade-in">
             <Heart className="w-5 h-5 text-primary animate-pulse" />
-            Olá! Crie seu perfil
+            {step === 'profile' ? 'Olá! Crie seu perfil' : step === 'pin' ? 'Crie seu código' : 'Adicione seu e-mail'}
           </DialogTitle>
           <DialogDescription className="text-center animate-fade-in">
-            Personalize como você aparecerá no app
+            {step === 'profile' 
+              ? 'Personalize como você aparecerá no app'
+              : step === 'pin'
+              ? 'Código de 4 dígitos para entrar em outros dispositivos'
+              : 'Para recuperar seu código se esquecer (opcional)'
+            }
           </DialogDescription>
         </DialogHeader>
 
@@ -273,7 +322,7 @@ export function OnboardingModal({ open, onComplete, profiles, shareCode }: Onboa
                 <ArrowRight className="w-4 h-4 ml-2" />
               </Button>
             </>
-          ) : (
+          ) : step === 'pin' ? (
             <>
               {/* PIN Creation Step */}
               <div className="flex flex-col items-center gap-6 animate-fade-in">
@@ -296,9 +345,6 @@ export function OnboardingModal({ open, onComplete, profiles, shareCode }: Onboa
                     <Lock className="w-4 h-4" />
                     <span>Crie um código pessoal</span>
                   </div>
-                  <p className="text-xs text-muted-foreground text-center mb-2">
-                    Use para entrar em outros dispositivos
-                  </p>
                   
                   <InputOTP 
                     maxLength={4} 
@@ -314,6 +360,13 @@ export function OnboardingModal({ open, onComplete, profiles, shareCode }: Onboa
                   </InputOTP>
                 </div>
 
+                {/* Step indicator */}
+                <div className="flex gap-2">
+                  <div className="w-2 h-2 rounded-full bg-primary" />
+                  <div className="w-2 h-2 rounded-full bg-primary" />
+                  <div className="w-2 h-2 rounded-full bg-muted" />
+                </div>
+
                 <div className="flex gap-2 w-full">
                   <Button 
                     variant="ghost"
@@ -324,14 +377,92 @@ export function OnboardingModal({ open, onComplete, profiles, shareCode }: Onboa
                     Voltar
                   </Button>
                   <Button 
-                    onClick={handleComplete} 
+                    onClick={handlePinComplete} 
                     disabled={pinCode.length !== 4} 
+                    className="flex-1"
+                  >
+                    Continuar
+                    <ArrowRight className="w-4 h-4 ml-2" />
+                  </Button>
+                </div>
+              </div>
+            </>
+          ) : (
+            <>
+              {/* Email Step */}
+              <div className="flex flex-col items-center gap-6 animate-fade-in">
+                {/* Profile Preview */}
+                <div 
+                  className="w-20 h-20 rounded-full overflow-hidden ring-4 transition-all animate-cat-idle"
+                  style={{ boxShadow: `0 0 0 4px ${color}` }}
+                >
+                  <img 
+                    src={CAT_AVATARS[avatarIndex - 1]} 
+                    alt="Preview"
+                    className="w-full h-full object-cover"
+                  />
+                </div>
+                <span className="font-semibold text-lg">{name}</span>
+
+                {/* Email Input */}
+                <div className="flex flex-col items-center gap-2 w-full">
+                  <div className="flex items-center gap-2 text-sm text-muted-foreground mb-2">
+                    <Mail className="w-4 h-4" />
+                    <span>E-mail para recuperação</span>
+                  </div>
+                  
+                  <Input
+                    type="email"
+                    value={email}
+                    onChange={(e) => handleEmailChange(e.target.value)}
+                    placeholder="seu@email.com"
+                    className="text-center"
+                  />
+                  
+                  {emailError && (
+                    <p className="text-sm text-destructive animate-fade-in">
+                      {emailError}
+                    </p>
+                  )}
+                  
+                  <p className="text-xs text-muted-foreground text-center mt-1">
+                    Se esquecer seu código, enviaremos um link de recuperação
+                  </p>
+                </div>
+
+                {/* Step indicator */}
+                <div className="flex gap-2">
+                  <div className="w-2 h-2 rounded-full bg-primary" />
+                  <div className="w-2 h-2 rounded-full bg-primary" />
+                  <div className="w-2 h-2 rounded-full bg-primary" />
+                </div>
+
+                <div className="flex gap-2 w-full">
+                  <Button 
+                    variant="ghost"
+                    onClick={() => setStep('pin')}
+                    className="flex-1"
+                  >
+                    <ArrowLeft className="w-4 h-4 mr-2" />
+                    Voltar
+                  </Button>
+                  <Button 
+                    onClick={handleComplete} 
                     className="flex-1"
                   >
                     <Heart className="w-4 h-4 mr-2" />
                     Criar perfil
                   </Button>
                 </div>
+
+                <Button 
+                  variant="link" 
+                  onClick={handleSkipEmail}
+                  className="text-muted-foreground"
+                >
+                  <SkipForward className="w-4 h-4 mr-2" />
+                  Pular esta etapa
+                </Button>
               </div>
             </>
           )}
