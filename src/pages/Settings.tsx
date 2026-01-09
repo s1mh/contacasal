@@ -1,20 +1,32 @@
 import { useState } from 'react';
 import { useOutletContext, useParams } from 'react-router-dom';
-import { User, Palette, Tag, Plus, Trash2, Check } from 'lucide-react';
+import { User, Palette, Tag, Plus, Trash2, Check, CreditCard } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Avatar } from '@/components/Avatar';
 import { TagPill } from '@/components/TagPill';
+import { CardManager } from '@/components/CardManager';
+import { AgreementManager } from '@/components/AgreementManager';
 import { Couple, useCouple } from '@/hooks/useCouple';
 import { CAT_AVATARS, PERSON_COLORS, TAG_ICONS } from '@/lib/constants';
 import { cn } from '@/lib/utils';
 
 export default function Settings() {
   const { couple } = useOutletContext<{ couple: Couple }>();
-  const { updateProfile, addTag, deleteTag } = useCouple();
+  const { 
+    updateProfile, 
+    addTag, 
+    deleteTag, 
+    addCard, 
+    deleteCard,
+    addAgreement,
+    updateAgreement,
+    deleteAgreement
+  } = useCouple();
   const { shareCode } = useParams();
 
   const [editingProfile, setEditingProfile] = useState<number | null>(null);
+  const [editingName, setEditingName] = useState('');
   const [newTagName, setNewTagName] = useState('');
   const [newTagIcon, setNewTagIcon] = useState('tag');
   const [newTagColor, setNewTagColor] = useState('#94A3B8');
@@ -23,9 +35,19 @@ export default function Settings() {
   const person1 = couple.profiles.find(p => p.position === 1);
   const person2 = couple.profiles.find(p => p.position === 2);
 
-  const handleUpdateName = async (profileId: string, name: string) => {
-    await updateProfile(profileId, { name });
+  const handleStartEditing = (profile: typeof person1) => {
+    if (profile) {
+      setEditingProfile(profile.position);
+      setEditingName(profile.name);
+    }
+  };
+
+  const handleUpdateName = async (profileId: string) => {
+    if (editingName.trim()) {
+      await updateProfile(profileId, { name: editingName.trim() });
+    }
     setEditingProfile(null);
+    setEditingName('');
   };
 
   const handleUpdateAvatar = async (profileId: string, avatarIndex: number) => {
@@ -50,12 +72,12 @@ export default function Settings() {
   };
 
   return (
-    <div className="p-4 safe-top">
+    <div className="p-4 safe-top space-y-4">
       <h1 className="text-xl font-semibold mb-6">Ajustes</h1>
 
       {/* Profiles */}
       {[person1, person2].map((person) => person && (
-        <div key={person.id} className="bg-card rounded-3xl p-4 shadow-glass mb-4">
+        <div key={person.id} className="bg-card rounded-3xl p-4 shadow-lg border border-border/50">
           <div className="flex items-center gap-3 mb-4">
             <User className="w-4 h-4 text-muted-foreground" />
             <span className="text-sm font-medium text-muted-foreground">
@@ -91,10 +113,14 @@ export default function Settings() {
             {editingProfile === person.position ? (
               <div className="flex gap-2">
                 <Input
-                  defaultValue={person.name}
+                  value={editingName}
+                  onChange={(e) => setEditingName(e.target.value)}
                   onKeyDown={(e) => {
                     if (e.key === 'Enter') {
-                      handleUpdateName(person.id, e.currentTarget.value);
+                      handleUpdateName(person.id);
+                    } else if (e.key === 'Escape') {
+                      setEditingProfile(null);
+                      setEditingName('');
                     }
                   }}
                   autoFocus
@@ -102,15 +128,14 @@ export default function Settings() {
                 />
                 <Button
                   size="icon"
-                  variant="ghost"
-                  onClick={() => setEditingProfile(null)}
+                  onClick={() => handleUpdateName(person.id)}
                 >
                   <Check className="w-4 h-4" />
                 </Button>
               </div>
             ) : (
               <button
-                onClick={() => setEditingProfile(person.position)}
+                onClick={() => handleStartEditing(person)}
                 className="w-full text-left p-3 bg-muted rounded-xl hover:bg-muted/80 transition-colors"
               >
                 {person.name}
@@ -119,7 +144,7 @@ export default function Settings() {
           </div>
 
           {/* Color */}
-          <div>
+          <div className="mb-4">
             <label className="text-sm text-muted-foreground mb-2 block flex items-center gap-2">
               <Palette className="w-4 h-4" /> Cor
             </label>
@@ -138,11 +163,32 @@ export default function Settings() {
               ))}
             </div>
           </div>
+
+          {/* Cards */}
+          <CardManager
+            profile={person}
+            cards={couple.cards}
+            onAddCard={addCard}
+            onDeleteCard={deleteCard}
+          />
         </div>
       ))}
 
+      {/* Agreements */}
+      <div className="bg-card rounded-3xl p-4 shadow-lg border border-border/50">
+        <AgreementManager
+          agreements={couple.agreements}
+          profiles={couple.profiles}
+          tags={couple.tags}
+          onAddAgreement={addAgreement}
+          onUpdateAgreement={updateAgreement}
+          onDeleteAgreement={deleteAgreement}
+          coupleId={couple.id}
+        />
+      </div>
+
       {/* Tags */}
-      <div className="bg-card rounded-3xl p-4 shadow-glass mb-4">
+      <div className="bg-card rounded-3xl p-4 shadow-lg border border-border/50">
         <div className="flex items-center justify-between mb-4">
           <div className="flex items-center gap-2">
             <Tag className="w-4 h-4 text-muted-foreground" />
