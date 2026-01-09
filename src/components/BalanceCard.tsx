@@ -19,6 +19,14 @@ export function BalanceCard({ profiles, balance }: BalanceCardProps) {
 
   if (!person1 || !person2) return null;
 
+  // Check if profiles are configured (not default names)
+  const isConfigured = (p: Profile) => 
+    p.name !== 'Pessoa 1' && p.name !== 'Pessoa 2' && p.name !== 'Pessoa';
+  
+  const person1Configured = isConfigured(person1);
+  const person2Configured = isConfigured(person2);
+  const bothConfigured = person1Configured && person2Configured;
+
   const isBalanced = Math.abs(balance.balance) < 0.01;
   const person1Owes = balance.balance < 0;
   const owingPerson = person1Owes ? person1 : person2;
@@ -29,7 +37,25 @@ export function BalanceCard({ profiles, balance }: BalanceCardProps) {
     <div className="bg-card rounded-3xl p-6 shadow-glass animate-fade-in">
       <h2 className="text-sm font-medium text-muted-foreground mb-4">Equilíbrio atual</h2>
 
-      {isBalanced ? (
+      {/* Show waiting message when only one person is configured */}
+      {!bothConfigured ? (
+        <div className="flex flex-col items-center justify-center py-4">
+          {person1Configured && (
+            <Avatar avatarIndex={person1.avatar_index} size="lg" ringColor={person1.color} />
+          )}
+          {person2Configured && (
+            <Avatar avatarIndex={person2.avatar_index} size="lg" ringColor={person2.color} />
+          )}
+          <div className="text-center mt-3">
+            <p className="text-lg font-semibold text-secondary-foreground">
+              Aguardando parceiro(a) 💕
+            </p>
+            <p className="text-sm text-muted-foreground mt-1">
+              Compartilhe o link para começarem juntos
+            </p>
+          </div>
+        </div>
+      ) : isBalanced ? (
         <div className="flex items-center justify-center gap-4 py-4">
           <Avatar avatarIndex={person1.avatar_index} size="lg" ringColor={person1.color} />
           <div className="text-center">
@@ -70,9 +96,11 @@ export function BalanceCard({ profiles, balance }: BalanceCardProps) {
       )}
 
       <p className="text-center text-xs text-muted-foreground mt-4">
-        {isBalanced 
-          ? 'Continue registrando para manter o equilíbrio 💕'
-          : `O equilíbrio está em ${formatCurrency(amount)} com ${receivingPerson.name}`
+        {!bothConfigured 
+          ? 'Use o botão "Compartilhar" para convidar'
+          : isBalanced 
+            ? 'Continue registrando para manter o equilíbrio 💕'
+            : `O equilíbrio está em ${formatCurrency(amount)} com ${receivingPerson.name}`
         }
       </p>
     </div>
