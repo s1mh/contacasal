@@ -163,10 +163,31 @@ export function useCouple() {
     try {
       const { error } = await supabase.from('profiles').update(updates).eq('id', profileId);
       if (error) throw error;
-      if (shareCode) await fetchCouple(shareCode);
     } catch (err: any) {
       console.error('Error updating profile:', err);
       toast({ title: 'Erro ao atualizar perfil', variant: 'destructive' });
+    }
+  };
+
+  const deleteProfile = async (profileId: string, shareCode: string) => {
+    try {
+      // Reset profile to default state instead of deleting
+      const { error } = await supabase.from('profiles').update({
+        name: 'Pessoa',
+        avatar_index: 1,
+        color: '#94A3B8'
+      }).eq('id', profileId);
+      if (error) throw error;
+      
+      // Clear localStorage
+      localStorage.removeItem(`couple_${shareCode}`);
+      
+      toast({ title: 'Perfil removido' });
+      return true;
+    } catch (err: any) {
+      console.error('Error deleting profile:', err);
+      toast({ title: 'Erro ao remover perfil', variant: 'destructive' });
+      return false;
     }
   };
 
@@ -366,6 +387,7 @@ export function useCouple() {
     error,
     createCouple,
     updateProfile,
+    deleteProfile,
     addExpense,
     deleteExpense,
     addTag,
