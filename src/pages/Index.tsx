@@ -1,8 +1,9 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Heart, ArrowRight, Sparkles, Loader2, Users } from 'lucide-react';
+import { Heart, ArrowRight, Sparkles, Loader2, Users, AtSign, Lock } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { InputOTP, InputOTPGroup, InputOTPSlotMasked } from '@/components/ui/input-otp';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { useAuthContext } from '@/contexts/AuthContext';
@@ -15,16 +16,26 @@ interface LastSpace {
   position: number;
   name: string;
   avatarIndex: number;
+  username?: string;
 }
 
 export default function Index() {
   const navigate = useNavigate();
   const { toast } = useToast();
-  const { loading: authLoading, clearValidation } = useAuthContext();
+  const { loading: authLoading, clearValidation, validateShareCode } = useAuthContext();
   const [loading, setLoading] = useState(false);
   const [existingCode, setExistingCode] = useState('');
   const [lastSpace, setLastSpace] = useState<LastSpace | null>(null);
   const [catsAnimating, setCatsAnimating] = useState(false);
+  
+  // Username login state
+  const [showUsernameLogin, setShowUsernameLogin] = useState(false);
+  const [username, setUsername] = useState('');
+  const [usernamePin, setUsernamePin] = useState('');
+  const [usernameError, setUsernameError] = useState('');
+  const [usernameLoading, setUsernameLoading] = useState(false);
+  const [attemptsRemaining, setAttemptsRemaining] = useState<number | null>(null);
+  const [lockedUntil, setLockedUntil] = useState<string | null>(null);
 
   // Check for saved space on mount
   useEffect(() => {
@@ -39,6 +50,7 @@ export default function Index() {
               position: data.position,
               name: data.name,
               avatarIndex: data.avatarIndex || 1,
+              username: data.username,
             });
             break;
           }
@@ -82,8 +94,6 @@ export default function Index() {
       // Refresh the session to pick up the new couple_id claim
       await supabase.auth.refreshSession();
 
-      // Toast moved to CoupleLayout after profile creation
-
       navigate(`/c/${data.share_code}`);
     } catch (err: unknown) {
       const message = err instanceof Error ? err.message : 'Tente novamente.';
@@ -117,6 +127,91 @@ export default function Index() {
     if (lastSpace) {
       navigate(`/c/${lastSpace.shareCode}`);
     }
+  };
+
+  const handleUsernameLogin = async () => {
+    if (!username.trim() || usernamePin.length !== 4) return;
+    
+    setUsernameLoading(true);
+    setUsernameError('');
+    
+    try {
+      const { data, error } = await supabase.functions.invoke('login-with-username', {
+        body: { 
+          username: username.trim(),
+          pin: usernamePin 
+        }
+      });
+
+      if (error) {
+        throw new Error(error.message);
+      }
+
+      if (!data.success) {
+        setUsernameError(data.error || 'Credenciais inválidas');
+        setUsernamePin('');
+        
+        if (data.attempts_remaining !== undefined) {
+          setAttemptsRemaining(data.attempts_remaining);
+        }
+        
+        if (data.locked) {
+          setLockedUntil(data.locked_until);
+        }
+        
+        return;
+      }
+
+      // Success! Save to localStorage and navigate
+      const shareCode = data.share_code;
+      const profile = data.profile;
+      
+      localStorage.setItem(`couple_${shareCode}`, JSON.stringify({
+        position: profile.position,
+        name: profile.name,
+        avatarIndex: profile.avatar_index,
+        color: profile.color,
+        username: username.trim().replace(/^@/, ''),
+        timestamp: Date.now()
+      }));
+
+      // Validate the share code to set up the session
+      await validateShareCode(shareCode);
+
+      toast({
+        title: `Bem-vindo de volta, ${profile.name}! 🎉`,
+        description: 'Bom te ver novamente'
+      });
+
+      navigate(`/c/${shareCode}`);
+    } catch (err) {
+      console.error('Username login error:', err);
+      setUsernameError('Erro ao fazer login. Tente novamente.');
+      setUsernamePin('');
+    } finally {
+      setUsernameLoading(false);
+    }
+  };
+
+  const handleUsernamePinChange = (value: string) => {
+    setUsernamePin(value);
+    setUsernameError('');
+    
+    // Auto-submit when 4 digits entered
+    if (value.length === 4) {
+      setTimeout(() => handleUsernameLogin(), 100);
+    }
+  };
+
+  const formatLockedTime = (isoDate: string): string => {
+    const lockDate = new Date(isoDate);
+    const now = new Date();
+    const diffMs = lockDate.getTime() - now.getTime();
+    const diffMins = Math.ceil(diffMs / 60000);
+    
+    if (diffMins <= 0) return 'agora';
+    if (diffMins === 1) return '1 minuto';
+    return `${diffMins} minutos`;
   };
 
   if (authLoading) {
@@ -183,7 +278,7 @@ export default function Index() {
         </div>
 
         {/* Continue as saved user */}
-        {lastSpace && (
+        {lastSpace && !showUsernameLogin && (
           <button
             onClick={handleContinue}
             className="w-full mb-4 p-4 bg-card rounded-3xl border-2 border-primary/30 hover:border-primary shadow-lg transition-all duration-300 flex items-center justify-between group animate-fade-slide-up hover:scale-[1.02]"
@@ -200,77 +295,188 @@ export default function Index() {
               <div className="text-left">
                 <p className="text-xs text-muted-foreground">Continuar como</p>
                 <p className="font-semibold">{lastSpace.name}</p>
+                {lastSpace.username && (
+                  <p className="text-xs text-muted-foreground">@{lastSpace.username}</p>
+                )}
               </div>
             </div>
             <ArrowRight className="w-5 h-5 text-primary group-hover:translate-x-1 transition-transform" />
           </button>
         )}
 
-        {/* Create New Space */}
-        <div 
-          className="bg-card rounded-3xl p-6 shadow-lg border border-border/50 mb-4 animate-fade-slide-up hover:shadow-xl transition-all duration-300"
-          style={{ animationDelay: '200ms' }}
-        >
-          <div className="flex items-center gap-3 mb-4">
-            <div className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center">
-              <Sparkles className="w-5 h-5 text-primary" />
-            </div>
-            <div>
-              <h2 className="font-semibold text-foreground">Novo espaço</h2>
-              <p className="text-xs text-muted-foreground">Crie um espaço compartilhado</p>
-            </div>
-          </div>
-          <Button
-            onClick={handleCreateSpace}
-            disabled={loading}
-            className="w-full bg-primary hover:bg-primary/90 text-primary-foreground rounded-xl h-12 transition-all duration-300 hover:scale-[1.02]"
+        {/* Username Login */}
+        {showUsernameLogin ? (
+          <div 
+            className="bg-card rounded-3xl p-6 shadow-lg border border-border/50 mb-4 animate-fade-slide-up"
           >
-            {loading ? (
-              <>
-                <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                Criando...
-              </>
-            ) : (
-              <>
-                Criar espaço do casal
-                <ArrowRight className="w-4 h-4 ml-2" />
-              </>
-            )}
-          </Button>
-        </div>
+            <div className="flex items-center gap-3 mb-4">
+              <div className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center">
+                <AtSign className="w-5 h-5 text-primary" />
+              </div>
+              <div>
+                <h2 className="font-semibold text-foreground">Entrar com @</h2>
+                <p className="text-xs text-muted-foreground">Use seu username pessoal</p>
+              </div>
+            </div>
 
-        {/* Join Existing Space */}
-        <div 
-          className="bg-card rounded-3xl p-6 shadow-lg border border-border/50 animate-fade-slide-up hover:shadow-xl transition-all duration-300"
-          style={{ animationDelay: '300ms' }}
-        >
-          <div className="flex items-center gap-3 mb-4">
-            <div className="w-10 h-10 rounded-xl bg-secondary/30 flex items-center justify-center">
-              <Users className="w-5 h-5 text-secondary-foreground" />
-            </div>
-            <div>
-              <h2 className="font-semibold text-foreground">Entrar em espaço</h2>
-              <p className="text-xs text-muted-foreground">Recebeu um código? Cole aqui</p>
+            <div className="space-y-4">
+              <Input
+                value={username}
+                onChange={(e) => {
+                  setUsername(e.target.value.replace(/\s/g, '').toLowerCase());
+                  setUsernameError('');
+                }}
+                placeholder="@seu_username"
+                className="text-center"
+                disabled={usernameLoading || !!lockedUntil}
+              />
+
+              <div className="flex flex-col items-center gap-2">
+                <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                  <Lock className="w-4 h-4" />
+                  <span>Código pessoal</span>
+                </div>
+                
+                <InputOTP 
+                  maxLength={4} 
+                  value={usernamePin} 
+                  onChange={handleUsernamePinChange}
+                  disabled={usernameLoading || !!lockedUntil || !username.trim()}
+                >
+                  <InputOTPGroup>
+                    <InputOTPSlotMasked index={0} className="w-12 h-12 text-xl" />
+                    <InputOTPSlotMasked index={1} className="w-12 h-12 text-xl" />
+                    <InputOTPSlotMasked index={2} className="w-12 h-12 text-xl" />
+                    <InputOTPSlotMasked index={3} className="w-12 h-12 text-xl" />
+                  </InputOTPGroup>
+                </InputOTP>
+
+                {usernameLoading && (
+                  <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                    <Loader2 className="w-4 h-4 animate-spin" />
+                    <span>Verificando...</span>
+                  </div>
+                )}
+
+                {usernameError && (
+                  <p className="text-sm text-destructive animate-fade-in text-center">
+                    {usernameError}
+                  </p>
+                )}
+
+                {attemptsRemaining !== null && attemptsRemaining > 0 && attemptsRemaining <= 3 && (
+                  <p className="text-xs text-amber-600 dark:text-amber-400 animate-fade-in">
+                    {attemptsRemaining} tentativa{attemptsRemaining > 1 ? 's' : ''} restante{attemptsRemaining > 1 ? 's' : ''}
+                  </p>
+                )}
+
+                {lockedUntil && (
+                  <p className="text-xs text-destructive animate-fade-in">
+                    Conta bloqueada por {formatLockedTime(lockedUntil)}
+                  </p>
+                )}
+              </div>
+
+              <Button
+                variant="ghost"
+                onClick={() => {
+                  setShowUsernameLogin(false);
+                  setUsername('');
+                  setUsernamePin('');
+                  setUsernameError('');
+                  setAttemptsRemaining(null);
+                  setLockedUntil(null);
+                }}
+                className="w-full"
+              >
+                Voltar
+              </Button>
             </div>
           </div>
-          <div className="flex gap-2">
-            <Input
-              value={existingCode}
-              onChange={(e) => setExistingCode(e.target.value.toLowerCase())}
-              placeholder="Cole o código aqui"
-              className="flex-1 rounded-xl h-12 bg-muted border-0 transition-all duration-300 focus:ring-2 focus:ring-primary/50"
-              onKeyDown={(e) => e.key === 'Enter' && handleJoinSpace()}
-            />
-            <Button
-              onClick={handleJoinSpace}
-              disabled={!existingCode.trim() || loading}
-              variant="outline"
-              className="rounded-xl h-12 px-4 transition-all duration-300 hover:scale-105"
+        ) : (
+          <>
+            {/* Create New Space */}
+            <div 
+              className="bg-card rounded-3xl p-6 shadow-lg border border-border/50 mb-4 animate-fade-slide-up hover:shadow-xl transition-all duration-300"
+              style={{ animationDelay: '200ms' }}
             >
-              Entrar
-            </Button>
-          </div>
-        </div>
+              <div className="flex items-center gap-3 mb-4">
+                <div className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center">
+                  <Sparkles className="w-5 h-5 text-primary" />
+                </div>
+                <div>
+                  <h2 className="font-semibold text-foreground">Novo espaço</h2>
+                  <p className="text-xs text-muted-foreground">Crie um espaço compartilhado</p>
+                </div>
+              </div>
+              <Button
+                onClick={handleCreateSpace}
+                disabled={loading}
+                className="w-full bg-primary hover:bg-primary/90 text-primary-foreground rounded-xl h-12 transition-all duration-300 hover:scale-[1.02]"
+              >
+                {loading ? (
+                  <>
+                    <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                    Criando...
+                  </>
+                ) : (
+                  <>
+                    Criar espaço do casal
+                    <ArrowRight className="w-4 h-4 ml-2" />
+                  </>
+                )}
+              </Button>
+            </div>
+
+            {/* Join Existing Space */}
+            <div 
+              className="bg-card rounded-3xl p-6 shadow-lg border border-border/50 mb-4 animate-fade-slide-up hover:shadow-xl transition-all duration-300"
+              style={{ animationDelay: '300ms' }}
+            >
+              <div className="flex items-center gap-3 mb-4">
+                <div className="w-10 h-10 rounded-xl bg-secondary/30 flex items-center justify-center">
+                  <Users className="w-5 h-5 text-secondary-foreground" />
+                </div>
+                <div>
+                  <h2 className="font-semibold text-foreground">Entrar em espaço</h2>
+                  <p className="text-xs text-muted-foreground">Recebeu um código? Cole aqui</p>
+                </div>
+              </div>
+              <div className="flex gap-2">
+                <Input
+                  value={existingCode}
+                  onChange={(e) => setExistingCode(e.target.value.toLowerCase())}
+                  placeholder="Cole o código aqui"
+                  className="flex-1 rounded-xl h-12 bg-muted border-0 transition-all duration-300 focus:ring-2 focus:ring-primary/50"
+                  onKeyDown={(e) => e.key === 'Enter' && handleJoinSpace()}
+                />
+                <Button
+                  onClick={handleJoinSpace}
+                  disabled={!existingCode.trim() || loading}
+                  variant="outline"
+                  className="rounded-xl h-12 px-4 transition-all duration-300 hover:scale-105"
+                >
+                  Entrar
+                </Button>
+              </div>
+            </div>
+
+            {/* Login with Username */}
+            <div 
+              className="animate-fade-slide-up"
+              style={{ animationDelay: '400ms' }}
+            >
+              <Button
+                variant="ghost"
+                onClick={() => setShowUsernameLogin(true)}
+                className="w-full text-muted-foreground hover:text-foreground"
+              >
+                <AtSign className="w-4 h-4 mr-2" />
+                Entrar com seu @username
+              </Button>
+            </div>
+          </>
+        )}
 
         {/* Footer */}
         <div className="text-center mt-8 animate-fade-in" style={{ animationDelay: '500ms' }}>

@@ -18,6 +18,8 @@ export interface Profile {
   color: string;
   avatar_index: number;
   position: number;
+  username?: string;
+  email?: string;
 }
 
 export interface Tag {
@@ -160,7 +162,7 @@ export function CoupleProvider({ children, shareCode }: CoupleProviderProps) {
       }
 
       const [profilesRes, tagsRes, expensesRes, cardsRes, agreementsRes, settlementsRes] = await Promise.all([
-        supabase.from('profiles').select('*').eq('couple_id', coupleData.id).order('position'),
+        supabase.from('profiles').select('id, couple_id, name, color, avatar_index, position, username, email').eq('couple_id', coupleData.id).order('position'),
         supabase.from('tags').select('*').eq('couple_id', coupleData.id),
         supabase.from('expenses').select('*').eq('couple_id', coupleData.id).order('expense_date', { ascending: false }),
         supabase.from('cards').select('*').eq('couple_id', coupleData.id),
@@ -218,7 +220,7 @@ export function CoupleProvider({ children, shareCode }: CoupleProviderProps) {
       if (!coupleData) return;
 
       const [profilesRes, tagsRes, expensesRes, cardsRes, agreementsRes, settlementsRes] = await Promise.all([
-        supabase.from('profiles').select('*').eq('couple_id', coupleData.id).order('position'),
+        supabase.from('profiles').select('id, couple_id, name, color, avatar_index, position, username, email').eq('couple_id', coupleData.id).order('position'),
         supabase.from('tags').select('*').eq('couple_id', coupleData.id),
         supabase.from('expenses').select('*').eq('couple_id', coupleData.id).order('expense_date', { ascending: false }),
         supabase.from('cards').select('*').eq('couple_id', coupleData.id),

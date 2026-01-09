@@ -6,11 +6,12 @@ import { InputOTP, InputOTPGroup, InputOTPSlotMasked } from '@/components/ui/inp
 import { cn } from '@/lib/utils';
 import { CAT_AVATARS, PERSON_COLORS } from '@/lib/constants';
 import { Profile } from '@/contexts/CoupleContext';
-import { Check, Heart, Sparkles, Lock, ArrowRight, ArrowLeft, Mail, SkipForward } from 'lucide-react';
+import { Check, Heart, Sparkles, Lock, ArrowRight, ArrowLeft, Mail, SkipForward, AtSign, Loader2 } from 'lucide-react';
+import { supabase } from '@/integrations/supabase/client';
 
 interface OnboardingModalProps {
   open: boolean;
-  onComplete: (position: number, name: string, avatarIndex: number, color: string, pinCode: string, email?: string) => void;
+  onComplete: (position: number, name: string, avatarIndex: number, color: string, pinCode: string, email?: string, username?: string) => void;
   profiles: Profile[];
   shareCode: string;
 }
@@ -58,6 +59,11 @@ export function OnboardingModal({ open, onComplete, profiles, shareCode }: Onboa
   const [pinCode, setPinCode] = useState('');
   const [email, setEmail] = useState('');
   const [emailError, setEmailError] = useState('');
+  const [emailExists, setEmailExists] = useState(false);
+  const [emailExistsInfo, setEmailExistsInfo] = useState<{ masked_space?: string; profile_name?: string } | null>(null);
+  const [checkingEmail, setCheckingEmail] = useState(false);
+  const [username, setUsername] = useState('');
+  const [generatingUsername, setGeneratingUsername] = useState(false);
   const [compliment, setCompliment] = useState('');
   const [showCompliment, setShowCompliment] = useState(false);
   const [hoveredAvatar, setHoveredAvatar] = useState<number | null>(null);
@@ -103,8 +109,29 @@ export function OnboardingModal({ open, onComplete, profiles, shareCode }: Onboa
     }
   }, [name]);
 
-  const handleNextStep = () => {
+  // Generate username when moving to PIN step
+  const generateUsername = async () => {
+    if (!name.trim()) return;
+    
+    setGeneratingUsername(true);
+    try {
+      const { data, error } = await supabase.functions.invoke('generate-username', {
+        body: { name: name.trim() }
+      });
+      
+      if (data?.success && data?.username) {
+        setUsername(data.username);
+      }
+    } catch (err) {
+      console.error('Error generating username:', err);
+    } finally {
+      setGeneratingUsername(false);
+    }
+  };
+
+  const handleNextStep = async () => {
     if (name.trim() && isValidName(name)) {
+      await generateUsername();
       setStep('pin');
     }
   };
@@ -115,15 +142,65 @@ export function OnboardingModal({ open, onComplete, profiles, shareCode }: Onboa
     }
   };
 
+  // Check if email already exists
+  const checkEmailExists = async (emailToCheck: string) => {
+    if (!emailToCheck.trim() || !isValidEmail(emailToCheck)) {
+      setEmailExists(false);
+      setEmailExistsInfo(null);
+      return;
+    }
+
+    setCheckingEmail(true);
+    try {
+      const { data, error } = await supabase.functions.invoke('check-email', {
+        body: { 
+          email: emailToCheck.trim().toLowerCase(),
+          couple_id: profiles[0]?.couple_id
+        }
+      });
+
+      if (data?.exists) {
+        setEmailExists(true);
+        setEmailExistsInfo({
+          masked_space: data.masked_space,
+          profile_name: data.profile_name
+        });
+        setEmailError(`Este e-mail já está cadastrado${data.masked_space ? ` no espaço ${data.masked_space}` : ''}`);
+      } else {
+        setEmailExists(false);
+        setEmailExistsInfo(null);
+        setEmailError('');
+      }
+    } catch (err) {
+      console.error('Error checking email:', err);
+    } finally {
+      setCheckingEmail(false);
+    }
+  };
+
   const handleEmailChange = (value: string) => {
     setEmail(value);
     setEmailError('');
+    setEmailExists(false);
+    setEmailExistsInfo(null);
+  };
+
+  // Check email on blur
+  const handleEmailBlur = () => {
+    if (email.trim()) {
+      checkEmailExists(email);
+    }
   };
 
   const handleComplete = () => {
     // Validate email if provided
     if (email.trim() && !isValidEmail(email)) {
       setEmailError('E-mail inválido');
+      return;
+    }
+
+    if (emailExists) {
+      setEmailError('Este e-mail já está em uso');
       return;
     }
 
@@ -140,10 +217,11 @@ export function OnboardingModal({ open, onComplete, profiles, shareCode }: Onboa
       name: formattedName,
       avatarIndex,
       color,
+      username,
       timestamp: Date.now()
     }));
     
-    onComplete(position, formattedName, avatarIndex, color, pinCode, email.trim().toLowerCase() || undefined);
+    onComplete(position, formattedName, avatarIndex, color, pinCode, email.trim().toLowerCase() || undefined, username || undefined);
   };
 
   const handleSkipEmail = () => {
@@ -159,14 +237,31 @@ export function OnboardingModal({ open, onComplete, profiles, shareCode }: Onboa
       name: formattedName,
       avatarIndex,
       color,
+      username,
       timestamp: Date.now()
     }));
     
-    onComplete(position, formattedName, avatarIndex, color, pinCode, undefined);
+    onComplete(position, formattedName, avatarIndex, color, pinCode, undefined, username || undefined);
   };
 
   const handlePinChange = (value: string) => {
     setPinCode(value);
+  };
+
+  const handleSendRecoveryLink = async () => {
+    if (!email.trim()) return;
+    
+    try {
+      await supabase.functions.invoke('request-pin-recovery', {
+        body: { email: email.trim().toLowerCase() }
+      });
+      setEmailError('');
+      setEmailExists(false);
+      // Show success message
+      setEmailExistsInfo({ profile_name: 'Link enviado! Verifique seu e-mail.' });
+    } catch (err) {
+      console.error('Error sending recovery:', err);
+    }
   };
 
   return (
@@ -337,7 +432,21 @@ export function OnboardingModal({ open, onComplete, profiles, shareCode }: Onboa
                     className="w-full h-full object-cover"
                   />
                 </div>
-                <span className="font-semibold text-lg">{name}</span>
+                <div className="text-center">
+                  <span className="font-semibold text-lg block">{name}</span>
+                  {username && (
+                    <span className="text-sm text-muted-foreground flex items-center justify-center gap-1">
+                      <AtSign className="w-3 h-3" />
+                      {username}
+                    </span>
+                  )}
+                  {generatingUsername && (
+                    <span className="text-xs text-muted-foreground flex items-center justify-center gap-1">
+                      <Loader2 className="w-3 h-3 animate-spin" />
+                      Gerando seu @...
+                    </span>
+                  )}
+                </div>
 
                 {/* PIN Input */}
                 <div className="flex flex-col items-center gap-2">
@@ -402,7 +511,15 @@ export function OnboardingModal({ open, onComplete, profiles, shareCode }: Onboa
                     className="w-full h-full object-cover"
                   />
                 </div>
-                <span className="font-semibold text-lg">{name}</span>
+                <div className="text-center">
+                  <span className="font-semibold text-lg block">{name}</span>
+                  {username && (
+                    <span className="text-sm text-muted-foreground flex items-center justify-center gap-1">
+                      <AtSign className="w-3 h-3" />
+                      {username}
+                    </span>
+                  )}
+                </div>
 
                 {/* Email Input */}
                 <div className="flex flex-col items-center gap-2 w-full">
@@ -411,23 +528,53 @@ export function OnboardingModal({ open, onComplete, profiles, shareCode }: Onboa
                     <span>E-mail para recuperação</span>
                   </div>
                   
-                  <Input
-                    type="email"
-                    value={email}
-                    onChange={(e) => handleEmailChange(e.target.value)}
-                    placeholder="seu@email.com"
-                    className="text-center"
-                  />
+                  <div className="relative w-full">
+                    <Input
+                      type="email"
+                      value={email}
+                      onChange={(e) => handleEmailChange(e.target.value)}
+                      onBlur={handleEmailBlur}
+                      placeholder="seu@email.com"
+                      className={cn(
+                        "text-center",
+                        emailExists && "border-destructive"
+                      )}
+                    />
+                    {checkingEmail && (
+                      <div className="absolute right-3 top-1/2 -translate-y-1/2">
+                        <Loader2 className="w-4 h-4 animate-spin text-muted-foreground" />
+                      </div>
+                    )}
+                  </div>
                   
-                  {emailError && (
+                  {emailError && !emailExists && (
                     <p className="text-sm text-destructive animate-fade-in">
                       {emailError}
                     </p>
                   )}
+
+                  {emailExists && (
+                    <div className="text-center animate-fade-in">
+                      <p className="text-sm text-destructive mb-2">
+                        {emailError}
+                      </p>
+                      <Button 
+                        variant="link" 
+                        size="sm"
+                        onClick={handleSendRecoveryLink}
+                        className="text-primary"
+                      >
+                        <Mail className="w-3 h-3 mr-1" />
+                        Enviar link de recuperação
+                      </Button>
+                    </div>
+                  )}
                   
-                  <p className="text-xs text-muted-foreground text-center mt-1">
-                    Se esquecer seu código, enviaremos um link de recuperação
-                  </p>
+                  {!emailExists && !emailError && (
+                    <p className="text-xs text-muted-foreground text-center mt-1">
+                      Se esquecer seu código, enviaremos um link de recuperação
+                    </p>
+                  )}
                 </div>
 
                 {/* Step indicator */}
@@ -449,6 +596,7 @@ export function OnboardingModal({ open, onComplete, profiles, shareCode }: Onboa
                   <Button 
                     onClick={handleComplete} 
                     className="flex-1"
+                    disabled={emailExists || checkingEmail}
                   >
                     <Heart className="w-4 h-4 mr-2" />
                     Criar perfil
@@ -459,6 +607,7 @@ export function OnboardingModal({ open, onComplete, profiles, shareCode }: Onboa
                   variant="link" 
                   onClick={handleSkipEmail}
                   className="text-muted-foreground"
+                  disabled={emailExists}
                 >
                   <SkipForward className="w-4 h-4 mr-2" />
                   Pular esta etapa
