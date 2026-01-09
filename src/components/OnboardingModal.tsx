@@ -75,14 +75,14 @@ export function OnboardingModal({ open, onComplete, profiles, shareCode }: Onboa
     }
   };
 
-  // Show compliment 3 seconds after user stops typing
+  // Show compliment 1 second after user stops typing
   useEffect(() => {
     if (isValidName(name) && looksLikeName(name)) {
       const timeout = setTimeout(() => {
         const randomCompliment = NAME_COMPLIMENTS[Math.floor(Math.random() * NAME_COMPLIMENTS.length)];
         setCompliment(randomCompliment);
         setShowCompliment(true);
-      }, 3000);
+      }, 1000);
       
       setComplimentTimeout(timeout);
       return () => clearTimeout(timeout);
@@ -154,35 +154,40 @@ export function OnboardingModal({ open, onComplete, profiles, shareCode }: Onboa
           <div className="space-y-2 animate-fade-in" style={{ animationDelay: '200ms' }}>
             <label className="text-sm font-medium text-muted-foreground">Escolha seu gatinho</label>
             <div className="grid grid-cols-4 gap-3">
-              {CAT_AVATARS.map((avatar, index) => (
-                <button
-                  key={index}
-                  onClick={() => setAvatarIndex(index + 1)}
-                  onMouseEnter={() => setHoveredAvatar(index)}
-                  onMouseLeave={() => setHoveredAvatar(null)}
-                  className={cn(
-                    "relative w-14 h-14 rounded-full overflow-hidden ring-2 transition-all duration-300",
-                    avatarIndex === index + 1 
-                      ? "ring-primary scale-110 shadow-lg" 
-                      : "ring-border hover:ring-primary/50 hover:scale-105"
-                  )}
-                >
-                  <img 
-                    src={avatar} 
-                    alt={`Avatar ${index + 1}`} 
+              {CAT_AVATARS.map((avatar, index) => {
+                const isSelected = avatarIndex === index + 1;
+                const isHovered = hoveredAvatar === index;
+                
+                return (
+                  <button
+                    key={index}
+                    onClick={() => setAvatarIndex(index + 1)}
+                    onMouseEnter={() => setHoveredAvatar(index)}
+                    onMouseLeave={() => setHoveredAvatar(null)}
                     className={cn(
-                      "w-full h-full object-cover transition-transform duration-300",
-                      avatarIndex === index + 1 && "animate-bounce-gentle",
-                      hoveredAvatar === index && avatarIndex !== index + 1 && "animate-wiggle"
+                      "relative w-14 h-14 rounded-full overflow-hidden ring-2 transition-all duration-300",
+                      isSelected 
+                        ? "ring-primary ring-offset-2 shadow-lg" 
+                        : "ring-border hover:ring-primary/50"
                     )}
-                  />
-                  {avatarIndex === index + 1 && (
-                    <div className="absolute inset-0 bg-primary/20 flex items-center justify-center animate-fade-in">
-                      <Check className="w-6 h-6 text-primary drop-shadow-md" />
-                    </div>
-                  )}
-                </button>
-              ))}
+                  >
+                    <img 
+                      src={avatar} 
+                      alt={`Avatar ${index + 1}`} 
+                      className={cn(
+                        "w-full h-full object-cover",
+                        isSelected && "animate-cat-idle",
+                        isHovered && !isSelected && "animate-wiggle"
+                      )}
+                    />
+                    {isSelected && (
+                      <div className="absolute inset-0 bg-primary/20 flex items-center justify-center">
+                        <Check className="w-6 h-6 text-primary drop-shadow-md animate-scale-in" />
+                      </div>
+                    )}
+                  </button>
+                );
+              })}
             </div>
           </div>
 
@@ -226,8 +231,8 @@ export function OnboardingModal({ open, onComplete, profiles, shareCode }: Onboa
                 src={CAT_AVATARS[avatarIndex - 1]} 
                 alt="Preview"
                 className={cn(
-                  "w-full h-full object-cover transition-transform duration-300",
-                  name.trim() && "animate-bounce-gentle"
+                  "w-full h-full object-cover",
+                  name.trim() && "animate-cat-idle"
                 )}
               />
             </div>
