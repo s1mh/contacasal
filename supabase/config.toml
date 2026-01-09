@@ -1,1 +1,4 @@
 project_id = "opvdclvrsrptgmllxjxh"
+
+[functions.validate-share-code]
+verify_jwt = false
