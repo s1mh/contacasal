@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { InputOTP, InputOTPGroup, InputOTPSlot } from '@/components/ui/input-otp';
+import { InputOTP, InputOTPGroup, InputOTPSlotMasked } from '@/components/ui/input-otp';
 import { cn } from '@/lib/utils';
 import { CAT_AVATARS, PERSON_COLORS } from '@/lib/constants';
 import { Profile } from '@/contexts/CoupleContext';
@@ -352,10 +352,10 @@ export function OnboardingModal({ open, onComplete, profiles, shareCode }: Onboa
                     onChange={handlePinChange}
                   >
                     <InputOTPGroup>
-                      <InputOTPSlot index={0} className="w-12 h-12 text-xl" />
-                      <InputOTPSlot index={1} className="w-12 h-12 text-xl" />
-                      <InputOTPSlot index={2} className="w-12 h-12 text-xl" />
-                      <InputOTPSlot index={3} className="w-12 h-12 text-xl" />
+                      <InputOTPSlotMasked index={0} className="w-12 h-12 text-xl" />
+                      <InputOTPSlotMasked index={1} className="w-12 h-12 text-xl" />
+                      <InputOTPSlotMasked index={2} className="w-12 h-12 text-xl" />
+                      <InputOTPSlotMasked index={3} className="w-12 h-12 text-xl" />
                     </InputOTPGroup>
                   </InputOTP>
                 </div>

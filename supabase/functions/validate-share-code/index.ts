@@ -5,8 +5,6 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 }
 
-const SHARE_CODE_EXPIRY_MINUTES = 5
-
 Deno.serve(async (req) => {
   // Handle CORS preflight requests
   if (req.method === 'OPTIONS') {
@@ -71,10 +69,10 @@ Deno.serve(async (req) => {
     // Use service role client to look up couple and update user metadata
     const supabaseAdmin = createClient(supabaseUrl, supabaseServiceKey)
 
-    // Look up the couple by share code
+    // Look up the couple by share code - no expiration check
     const { data: couple, error: coupleError } = await supabaseAdmin
       .from('couples')
-      .select('id, share_code_used_at, share_code_expires_at')
+      .select('id')
       .eq('share_code', share_code)
       .single()
 
@@ -87,38 +85,6 @@ Deno.serve(async (req) => {
     }
 
     console.log('Found couple:', couple.id)
-
-    // Check if share code has been used and if it's expired
-    if (couple.share_code_used_at) {
-      const usedAt = new Date(couple.share_code_used_at)
-      const expiresAt = couple.share_code_expires_at 
-        ? new Date(couple.share_code_expires_at)
-        : new Date(usedAt.getTime() + SHARE_CODE_EXPIRY_MINUTES * 60 * 1000)
-      
-      const now = new Date()
-      
-      if (now > expiresAt) {
-        console.log('Share code expired. Used at:', usedAt, 'Expires at:', expiresAt)
-        return new Response(
-          JSON.stringify({ error: 'Código expirado. Peça ao seu parceiro para gerar um novo.' }),
-          { status: 410, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-        )
-      }
-    } else {
-      // First use - set the used_at timestamp and expiration
-      const now = new Date()
-      const expiresAt = new Date(now.getTime() + SHARE_CODE_EXPIRY_MINUTES * 60 * 1000)
-      
-      await supabaseAdmin
-        .from('couples')
-        .update({ 
-          share_code_used_at: now.toISOString(),
-          share_code_expires_at: expiresAt.toISOString()
-        })
-        .eq('id', couple.id)
-      
-      console.log('Share code first use. Expires at:', expiresAt)
-    }
 
     // Update the user's app_metadata with the couple_id
     const { error: updateError } = await supabaseAdmin.auth.admin.updateUserById(

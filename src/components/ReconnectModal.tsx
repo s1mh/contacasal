@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
-import { InputOTP, InputOTPGroup, InputOTPSlot } from '@/components/ui/input-otp';
+import { InputOTP, InputOTPGroup, InputOTPSlotMasked } from '@/components/ui/input-otp';
 import { cn } from '@/lib/utils';
 import { CAT_AVATARS } from '@/lib/constants';
 import { Profile } from '@/contexts/CoupleContext';
@@ -217,10 +217,10 @@ export function ReconnectModal({ open, profiles, onReconnect, onCreateNew, share
                       disabled={loading || !!lockedUntil}
                     >
                       <InputOTPGroup>
-                        <InputOTPSlot index={0} className="w-12 h-12 text-xl" />
-                        <InputOTPSlot index={1} className="w-12 h-12 text-xl" />
-                        <InputOTPSlot index={2} className="w-12 h-12 text-xl" />
-                        <InputOTPSlot index={3} className="w-12 h-12 text-xl" />
+                        <InputOTPSlotMasked index={0} className="w-12 h-12 text-xl" />
+                        <InputOTPSlotMasked index={1} className="w-12 h-12 text-xl" />
+                        <InputOTPSlotMasked index={2} className="w-12 h-12 text-xl" />
+                        <InputOTPSlotMasked index={3} className="w-12 h-12 text-xl" />
                       </InputOTPGroup>
                     </InputOTP>
 
