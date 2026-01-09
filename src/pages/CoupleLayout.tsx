@@ -31,50 +31,44 @@ function CoupleLayoutContent() {
     const doValidation = async () => {
       if (!shareCode || authLoading) return;
       
-      // Check if already validated for this space
-      if (isValidated && coupleId) {
-        // Already validated, just need to load couple data
-        return;
-      }
-      
       setValidating(true);
       setValidationError(null);
       
-      // First, try to validate (checks if user is already a member)
+      // Always validate the share code to check membership for THIS specific space
       const validateResult = await validateShareCode(shareCode);
       
-      if (validateResult.success && validateResult.isMember) {
-        // User is already a member of this space
-        setValidating(false);
-        return;
-      }
-      
-      if (validateResult.success && !validateResult.isMember) {
-        // Valid code but user is not a member yet - join as new member
-        const joinResult = await joinSpace(shareCode);
-        
-        if (!joinResult.success) {
-          setValidationError(joinResult.error || 'Falha ao entrar no espaço');
-        } else if (joinResult.profileId) {
-          // New member joined - store profile ID to show onboarding with welcome
-          setNewProfileId(joinResult.profileId);
-          setIsNewMember(true);
-        }
-        
-        setValidating(false);
-        return;
-      }
-      
-      // If validation failed completely
       if (!validateResult.success) {
+        // Validation failed completely
         setValidationError(validateResult.error || 'Código inválido');
+        setValidating(false);
+        return;
+      }
+      
+      if (validateResult.isMember) {
+        // User is already a member of this space - just proceed
+        console.log('User is already a member of this space');
+        setValidating(false);
+        return;
+      }
+      
+      // Valid code but user is not a member yet - join as new member
+      console.log('User is not a member - joining space');
+      const joinResult = await joinSpace(shareCode);
+      
+      if (!joinResult.success) {
+        setValidationError(joinResult.error || 'Falha ao entrar no espaço');
+      } else if (joinResult.profileId) {
+        // New member joined - store profile ID to show onboarding with welcome
+        setNewProfileId(joinResult.profileId);
+        setIsNewMember(true);
+        console.log('New member joined with profile:', joinResult.profileId);
       }
       
       setValidating(false);
     };
     
     doValidation();
-  }, [shareCode, authLoading, isValidated, coupleId, validateShareCode, joinSpace]);
+  }, [shareCode, authLoading, validateShareCode, joinSpace]);
 
   // Check for existing device recognition or show appropriate modal
   useEffect(() => {
