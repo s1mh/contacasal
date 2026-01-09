@@ -19,8 +19,18 @@ function generateToken(): string {
 }
 
 interface RecoveryRequest {
-  share_code: string;
   email: string;
+  share_code?: string; // Now optional
+}
+
+interface ProfileWithCouple {
+  id: string;
+  name: string;
+  email: string;
+  couple_id: string;
+  couples: {
+    share_code: string;
+  } | null;
 }
 
 const handler = async (req: Request): Promise<Response> => {
@@ -46,9 +56,9 @@ const handler = async (req: Request): Promise<Response> => {
 
     const { share_code, email }: RecoveryRequest = await req.json();
 
-    if (!share_code || !email) {
+    if (!email) {
       return new Response(
-        JSON.stringify({ success: false, error: "Share code and email are required" }),
+        JSON.stringify({ success: false, error: "Email is required" }),
         { status: 400, headers: { "Content-Type": "application/json", ...corsHeaders } }
       );
     }
@@ -62,16 +72,68 @@ const handler = async (req: Request): Promise<Response> => {
       );
     }
 
-    // Get couple by share code
-    const { data: couple, error: coupleError } = await supabase
-      .from("couples")
-      .select("id")
-      .eq("share_code", share_code.toLowerCase())
-      .single();
+    const normalizedEmail = email.toLowerCase();
+    let profiles: ProfileWithCouple[] = [];
 
-    if (coupleError || !couple) {
-      // Don't reveal if space exists - security best practice
-      console.log("Couple not found for share code (silent):", share_code);
+    if (share_code) {
+      // Mode 1: Specific share_code provided - find profile in that space
+      const { data: couple, error: coupleError } = await supabase
+        .from("couples")
+        .select("id, share_code")
+        .eq("share_code", share_code.toLowerCase())
+        .single();
+
+      if (coupleError || !couple) {
+        console.log("Couple not found for share code (silent):", share_code);
+        return new Response(
+          JSON.stringify({ 
+            success: true, 
+            message: "Se este e-mail estiver cadastrado, você receberá um link de recuperação." 
+          }),
+          { status: 200, headers: { "Content-Type": "application/json", ...corsHeaders } }
+        );
+      }
+
+      const { data: profile, error: profileError } = await supabase
+        .from("profiles")
+        .select("id, name, email, couple_id")
+        .eq("couple_id", couple.id)
+        .eq("email", normalizedEmail)
+        .single();
+
+      if (profile && !profileError) {
+        profiles = [{
+          ...profile,
+          couples: { share_code: couple.share_code }
+        }];
+      }
+    } else {
+      // Mode 2: No share_code - find ALL profiles with this email
+      const { data: foundProfiles, error: profilesError } = await supabase
+        .from("profiles")
+        .select(`
+          id, 
+          name, 
+          email, 
+          couple_id,
+          couples!inner (
+            share_code
+          )
+        `)
+        .eq("email", normalizedEmail);
+
+      if (!profilesError && foundProfiles) {
+        // Transform the array couples to single object
+        profiles = foundProfiles.map((p: any) => ({
+          ...p,
+          couples: Array.isArray(p.couples) ? p.couples[0] : p.couples
+        })) as ProfileWithCouple[];
+      }
+    }
+
+    // If no profiles found, return success message (security - don't reveal if email exists)
+    if (profiles.length === 0) {
+      console.log("No profiles found for email (silent):", normalizedEmail);
       return new Response(
         JSON.stringify({ 
           success: true, 
@@ -81,53 +143,35 @@ const handler = async (req: Request): Promise<Response> => {
       );
     }
 
-    // Find profile with matching email in this couple
-    const { data: profile, error: profileError } = await supabase
-      .from("profiles")
-      .select("id, name, email")
-      .eq("couple_id", couple.id)
-      .eq("email", email.toLowerCase())
-      .single();
-
-    if (profileError || !profile) {
-      // Don't reveal if email exists - security best practice
-      console.log("Profile not found for email (silent):", email);
-      return new Response(
-        JSON.stringify({ 
-          success: true, 
-          message: "Se este e-mail estiver cadastrado, você receberá um link de recuperação." 
-        }),
-        { status: 200, headers: { "Content-Type": "application/json", ...corsHeaders } }
-      );
-    }
-
-    // Generate recovery token
-    const token = generateToken();
-    const expiresAt = new Date(Date.now() + TOKEN_EXPIRY_MINUTES * 60 * 1000);
-
-    // Save token to profile
-    const { error: updateError } = await supabase
-      .from("profiles")
-      .update({
-        recovery_token: token,
-        recovery_token_expires_at: expiresAt.toISOString(),
-      })
-      .eq("id", profile.id);
-
-    if (updateError) {
-      console.error("Error saving recovery token:", updateError);
-      return new Response(
-        JSON.stringify({ success: false, error: "Failed to generate recovery token" }),
-        { status: 500, headers: { "Content-Type": "application/json", ...corsHeaders } }
-      );
-    }
-
-    // Build recovery URL - use the origin from the request or fallback
+    // Build recovery URL origin
     const origin = req.headers.get("origin") || "https://lovable.dev";
-    const recoveryUrl = `${origin}/reset-pin/${token}`;
 
-    // Send email with beautiful template
-    const emailHtml = `
+    // Process each profile found
+    for (const profile of profiles) {
+      // Generate unique recovery token for each profile
+      const token = generateToken();
+      const expiresAt = new Date(Date.now() + TOKEN_EXPIRY_MINUTES * 60 * 1000);
+
+      // Save token to profile
+      const { error: updateError } = await supabase
+        .from("profiles")
+        .update({
+          recovery_token: token,
+          recovery_token_expires_at: expiresAt.toISOString(),
+        })
+        .eq("id", profile.id);
+
+      if (updateError) {
+        console.error("Error saving recovery token for profile:", profile.id, updateError);
+        continue; // Skip to next profile
+      }
+
+      const recoveryUrl = `${origin}/reset-pin/${token}`;
+      const shareCode = profile.couples?.share_code || '';
+      const maskedCode = shareCode ? shareCode.slice(0, 4) + "****" : 'Espaço desconhecido';
+
+      // Send email with beautiful template
+      const emailHtml = `
 <!DOCTYPE html>
 <html>
 <head>
@@ -164,8 +208,11 @@ const handler = async (req: Request): Promise<Response> => {
               <p style="margin: 0 0 16px; font-size: 16px; color: #374151; line-height: 1.6;">
                 Olá, <strong>${profile.name}</strong>! 👋
               </p>
-              <p style="margin: 0 0 24px; font-size: 16px; color: #374151; line-height: 1.6;">
-                Recebemos uma solicitação para redefinir seu código pessoal. Clique no botão abaixo para criar um novo código:
+              <p style="margin: 0 0 8px; font-size: 16px; color: #374151; line-height: 1.6;">
+                Recebemos uma solicitação para redefinir seu código pessoal.
+              </p>
+              <p style="margin: 0 0 24px; font-size: 14px; color: #6b7280; line-height: 1.6;">
+                Espaço: <strong>${maskedCode}</strong>
               </p>
 
               <!-- CTA Button -->
@@ -212,24 +259,21 @@ const handler = async (req: Request): Promise<Response> => {
   </table>
 </body>
 </html>
-    `;
+      `;
 
-    const { error: emailError } = await resend.emails.send({
-      from: "Conta de Casal <onboarding@resend.dev>",
-      to: [email],
-      subject: "🔐 Recuperar seu código - Conta de Casal",
-      html: emailHtml,
-    });
+      const { error: emailError } = await resend.emails.send({
+        from: "Conta de Casal <onboarding@resend.dev>",
+        to: [normalizedEmail],
+        subject: `🔐 Recuperar seu código - ${profile.name}`,
+        html: emailHtml,
+      });
 
-    if (emailError) {
-      console.error("Error sending email:", emailError);
-      return new Response(
-        JSON.stringify({ success: false, error: "Failed to send recovery email" }),
-        { status: 500, headers: { "Content-Type": "application/json", ...corsHeaders } }
-      );
+      if (emailError) {
+        console.error("Error sending email to profile:", profile.id, emailError);
+      } else {
+        console.log("Recovery email sent successfully for profile:", profile.id, "to:", normalizedEmail);
+      }
     }
-
-    console.log("Recovery email sent successfully to:", email);
 
     return new Response(
       JSON.stringify({ 
