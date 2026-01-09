@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { Outlet, useParams, Navigate, useNavigate } from 'react-router-dom';
 import { BottomNav } from '@/components/BottomNav';
 import { OnboardingModal } from '@/components/OnboardingModal';
+import { SyncIndicator } from '@/components/SyncIndicator';
 import { CoupleProvider, useCoupleContext } from '@/contexts/CoupleContext';
 import { useAuthContext } from '@/contexts/AuthContext';
 import { Loader2, AlertCircle, RefreshCw } from 'lucide-react';
@@ -11,7 +12,7 @@ import { CAT_AVATARS } from '@/lib/constants';
 function CoupleLayoutContent() {
   const { shareCode } = useParams();
   const navigate = useNavigate();
-  const { couple, loading, error, updateProfile, refetch } = useCoupleContext();
+  const { couple, loading, error, isSyncing, updateProfile, refetch } = useCoupleContext();
   const { loading: authLoading, isValidated, coupleId, validateShareCode } = useAuthContext();
   const [showOnboarding, setShowOnboarding] = useState(false);
   const [myPosition, setMyPosition] = useState<number | null>(null);
@@ -165,6 +166,7 @@ function CoupleLayoutContent() {
 
   return (
     <div className="min-h-screen bg-background pb-24">
+      <SyncIndicator isSyncing={isSyncing} />
       <Outlet context={{ couple, myPosition }} />
       <BottomNav />
       

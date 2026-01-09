@@ -1,4 +1,4 @@
-import { createContext, useContext, useState, useEffect, useCallback, ReactNode } from 'react';
+import { createContext, useContext, useState, useEffect, useCallback, ReactNode, useRef } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { 
@@ -97,6 +97,7 @@ interface CoupleContextType {
   loading: boolean;
   error: string | null;
   realtimeStatus: string;
+  isSyncing: boolean;
   fetchCouple: (code: string) => Promise<void>;
   refetch: () => Promise<void>;
   updateProfile: (profileId: string, updates: Partial<Profile>) => Promise<void>;
@@ -135,6 +136,8 @@ export function CoupleProvider({ children, shareCode }: CoupleProviderProps) {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [realtimeStatus, setRealtimeStatus] = useState<string>('CONNECTING');
+  const [isSyncing, setIsSyncing] = useState(false);
+  const syncTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
   const fetchCouple = useCallback(async (code: string) => {
     try {
@@ -197,6 +200,61 @@ export function CoupleProvider({ children, shareCode }: CoupleProviderProps) {
       await fetchCouple(shareCode);
     }
   }, [shareCode, fetchCouple]);
+
+  // Silent refetch - atualiza em background sem mostrar loading
+  const silentRefetch = useCallback(async () => {
+    if (!shareCode || !couple) return;
+    
+    // Debounce de 100ms - só mostra indicador se demorar
+    syncTimeoutRef.current = setTimeout(() => setIsSyncing(true), 100);
+    
+    try {
+      const { data: coupleData } = await supabase
+        .from('couples')
+        .select('*')
+        .eq('share_code', shareCode)
+        .single();
+
+      if (!coupleData) return;
+
+      const [profilesRes, tagsRes, expensesRes, cardsRes, agreementsRes, settlementsRes] = await Promise.all([
+        supabase.from('profiles').select('*').eq('couple_id', coupleData.id).order('position'),
+        supabase.from('tags').select('*').eq('couple_id', coupleData.id),
+        supabase.from('expenses').select('*').eq('couple_id', coupleData.id).order('expense_date', { ascending: false }),
+        supabase.from('cards').select('*').eq('couple_id', coupleData.id),
+        supabase.from('agreements').select('*').eq('couple_id', coupleData.id),
+        supabase.from('settlements').select('*').eq('couple_id', coupleData.id).order('settled_at', { ascending: false }),
+      ]);
+
+      setCouple({
+        id: coupleData.id,
+        share_code: coupleData.share_code,
+        profiles: profilesRes.data || [],
+        tags: tagsRes.data || [],
+        expenses: (expensesRes.data || []).map(e => ({
+          ...e,
+          split_value: e.split_value as { person1: number; person2: number },
+          payment_type: e.payment_type || 'debit',
+          installments: e.installments || 1,
+          installment_number: e.installment_number || 1,
+        })) as Expense[],
+        cards: (cardsRes.data || []) as Card[],
+        agreements: (agreementsRes.data || []).map(a => ({
+          ...a,
+          split_value: a.split_value as { person1: number; person2: number },
+        })) as Agreement[],
+        settlements: (settlementsRes.data || []) as Settlement[],
+      });
+    } catch (err: unknown) {
+      console.error('[CoupleContext] Silent refetch error:', err);
+    } finally {
+      if (syncTimeoutRef.current) {
+        clearTimeout(syncTimeoutRef.current);
+        syncTimeoutRef.current = null;
+      }
+      setIsSyncing(false);
+    }
+  }, [shareCode, couple]);
 
   // ============ MUTATIONS with immediate local updates ============
 
@@ -624,7 +682,7 @@ export function CoupleProvider({ children, shareCode }: CoupleProviderProps) {
         { event: '*', schema: 'public', table: 'expenses', filter: `couple_id=eq.${couple.id}` }, 
         (payload) => {
           console.log('[CoupleContext] Realtime expenses update:', payload.eventType);
-          refetch();
+          silentRefetch();
         }
       )
       .on(
@@ -632,7 +690,7 @@ export function CoupleProvider({ children, shareCode }: CoupleProviderProps) {
         { event: '*', schema: 'public', table: 'profiles', filter: `couple_id=eq.${couple.id}` }, 
         (payload) => {
           console.log('[CoupleContext] Realtime profiles update:', payload.eventType);
-          refetch();
+          silentRefetch();
         }
       )
       .on(
@@ -640,7 +698,7 @@ export function CoupleProvider({ children, shareCode }: CoupleProviderProps) {
         { event: '*', schema: 'public', table: 'tags', filter: `couple_id=eq.${couple.id}` }, 
         (payload) => {
           console.log('[CoupleContext] Realtime tags update:', payload.eventType);
-          refetch();
+          silentRefetch();
         }
       )
       .on(
@@ -648,7 +706,7 @@ export function CoupleProvider({ children, shareCode }: CoupleProviderProps) {
         { event: '*', schema: 'public', table: 'cards', filter: `couple_id=eq.${couple.id}` }, 
         (payload) => {
           console.log('[CoupleContext] Realtime cards update:', payload.eventType);
-          refetch();
+          silentRefetch();
         }
       )
       .on(
@@ -656,7 +714,7 @@ export function CoupleProvider({ children, shareCode }: CoupleProviderProps) {
         { event: '*', schema: 'public', table: 'agreements', filter: `couple_id=eq.${couple.id}` }, 
         (payload) => {
           console.log('[CoupleContext] Realtime agreements update:', payload.eventType);
-          refetch();
+          silentRefetch();
         }
       )
       .on(
@@ -664,7 +722,7 @@ export function CoupleProvider({ children, shareCode }: CoupleProviderProps) {
         { event: '*', schema: 'public', table: 'settlements', filter: `couple_id=eq.${couple.id}` }, 
         (payload) => {
           console.log('[CoupleContext] Realtime settlements update:', payload.eventType);
-          refetch();
+          silentRefetch();
         }
       )
       .subscribe((status, err) => {
@@ -679,24 +737,25 @@ export function CoupleProvider({ children, shareCode }: CoupleProviderProps) {
       console.log('[CoupleContext] Removing realtime channel:', channelName);
       supabase.removeChannel(channel); 
     };
-  }, [couple?.id, refetch]);
+  }, [couple?.id, silentRefetch]);
 
   // ============ Fallback polling on focus ============
   useEffect(() => {
     const handleFocus = () => {
-      console.log('[CoupleContext] Window focused, refetching...');
-      refetch();
+      console.log('[CoupleContext] Window focused, silent refetching...');
+      silentRefetch();
     };
 
     window.addEventListener('focus', handleFocus);
     return () => window.removeEventListener('focus', handleFocus);
-  }, [refetch]);
+  }, [silentRefetch]);
 
   const value: CoupleContextType = {
     couple,
     loading,
     error,
     realtimeStatus,
+    isSyncing,
     fetchCouple,
     refetch,
     updateProfile,
