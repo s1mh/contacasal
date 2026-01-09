@@ -1,9 +1,9 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import { Heart, ArrowRight, Sparkles, Loader2, Users, AtSign, Lock, HelpCircle } from "lucide-react";
+import { Heart, ArrowRight, Sparkles, Loader2, Users, AtSign, Lock, HelpCircle, Eye, EyeOff } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { InputOTP, InputOTPGroup, InputOTPSlotMasked } from "@/components/ui/input-otp";
+import { InputOTP, InputOTPGroup, InputOTPSlot, InputOTPSlotMasked } from "@/components/ui/input-otp";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { useAuthContext } from "@/contexts/AuthContext";
@@ -38,6 +38,7 @@ export default function Index() {
   const [attemptsRemaining, setAttemptsRemaining] = useState<number | null>(null);
   const [lockedUntil, setLockedUntil] = useState<string | null>(null);
   const [showRecovery, setShowRecovery] = useState(false);
+  const [showUsernamePin, setShowUsernamePin] = useState(false);
 
   // Check for saved space on mount
   useEffect(() => {
@@ -319,16 +320,19 @@ export default function Index() {
             </div>
 
             <div className="space-y-4">
-              <Input
-                value={username}
-                onChange={(e) => {
-                  setUsername(e.target.value.replace(/\s/g, "").toLowerCase());
-                  setUsernameError("");
-                }}
-                placeholder="@seu_username"
-                className="text-center"
-                disabled={usernameLoading || !!lockedUntil}
-              />
+              <div className="relative">
+                <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground font-medium">@</span>
+                <Input
+                  value={username}
+                  onChange={(e) => {
+                    setUsername(e.target.value.replace(/[@\s]/g, "").toLowerCase());
+                    setUsernameError("");
+                  }}
+                  placeholder="seu_username"
+                  className="pl-8 text-left"
+                  disabled={usernameLoading || !!lockedUntil}
+                />
+              </div>
 
               <div className="flex flex-col items-center gap-2">
                 <div className="flex items-center gap-2 text-sm text-muted-foreground">
@@ -336,19 +340,46 @@ export default function Index() {
                   <span>Código pessoal</span>
                 </div>
 
-                <InputOTP
-                  maxLength={4}
-                  value={usernamePin}
-                  onChange={handleUsernamePinChange}
-                  disabled={usernameLoading || !!lockedUntil || !username.trim()}
-                >
-                  <InputOTPGroup>
-                    <InputOTPSlotMasked index={0} className="w-12 h-12 text-xl" />
-                    <InputOTPSlotMasked index={1} className="w-12 h-12 text-xl" />
-                    <InputOTPSlotMasked index={2} className="w-12 h-12 text-xl" />
-                    <InputOTPSlotMasked index={3} className="w-12 h-12 text-xl" />
-                  </InputOTPGroup>
-                </InputOTP>
+                <div className="flex items-center gap-2">
+                  <InputOTP
+                    maxLength={4}
+                    value={usernamePin}
+                    onChange={handleUsernamePinChange}
+                    disabled={usernameLoading || !!lockedUntil || !username.trim()}
+                  >
+                    <InputOTPGroup>
+                      {showUsernamePin ? (
+                        <>
+                          <InputOTPSlot index={0} className="w-12 h-12 text-xl" />
+                          <InputOTPSlot index={1} className="w-12 h-12 text-xl" />
+                          <InputOTPSlot index={2} className="w-12 h-12 text-xl" />
+                          <InputOTPSlot index={3} className="w-12 h-12 text-xl" />
+                        </>
+                      ) : (
+                        <>
+                          <InputOTPSlotMasked index={0} className="w-12 h-12 text-xl" />
+                          <InputOTPSlotMasked index={1} className="w-12 h-12 text-xl" />
+                          <InputOTPSlotMasked index={2} className="w-12 h-12 text-xl" />
+                          <InputOTPSlotMasked index={3} className="w-12 h-12 text-xl" />
+                        </>
+                      )}
+                    </InputOTPGroup>
+                  </InputOTP>
+                  
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="icon"
+                    onClick={() => setShowUsernamePin(!showUsernamePin)}
+                    className="h-10 w-10"
+                  >
+                    {showUsernamePin ? (
+                      <EyeOff className="w-4 h-4 text-muted-foreground" />
+                    ) : (
+                      <Eye className="w-4 h-4 text-muted-foreground" />
+                    )}
+                  </Button>
+                </div>
 
                 {usernameLoading && (
                   <div className="flex items-center gap-2 text-sm text-muted-foreground">
@@ -374,6 +405,25 @@ export default function Index() {
                   </p>
                 )}
               </div>
+
+              {/* Login Button */}
+              <Button
+                onClick={handleUsernameLogin}
+                disabled={!username.trim() || usernamePin.length !== 4 || usernameLoading || !!lockedUntil}
+                className="w-full"
+              >
+                {usernameLoading ? (
+                  <>
+                    <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                    Entrando...
+                  </>
+                ) : (
+                  <>
+                    Entrar
+                    <ArrowRight className="w-4 h-4 ml-2" />
+                  </>
+                )}
+              </Button>
 
               {/* Forgot PIN Link */}
               <Button
