@@ -1,5 +1,5 @@
 import { useOutletContext, useParams } from 'react-router-dom';
-import { Share2, Copy } from 'lucide-react';
+import { Share2 } from 'lucide-react';
 import { BalanceCard } from '@/components/BalanceCard';
 import { ExpenseCard } from '@/components/ExpenseCard';
 import { Avatar } from '@/components/Avatar';
@@ -65,23 +65,6 @@ export default function Summary() {
 
       {/* Balance Card */}
       <BalanceCard profiles={couple.profiles} balance={balance} />
-
-      {/* Share Code */}
-      <div className="mt-4 bg-muted rounded-2xl p-4 flex items-center justify-between">
-        <div>
-          <p className="text-xs text-muted-foreground">Código do espaço</p>
-          <p className="font-mono font-semibold text-foreground">{shareCode}</p>
-        </div>
-        <button
-          onClick={() => {
-            navigator.clipboard.writeText(shareCode || '');
-            toast({ title: 'Código copiado!' });
-          }}
-          className="p-2 hover:bg-background rounded-lg transition-colors"
-        >
-          <Copy className="w-4 h-4 text-muted-foreground" />
-        </button>
-      </div>
 
       {/* Recent Expenses */}
       <div className="mt-6">
