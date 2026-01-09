@@ -17,3 +17,12 @@ verify_jwt = false
 
 [functions.reset-pin]
 verify_jwt = false
+
+[functions.generate-username]
+verify_jwt = false
+
+[functions.check-email]
+verify_jwt = false
+
+[functions.login-with-username]
+verify_jwt = false

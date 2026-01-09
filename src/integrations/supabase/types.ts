@@ -293,6 +293,7 @@ export type Database = {
           recovery_token: string | null
           recovery_token_expires_at: string | null
           updated_at: string
+          username: string | null
         }
         Insert: {
           avatar_index?: number
@@ -309,6 +310,7 @@ export type Database = {
           recovery_token?: string | null
           recovery_token_expires_at?: string | null
           updated_at?: string
+          username?: string | null
         }
         Update: {
           avatar_index?: number
@@ -325,6 +327,7 @@ export type Database = {
           recovery_token?: string | null
           recovery_token_expires_at?: string | null
           updated_at?: string
+          username?: string | null
         }
         Relationships: [
           {

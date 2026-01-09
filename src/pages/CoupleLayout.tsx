@@ -88,7 +88,7 @@ function CoupleLayoutContent() {
     }
   };
 
-  const handleOnboardingComplete = async (position: number, name: string, avatarIndex: number, color: string, pinCode: string, email?: string) => {
+  const handleOnboardingComplete = async (position: number, name: string, avatarIndex: number, color: string, pinCode: string, email?: string, username?: string) => {
     const profile = couple?.profiles.find(p => p.position === position);
     if (profile) {
       // Hash PIN on server - for now store plain, will be hashed on first verify
@@ -101,6 +101,10 @@ function CoupleLayoutContent() {
       
       if (email) {
         updateData.email = email;
+      }
+
+      if (username) {
+        updateData.username = username;
       }
 
       const { error } = await supabase
@@ -126,7 +130,7 @@ function CoupleLayoutContent() {
     // Show success toast after profile creation
     toast({ 
       title: 'Espaço criado! 🎉',
-      description: 'Seu cantinho do casal está pronto'
+      description: username ? `Seu @ é @${username}` : 'Seu cantinho do casal está pronto'
     });
   };
 
