@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Heart, ArrowRight, Sparkles, Loader2, Users, AtSign, Lock } from 'lucide-react';
+import { Heart, ArrowRight, Sparkles, Loader2, Users, AtSign, Lock, HelpCircle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { InputOTP, InputOTPGroup, InputOTPSlotMasked } from '@/components/ui/input-otp';
@@ -10,6 +10,7 @@ import { useAuthContext } from '@/contexts/AuthContext';
 import { CAT_AVATARS } from '@/lib/constants';
 import { devLog } from '@/lib/validation';
 import { cn } from '@/lib/utils';
+import { RecoveryModal } from '@/components/RecoveryModal';
 
 interface LastSpace {
   shareCode: string;
@@ -36,6 +37,7 @@ export default function Index() {
   const [usernameLoading, setUsernameLoading] = useState(false);
   const [attemptsRemaining, setAttemptsRemaining] = useState<number | null>(null);
   const [lockedUntil, setLockedUntil] = useState<string | null>(null);
+  const [showRecovery, setShowRecovery] = useState(false);
 
   // Check for saved space on mount
   useEffect(() => {
@@ -377,6 +379,17 @@ export default function Index() {
                 )}
               </div>
 
+              {/* Forgot PIN Link */}
+              <Button
+                variant="link"
+                onClick={() => setShowRecovery(true)}
+                className="text-muted-foreground text-sm"
+                disabled={usernameLoading}
+              >
+                <HelpCircle className="w-4 h-4 mr-1" />
+                Esqueci meu código
+              </Button>
+
               <Button
                 variant="ghost"
                 onClick={() => {
@@ -488,6 +501,12 @@ export default function Index() {
           </p>
         </div>
       </div>
+
+      {/* Recovery Modal for username login */}
+      <RecoveryModal
+        open={showRecovery}
+        onClose={() => setShowRecovery(false)}
+      />
     </div>
   );
 }

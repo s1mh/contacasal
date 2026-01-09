@@ -149,12 +149,12 @@ export function ReconnectModal({ open, profiles, onReconnect, onCreateNew, share
               <>
                 {/* Profile Selection */}
                 <div className="grid grid-cols-2 gap-4 animate-fade-in">
-                  {configuredProfiles.map((profile) => (
+                {configuredProfiles.map((profile) => (
                     <button
                       key={profile.id}
                       onClick={() => handleProfileSelect(profile)}
                       className={cn(
-                        "flex flex-col items-center gap-3 p-4 rounded-2xl",
+                        "flex flex-col items-center gap-2 p-4 rounded-2xl",
                         "bg-muted/50 hover:bg-muted transition-all duration-300",
                         "hover:scale-105 hover:shadow-lg",
                         "border-2 border-transparent hover:border-primary/30"
@@ -171,6 +171,9 @@ export function ReconnectModal({ open, profiles, onReconnect, onCreateNew, share
                         />
                       </div>
                       <span className="font-medium text-sm">{profile.name}</span>
+                      {profile.username && (
+                        <span className="text-xs text-muted-foreground">@{profile.username}</span>
+                      )}
                     </button>
                   ))}
                 </div>
@@ -192,15 +195,20 @@ export function ReconnectModal({ open, profiles, onReconnect, onCreateNew, share
                 {/* PIN Entry */}
                 <div className="flex flex-col items-center gap-6 animate-fade-in">
                   {/* Selected Profile Preview */}
-                  <div 
-                    className="w-20 h-20 rounded-full overflow-hidden ring-4 transition-all animate-cat-idle"
-                    style={{ boxShadow: `0 0 0 4px ${selectedProfile.color}` }}
-                  >
-                    <img 
-                      src={CAT_AVATARS[selectedProfile.avatar_index - 1]} 
-                      alt={selectedProfile.name}
-                      className="w-full h-full object-cover"
-                    />
+                  <div className="flex flex-col items-center gap-1">
+                    <div 
+                      className="w-20 h-20 rounded-full overflow-hidden ring-4 transition-all animate-cat-idle"
+                      style={{ boxShadow: `0 0 0 4px ${selectedProfile.color}` }}
+                    >
+                      <img 
+                        src={CAT_AVATARS[selectedProfile.avatar_index - 1]} 
+                        alt={selectedProfile.name}
+                        className="w-full h-full object-cover"
+                      />
+                    </div>
+                    {selectedProfile.username && (
+                      <span className="text-sm text-muted-foreground">@{selectedProfile.username}</span>
+                    )}
                   </div>
 
                   {/* PIN Input */}
