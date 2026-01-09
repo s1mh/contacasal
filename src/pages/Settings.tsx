@@ -1,6 +1,6 @@
 import { useState } from 'react';
-import { useOutletContext, useParams } from 'react-router-dom';
-import { User, Palette, Tag, Plus, Trash2, Check, Copy } from 'lucide-react';
+import { useOutletContext, useParams, useNavigate } from 'react-router-dom';
+import { User, Palette, Tag, Plus, Trash2, Check, Copy, LogOut } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Avatar } from '@/components/Avatar';
@@ -11,11 +11,14 @@ import { Couple, useCouple } from '@/hooks/useCouple';
 import { CAT_AVATARS, PERSON_COLORS, TAG_ICONS } from '@/lib/constants';
 import { cn } from '@/lib/utils';
 import { useToast } from '@/hooks/use-toast';
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
 
 export default function Settings() {
   const { couple, myPosition } = useOutletContext<{ couple: Couple; myPosition: number | null }>();
+  const navigate = useNavigate();
   const { 
     updateProfile, 
+    deleteProfile,
     addTag, 
     deleteTag, 
     addCard, 
@@ -80,6 +83,15 @@ export default function Settings() {
   const handleCopyCode = () => {
     navigator.clipboard.writeText(shareCode || '');
     toast({ title: 'Código copiado!' });
+  };
+
+  const handleDeleteProfile = async () => {
+    if (myProfile && shareCode) {
+      const success = await deleteProfile(myProfile.id, shareCode);
+      if (success) {
+        navigate('/');
+      }
+    }
   };
 
   if (!myProfile) {
@@ -311,6 +323,34 @@ export default function Settings() {
           <Copy className="w-5 h-5 text-muted-foreground" />
         </button>
       </div>
+
+      {/* Delete Profile */}
+      <AlertDialog>
+        <AlertDialogTrigger asChild>
+          <Button 
+            variant="ghost" 
+            className="w-full text-destructive hover:text-destructive hover:bg-destructive/10"
+          >
+            <LogOut className="w-4 h-4 mr-2" />
+            Sair deste espaço
+          </Button>
+        </AlertDialogTrigger>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Tem certeza?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Seu perfil será resetado e você será redirecionado para a página inicial. 
+              Você poderá entrar novamente com o código do espaço.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancelar</AlertDialogCancel>
+            <AlertDialogAction onClick={handleDeleteProfile} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
+              Sair
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }
