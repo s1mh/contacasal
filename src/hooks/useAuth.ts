@@ -76,6 +76,8 @@ export function useAuth() {
   // Validate share code and set couple_id in JWT claims
   const validateShareCode = useCallback(async (shareCode: string): Promise<{ success: boolean; error?: string; coupleId?: string }> => {
     try {
+      devLog('Validating share code:', shareCode);
+      
       const { data, error } = await supabase.functions.invoke('validate-share-code', {
         body: { share_code: shareCode },
       });
@@ -86,14 +88,31 @@ export function useAuth() {
       }
 
       if (!data.success) {
+        devLog('Share code validation returned error:', data.error);
         return { success: false, error: data.error || 'Validation failed' };
       }
 
+      devLog('Share code validated, refreshing session...');
+
       // Refresh the session to get the updated JWT with couple_id
-      const { error: refreshError } = await supabase.auth.refreshSession();
+      const { data: refreshData, error: refreshError } = await supabase.auth.refreshSession();
       if (refreshError) {
         devLog('Session refresh failed:', refreshError.message);
         return { success: false, error: 'Failed to refresh session' };
+      }
+
+      // Update local state with the new session data
+      if (refreshData.session) {
+        const newCoupleId = refreshData.session.user?.app_metadata?.couple_id || null;
+        devLog('Session refreshed, new couple_id:', newCoupleId);
+        
+        setAuthState({
+          user: refreshData.session.user,
+          session: refreshData.session,
+          coupleId: newCoupleId,
+          loading: false,
+          isValidated: !!newCoupleId,
+        });
       }
 
       devLog('Share code validated successfully');

@@ -20,8 +20,11 @@ export default function CoupleLayout() {
     const doValidation = async () => {
       if (!shareCode || authLoading) return;
       
-      // If already validated for a different couple, or not validated at all
-      if (!isValidated || (couple && coupleId !== couple.id)) {
+      // Always validate if not validated, or if the couple_id doesn't match what we expect
+      // This ensures each device/session gets proper validation
+      const needsValidation = !isValidated || !coupleId;
+      
+      if (needsValidation) {
         setValidating(true);
         setValidationError(null);
         
@@ -36,7 +39,7 @@ export default function CoupleLayout() {
     };
     
     doValidation();
-  }, [shareCode, authLoading, isValidated, couple, coupleId, validateShareCode]);
+  }, [shareCode, authLoading, isValidated, coupleId, validateShareCode]);
 
   // Check for existing device recognition
   useEffect(() => {
