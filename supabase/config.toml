@@ -35,3 +35,9 @@ verify_jwt = false
 
 [functions.check-username]
 verify_jwt = false
+
+[functions.activate-profile]
+verify_jwt = false
+
+[functions.cancel-pending-profile]
+verify_jwt = false

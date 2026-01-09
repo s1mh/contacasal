@@ -1,6 +1,6 @@
 import { useState, useMemo } from 'react';
 import { useOutletContext } from 'react-router-dom';
-import { Calendar, Filter } from 'lucide-react';
+import { Calendar, Filter, FileText } from 'lucide-react';
 import { ExpenseCard } from '@/components/ExpenseCard';
 import { TagPill } from '@/components/TagPill';
 import { AnimatedPage, AnimatedItem } from '@/components/AnimatedPage';
@@ -9,6 +9,7 @@ import { formatCurrency } from '@/lib/constants';
 import { format, startOfMonth, endOfMonth, isWithinInterval, parseISO } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { cn } from '@/lib/utils';
+import { Avatar } from '@/components/Avatar';
 
 export default function History() {
   const { couple } = useOutletContext<{ couple: Couple }>();
@@ -114,6 +115,53 @@ export default function History() {
         </div>
       </AnimatedItem>
 
+      {/* Active Agreements - Separate section */}
+      {couple.agreements.filter(a => a.is_active).length > 0 && (
+        <AnimatedItem delay={250}>
+          <div className="mb-4">
+            <div className="flex items-center gap-2 mb-2">
+              <FileText className="w-4 h-4 text-muted-foreground" />
+              <span className="text-sm text-muted-foreground">Acordos recorrentes</span>
+            </div>
+            <div className="bg-card rounded-2xl p-4 shadow-glass space-y-3">
+              {couple.agreements.filter(a => a.is_active).map((agreement) => {
+                const tag = couple.tags.find(t => t.id === agreement.tag_id);
+                const paidByProfile = couple.profiles.find(p => p.id === agreement.paid_by_profile_id || p.position === agreement.paid_by);
+                
+                return (
+                  <div key={agreement.id} className="flex items-center justify-between">
+                    <div className="flex items-center gap-3">
+                      {paidByProfile && (
+                        <Avatar avatarIndex={paidByProfile.avatar_index} size="sm" ringColor={paidByProfile.color} />
+                      )}
+                      <div>
+                        <div className="flex items-center gap-2">
+                          {tag && <TagPill name={tag.name} icon={tag.icon} color={tag.color} size="sm" />}
+                          <span className="font-medium text-sm">{agreement.name}</span>
+                        </div>
+                        <p className="text-xs text-muted-foreground">
+                          Dia {agreement.day_of_month} de cada mês
+                        </p>
+                      </div>
+                    </div>
+                    <span className="font-semibold">{formatCurrency(agreement.amount)}</span>
+                  </div>
+                );
+              })}
+              <div className="pt-2 border-t border-border/50">
+                <div className="flex justify-between text-sm">
+                  <span className="text-muted-foreground">Total acordos</span>
+                  <span className="font-bold">
+                    {formatCurrency(
+                      couple.agreements.filter(a => a.is_active).reduce((sum, a) => sum + a.amount, 0)
+                    )}
+                  </span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </AnimatedItem>
+      )}
       {/* Expenses List */}
       {filteredExpenses.length === 0 ? (
         <AnimatedItem delay={300}>
