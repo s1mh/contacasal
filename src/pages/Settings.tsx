@@ -38,6 +38,10 @@ export default function Settings() {
 
   const [editingName, setEditingName] = useState(false);
   const [nameValue, setNameValue] = useState('');
+  const [editingUsername, setEditingUsername] = useState(false);
+  const [usernameValue, setUsernameValue] = useState('');
+  const [usernameError, setUsernameError] = useState('');
+  const [checkingUsername, setCheckingUsername] = useState(false);
   const [newTagName, setNewTagName] = useState('');
   const [newTagIcon, setNewTagIcon] = useState('tag');
   const [newTagColor, setNewTagColor] = useState('#94A3B8');
@@ -70,6 +74,35 @@ export default function Settings() {
   const handleUpdateColor = async (color: string) => {
     if (myProfile) {
       await updateProfile(myProfile.id, { color });
+    }
+  };
+
+  const handleUpdateUsername = async () => {
+    if (!myProfile || !usernameValue.trim()) {
+      setEditingUsername(false);
+      return;
+    }
+
+    // Check availability
+    setCheckingUsername(true);
+    try {
+      const { data } = await supabase.functions.invoke('check-username', {
+        body: { username: usernameValue.trim(), exclude_profile_id: myProfile.id }
+      });
+
+      if (data?.exists) {
+        setUsernameError('Este username já está em uso');
+        return;
+      }
+
+      await updateProfile(myProfile.id, { username: usernameValue.trim() });
+      setEditingUsername(false);
+      setUsernameValue('');
+    } catch (err) {
+      console.error('Error updating username:', err);
+      setUsernameError('Erro ao verificar username');
+    } finally {
+      setCheckingUsername(false);
     }
   };
 
@@ -228,17 +261,55 @@ export default function Settings() {
             )}
           </div>
 
-          {/* Username */}
-          {myProfile.username && (
-            <div className="mb-4">
-              <label className="text-sm text-muted-foreground mb-2 block flex items-center gap-2">
-                <AtSign className="w-4 h-4" /> Username
-              </label>
-              <div className="p-3 bg-muted/50 rounded-2xl">
-                <span className="font-mono text-foreground">@{myProfile.username}</span>
+          {/* Username - Editable */}
+          <div className="mb-4">
+            <label className="text-sm text-muted-foreground mb-2 block flex items-center gap-2">
+              <AtSign className="w-4 h-4" /> Username
+            </label>
+            {editingUsername ? (
+              <div className="flex gap-2">
+                <div className="flex-1 flex items-center gap-1">
+                  <span className="text-muted-foreground">@</span>
+                  <Input
+                    value={usernameValue}
+                    onChange={(e) => {
+                      setUsernameValue(e.target.value.replace(/[@\s]/g, '').toLowerCase());
+                      setUsernameError('');
+                    }}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter') {
+                        handleUpdateUsername();
+                      } else if (e.key === 'Escape') {
+                        setEditingUsername(false);
+                        setUsernameValue('');
+                        setUsernameError('');
+                      }
+                    }}
+                    autoFocus
+                    maxLength={20}
+                  />
+                </div>
+                <Button
+                  size="icon"
+                  onClick={handleUpdateUsername}
+                  disabled={checkingUsername || !!usernameError}
+                >
+                  <Check className="w-4 h-4" />
+                </Button>
               </div>
-            </div>
-          )}
+            ) : (
+              <button
+                onClick={() => {
+                  setEditingUsername(true);
+                  setUsernameValue(myProfile.username || '');
+                }}
+                className="w-full text-left p-3 bg-muted/50 rounded-2xl hover:bg-muted/80 transition-colors border-2 border-transparent hover:border-primary/30"
+              >
+                <span className="font-mono text-foreground">@{myProfile.username || 'Clique para definir'}</span>
+              </button>
+            )}
+            {usernameError && <p className="text-xs text-destructive mt-1">{usernameError}</p>}
+          </div>
 
           {/* Color */}
           <div>

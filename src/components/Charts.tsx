@@ -86,7 +86,12 @@ export function ExpensesByTagChart({ expenses, tags }: { expenses: Expense[]; ta
 
 export function ExpensesByPersonChart({ expenses, profiles }: { expenses: Expense[]; profiles: Profile[] }) {
   const data = useMemo(() => {
-    const byPerson = profiles.map(profile => {
+    // Filter only configured profiles (not "Pessoa 1", "Pessoa 2", or "Pessoa")
+    const configuredProfiles = profiles.filter(p => 
+      p.name !== 'Pessoa 1' && p.name !== 'Pessoa 2' && p.name !== 'Pessoa'
+    );
+    
+    const byPerson = configuredProfiles.map(profile => {
       const personExpenses = expenses.filter(e => e.paid_by === profile.position);
       const total = personExpenses.reduce((sum, e) => sum + e.total_amount, 0);
       return {

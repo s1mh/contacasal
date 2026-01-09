@@ -3,6 +3,7 @@ import { useOutletContext, useNavigate, useParams } from 'react-router-dom';
 import { ArrowLeft, Check, Calculator, CreditCard, Calendar, Info } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { CurrencyInput } from '@/components/ui/currency-input';
 import { Avatar } from '@/components/Avatar';
 import { TagPill } from '@/components/TagPill';
 import { Couple, useCoupleContext } from '@/contexts/CoupleContext';
@@ -23,7 +24,7 @@ export default function NewExpense() {
   const { shareCode } = useParams();
   const navigate = useNavigate();
 
-  const [amount, setAmount] = useState('');
+  const [amount, setAmount] = useState(0);
   const [description, setDescription] = useState('');
   const [splitType, setSplitType] = useState<SplitType>('equal');
   const [splitValue, setSplitValue] = useState({ person1: 50, person2: 50 });
@@ -59,22 +60,22 @@ export default function NewExpense() {
   const creditCards = payerCards.filter(c => c.type === 'credit');
   const selectedCard = couple.cards.find(c => c.id === selectedCardId);
 
-  const numericAmount = parseFloat(amount.replace(',', '.')) || 0;
+  const numericAmount = amount;
 
   // Calculate billing month based on card closing day
-  // Rule: if expense day > closing day, expense goes to NEXT month's bill (paid in month after)
-  // Example: closing day 29, expense on day 30 of January → bill for February (paid in March)
+  // Rule: if expense day >= closing day, expense goes to NEXT month's bill (paid in month after)
+  // Example: closing day 1, expense on day 1 of January → bill for February (paid in March)
   const billingMonth = useMemo(() => {
     if (paymentType !== 'credit' || !selectedCard?.closing_day) return null;
     
     const day = expenseDate.getDate();
     const closingDay = selectedCard.closing_day;
     
-    // If the purchase is AFTER the closing day, it goes to next month's bill
-    if (day > closingDay) {
+    // If the purchase is ON or AFTER the closing day, it goes to next month's bill
+    if (day >= closingDay) {
       return addMonths(startOfMonth(expenseDate), 2); // +2 because: next bill (month+1) is paid in (month+2)
     }
-    // If purchase is on or before closing day, it goes to current month's bill
+    // If purchase is before closing day, it goes to current month's bill
     return addMonths(startOfMonth(expenseDate), 1); // Current bill is paid next month
   }, [expenseDate, paymentType, selectedCard]);
 
@@ -177,11 +178,9 @@ export default function NewExpense() {
         <label className="text-sm text-muted-foreground mb-2 block">Valor total</label>
         <div className="flex items-center gap-2">
           <span className="text-2xl text-muted-foreground">R$</span>
-          <Input
-            type="text"
-            inputMode="decimal"
+          <CurrencyInput
             value={amount}
-            onChange={(e) => setAmount(e.target.value.replace(/[^0-9,\.]/g, ''))}
+            onChange={setAmount}
             placeholder="0,00"
             className="text-4xl font-bold border-0 bg-transparent p-0 h-auto focus-visible:ring-0"
           />
