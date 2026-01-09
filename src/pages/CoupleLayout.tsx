@@ -88,18 +88,24 @@ function CoupleLayoutContent() {
     }
   };
 
-  const handleOnboardingComplete = async (position: number, name: string, avatarIndex: number, color: string, pinCode: string) => {
+  const handleOnboardingComplete = async (position: number, name: string, avatarIndex: number, color: string, pinCode: string, email?: string) => {
     const profile = couple?.profiles.find(p => p.position === position);
     if (profile) {
-      // Update profile with PIN
+      // Hash PIN on server - for now store plain, will be hashed on first verify
+      const updateData: Record<string, unknown> = { 
+        name, 
+        avatar_index: avatarIndex, 
+        color,
+        pin_code: pinCode 
+      };
+      
+      if (email) {
+        updateData.email = email;
+      }
+
       const { error } = await supabase
         .from('profiles')
-        .update({ 
-          name, 
-          avatar_index: avatarIndex, 
-          color,
-          pin_code: pinCode 
-        })
+        .update(updateData)
         .eq('id', profile.id);
       
       if (error) {
@@ -116,24 +122,17 @@ function CoupleLayoutContent() {
     }
     setMyPosition(position);
     setShowOnboarding(false);
+    
+    // Show success toast after profile creation
+    toast({ 
+      title: 'Espaço criado! 🎉',
+      description: 'Seu cantinho do casal está pronto'
+    });
   };
 
   const handleReconnect = async (profile: Profile, pin: string): Promise<boolean> => {
-    // Verify PIN against database
-    const { data, error } = await supabase
-      .from('profiles')
-      .select('pin_code')
-      .eq('id', profile.id)
-      .single();
-    
-    if (error || !data) {
-      console.error('Error verifying PIN:', error);
-      return false;
-    }
-    
-    if (data.pin_code !== pin) {
-      return false;
-    }
+    // PIN verification is now done via edge function in ReconnectModal
+    // This function just handles the localStorage and state update
     
     // PIN correct - save to localStorage and proceed
     localStorage.setItem(`couple_${shareCode}`, JSON.stringify({

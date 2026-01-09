@@ -82,10 +82,7 @@ export default function Index() {
       // Refresh the session to pick up the new couple_id claim
       await supabase.auth.refreshSession();
 
-      toast({
-        title: 'Espaço criado! 🎉',
-        description: 'Compartilhe o código com seu amor.',
-      });
+      // Toast moved to CoupleLayout after profile creation
 
       navigate(`/c/${data.share_code}`);
     } catch (err: unknown) {
