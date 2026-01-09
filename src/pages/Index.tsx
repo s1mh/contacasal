@@ -71,45 +71,9 @@ export default function Index() {
     return () => clearTimeout(timer);
   }, []);
 
-  const handleCreateSpace = async () => {
-    setLoading(true);
-    setCatsAnimating(true);
-
-    try {
-      devLog("Creating new couple space...");
-
-      const { data, error } = await supabase.functions.invoke("create-couple", {
-        body: {},
-      });
-
-      if (error) {
-        devLog("Error creating couple (function):", error.message);
-        throw new Error(error.message || "Erro ao criar espaço");
-      }
-
-      if (!data?.success || !data?.share_code) {
-        devLog("Invalid response from create-couple:", data);
-        throw new Error(data?.error || "Falha ao criar espaço");
-      }
-
-      devLog("Couple created successfully:", data.share_code);
-
-      // Refresh the session to pick up the new couple_id claim
-      await supabase.auth.refreshSession();
-
-      navigate(`/c/${data.share_code}`);
-    } catch (err: unknown) {
-      const message = err instanceof Error ? err.message : "Tente novamente.";
-      devLog("Error creating space:", err);
-      toast({
-        title: "Erro ao criar espaço",
-        description: message,
-        variant: "destructive",
-      });
-    } finally {
-      setLoading(false);
-      setCatsAnimating(false);
-    }
+  const handleCreateSpace = () => {
+    // Navigate to create page - space is created after profile is configured
+    navigate("/create");
   };
 
   const handleJoinSpace = async () => {

@@ -62,7 +62,12 @@ export default function Statistics() {
     const total = filteredExpenses.reduce((sum, e) => sum + e.total_amount, 0);
     const avgPerExpense = filteredExpenses.length > 0 ? total / filteredExpenses.length : 0;
     
-    const byPerson = couple.profiles.map(p => {
+    // Filter only configured profiles (not "Pessoa 1", "Pessoa 2", or "Pessoa")
+    const configuredProfiles = couple.profiles.filter(p => 
+      p.name !== 'Pessoa 1' && p.name !== 'Pessoa 2' && p.name !== 'Pessoa'
+    );
+    
+    const byPerson = configuredProfiles.map(p => {
       const personTotal = filteredExpenses
         .filter(e => e.paid_by === p.position)
         .reduce((sum, e) => sum + e.total_amount, 0);
