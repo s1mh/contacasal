@@ -24,6 +24,7 @@ function CoupleLayoutContent() {
   const [validating, setValidating] = useState(false);
   const [validationError, setValidationError] = useState<string | null>(null);
   const [newProfileId, setNewProfileId] = useState<string | null>(null);
+  const [isNewMember, setIsNewMember] = useState(false);
 
   // Validate share code when accessing a couple space
   useEffect(() => {
@@ -39,23 +40,34 @@ function CoupleLayoutContent() {
       setValidating(true);
       setValidationError(null);
       
-      // First, try to validate (for existing members)
+      // First, try to validate (checks if user is already a member)
       const validateResult = await validateShareCode(shareCode);
       
-      if (validateResult.success) {
-        // User already has access to this space
+      if (validateResult.success && validateResult.isMember) {
+        // User is already a member of this space
         setValidating(false);
         return;
       }
       
-      // If validation failed, try to join as new member
-      const joinResult = await joinSpace(shareCode);
+      if (validateResult.success && !validateResult.isMember) {
+        // Valid code but user is not a member yet - join as new member
+        const joinResult = await joinSpace(shareCode);
+        
+        if (!joinResult.success) {
+          setValidationError(joinResult.error || 'Falha ao entrar no espaço');
+        } else if (joinResult.profileId) {
+          // New member joined - store profile ID to show onboarding with welcome
+          setNewProfileId(joinResult.profileId);
+          setIsNewMember(true);
+        }
+        
+        setValidating(false);
+        return;
+      }
       
-      if (!joinResult.success) {
-        setValidationError(joinResult.error || 'Falha ao entrar no espaço');
-      } else if (joinResult.profileId) {
-        // New member joined - store profile ID to show onboarding
-        setNewProfileId(joinResult.profileId);
+      // If validation failed completely
+      if (!validateResult.success) {
+        setValidationError(validateResult.error || 'Código inválido');
       }
       
       setValidating(false);
@@ -311,6 +323,7 @@ function CoupleLayoutContent() {
         onComplete={handleOnboardingComplete}
         profiles={couple.profiles}
         shareCode={shareCode}
+        isNewMember={isNewMember}
       />
 
       {/* Reconnect Modal - For returning users on new devices */}

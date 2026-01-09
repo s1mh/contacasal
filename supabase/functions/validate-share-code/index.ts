@@ -66,10 +66,10 @@ Deno.serve(async (req) => {
       )
     }
 
-    // Use service role client to look up couple and update user metadata
+    // Use service role client to look up couple and check membership
     const supabaseAdmin = createClient(supabaseUrl, supabaseServiceKey)
 
-    // Look up the couple by share code - no expiration check
+    // Look up the couple by share code
     const { data: couple, error: coupleError } = await supabaseAdmin
       .from('couples')
       .select('id')
@@ -85,6 +85,17 @@ Deno.serve(async (req) => {
     }
 
     console.log('Found couple:', couple.id)
+
+    // Check if user already has a profile in this space
+    const { data: existingProfile, error: profileError } = await supabaseAdmin
+      .from('profiles')
+      .select('id, name')
+      .eq('couple_id', couple.id)
+      .eq('id', userId)
+      .maybeSingle()
+
+    const isMember = !!existingProfile
+    console.log('Is member:', isMember, existingProfile?.name)
 
     // Update the user's app_metadata with the couple_id
     const { error: updateError } = await supabaseAdmin.auth.admin.updateUserById(
@@ -108,7 +119,10 @@ Deno.serve(async (req) => {
       JSON.stringify({ 
         success: true, 
         couple_id: couple.id,
-        message: 'Share code validated. Please refresh your session to access data.'
+        is_member: isMember,
+        message: isMember 
+          ? 'User already has access to this space.'
+          : 'Share code validated. User needs to join space.'
       }),
       { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     )

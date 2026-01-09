@@ -74,7 +74,7 @@ export function useAuth() {
   }, []);
 
   // Validate share code and set couple_id in JWT claims
-  const validateShareCode = useCallback(async (shareCode: string): Promise<{ success: boolean; error?: string; coupleId?: string }> => {
+  const validateShareCode = useCallback(async (shareCode: string): Promise<{ success: boolean; error?: string; coupleId?: string; isMember?: boolean }> => {
     try {
       devLog('Validating share code:', shareCode);
       
@@ -115,8 +115,8 @@ export function useAuth() {
         });
       }
 
-      devLog('Share code validated successfully');
-      return { success: true, coupleId: data.couple_id };
+      devLog('Share code validated successfully, isMember:', data.is_member);
+      return { success: true, coupleId: data.couple_id, isMember: data.is_member };
     } catch (err: unknown) {
       const message = err instanceof Error ? err.message : 'Unknown error';
       devLog('Share code validation error:', message);
