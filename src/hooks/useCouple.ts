@@ -2,6 +2,15 @@ import { useState, useEffect } from 'react';
 import { useParams } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
+import { 
+  validateExpense, 
+  validateProfile, 
+  validateTag, 
+  validateCard, 
+  validateAgreement, 
+  validateSettlement,
+  devLog 
+} from '@/lib/validation';
 
 export interface Profile {
   id: string;
@@ -139,9 +148,9 @@ export function useCouple() {
         })) as Agreement[],
         settlements: (settlementsRes.data || []) as Settlement[],
       });
-    } catch (err: any) {
-      console.error('Error fetching couple:', err);
-      setError(err.message);
+    } catch (err: unknown) {
+      devLog('Error fetching couple:', err);
+      setError('Erro ao carregar dados');
     } finally {
       setLoading(false);
     }
@@ -152,26 +161,37 @@ export function useCouple() {
       const { data, error } = await supabase.from('couples').insert({}).select('share_code').single();
       if (error) throw error;
       return data.share_code;
-    } catch (err: any) {
-      console.error('Error creating couple:', err);
+    } catch (err: unknown) {
+      devLog('Error creating couple:', err);
       toast({ title: 'Erro ao criar espaço', variant: 'destructive' });
       return null;
     }
   };
 
   const updateProfile = async (profileId: string, updates: Partial<Profile>) => {
+    const validationData = {
+      name: updates.name ?? 'placeholder',
+      color: updates.color ?? '#000000',
+      avatar_index: updates.avatar_index ?? 1,
+    };
+    
+    const validationError = validateProfile(validationData);
+    if (validationError) {
+      toast({ title: validationError, variant: 'destructive' });
+      return;
+    }
+
     try {
       const { error } = await supabase.from('profiles').update(updates).eq('id', profileId);
       if (error) throw error;
-    } catch (err: any) {
-      console.error('Error updating profile:', err);
+    } catch (err: unknown) {
+      devLog('Error updating profile:', err);
       toast({ title: 'Erro ao atualizar perfil', variant: 'destructive' });
     }
   };
 
   const deleteProfile = async (profileId: string, shareCode: string) => {
     try {
-      // Reset profile to default state instead of deleting
       const { error } = await supabase.from('profiles').update({
         name: 'Pessoa',
         avatar_index: 1,
@@ -179,13 +199,12 @@ export function useCouple() {
       }).eq('id', profileId);
       if (error) throw error;
       
-      // Clear localStorage
       localStorage.removeItem(`couple_${shareCode}`);
       
       toast({ title: 'Perfil removido' });
       return true;
-    } catch (err: any) {
-      console.error('Error deleting profile:', err);
+    } catch (err: unknown) {
+      devLog('Error deleting profile:', err);
       toast({ title: 'Erro ao remover perfil', variant: 'destructive' });
       return false;
     }
@@ -193,6 +212,13 @@ export function useCouple() {
 
   const addExpense = async (expense: Omit<Expense, 'id' | 'couple_id' | 'created_at'>) => {
     if (!couple) return;
+    
+    const validationError = validateExpense(expense);
+    if (validationError) {
+      toast({ title: validationError, variant: 'destructive' });
+      return;
+    }
+
     try {
       const { error } = await supabase.from('expenses').insert({
         couple_id: couple.id,
@@ -201,8 +227,8 @@ export function useCouple() {
       if (error) throw error;
       if (shareCode) await fetchCouple(shareCode);
       toast({ title: 'Gasto registrado!' });
-    } catch (err: any) {
-      console.error('Error adding expense:', err);
+    } catch (err: unknown) {
+      devLog('Error adding expense:', err);
       toast({ title: 'Erro ao adicionar gasto', variant: 'destructive' });
     }
   };
@@ -213,20 +239,27 @@ export function useCouple() {
       if (error) throw error;
       if (shareCode) await fetchCouple(shareCode);
       toast({ title: 'Gasto removido' });
-    } catch (err: any) {
-      console.error('Error deleting expense:', err);
+    } catch (err: unknown) {
+      devLog('Error deleting expense:', err);
       toast({ title: 'Erro ao remover gasto', variant: 'destructive' });
     }
   };
 
   const addTag = async (tag: Omit<Tag, 'id' | 'couple_id'>) => {
     if (!couple) return;
+    
+    const validationError = validateTag(tag);
+    if (validationError) {
+      toast({ title: validationError, variant: 'destructive' });
+      return;
+    }
+
     try {
       const { error } = await supabase.from('tags').insert({ couple_id: couple.id, ...tag });
       if (error) throw error;
       if (shareCode) await fetchCouple(shareCode);
-    } catch (err: any) {
-      console.error('Error adding tag:', err);
+    } catch (err: unknown) {
+      devLog('Error adding tag:', err);
       toast({ title: 'Erro ao adicionar tag', variant: 'destructive' });
     }
   };
@@ -236,20 +269,26 @@ export function useCouple() {
       const { error } = await supabase.from('tags').delete().eq('id', tagId);
       if (error) throw error;
       if (shareCode) await fetchCouple(shareCode);
-    } catch (err: any) {
-      console.error('Error deleting tag:', err);
+    } catch (err: unknown) {
+      devLog('Error deleting tag:', err);
       toast({ title: 'Erro ao remover tag', variant: 'destructive' });
     }
   };
 
   const addCard = async (card: Omit<Card, 'id' | 'created_at'>) => {
+    const validationError = validateCard(card);
+    if (validationError) {
+      toast({ title: validationError, variant: 'destructive' });
+      return;
+    }
+
     try {
       const { error } = await supabase.from('cards').insert(card);
       if (error) throw error;
       if (shareCode) await fetchCouple(shareCode);
       toast({ title: 'Cartão adicionado!' });
-    } catch (err: any) {
-      console.error('Error adding card:', err);
+    } catch (err: unknown) {
+      devLog('Error adding card:', err);
       toast({ title: 'Erro ao adicionar cartão', variant: 'destructive' });
     }
   };
@@ -260,20 +299,26 @@ export function useCouple() {
       if (error) throw error;
       if (shareCode) await fetchCouple(shareCode);
       toast({ title: 'Cartão removido' });
-    } catch (err: any) {
-      console.error('Error deleting card:', err);
+    } catch (err: unknown) {
+      devLog('Error deleting card:', err);
       toast({ title: 'Erro ao remover cartão', variant: 'destructive' });
     }
   };
 
   const addAgreement = async (agreement: Omit<Agreement, 'id' | 'created_at'>) => {
+    const validationError = validateAgreement(agreement);
+    if (validationError) {
+      toast({ title: validationError, variant: 'destructive' });
+      return;
+    }
+
     try {
       const { error } = await supabase.from('agreements').insert(agreement);
       if (error) throw error;
       if (shareCode) await fetchCouple(shareCode);
       toast({ title: 'Acordo criado!' });
-    } catch (err: any) {
-      console.error('Error adding agreement:', err);
+    } catch (err: unknown) {
+      devLog('Error adding agreement:', err);
       toast({ title: 'Erro ao criar acordo', variant: 'destructive' });
     }
   };
@@ -283,8 +328,8 @@ export function useCouple() {
       const { error } = await supabase.from('agreements').update(updates).eq('id', id);
       if (error) throw error;
       if (shareCode) await fetchCouple(shareCode);
-    } catch (err: any) {
-      console.error('Error updating agreement:', err);
+    } catch (err: unknown) {
+      devLog('Error updating agreement:', err);
       toast({ title: 'Erro ao atualizar acordo', variant: 'destructive' });
     }
   };
@@ -295,20 +340,26 @@ export function useCouple() {
       if (error) throw error;
       if (shareCode) await fetchCouple(shareCode);
       toast({ title: 'Acordo removido' });
-    } catch (err: any) {
-      console.error('Error deleting agreement:', err);
+    } catch (err: unknown) {
+      devLog('Error deleting agreement:', err);
       toast({ title: 'Erro ao remover acordo', variant: 'destructive' });
     }
   };
 
   const addSettlement = async (settlement: Omit<Settlement, 'id' | 'settled_at'>) => {
+    const validationError = validateSettlement(settlement);
+    if (validationError) {
+      toast({ title: validationError, variant: 'destructive' });
+      return;
+    }
+
     try {
       const { error } = await supabase.from('settlements').insert(settlement);
       if (error) throw error;
       if (shareCode) await fetchCouple(shareCode);
       toast({ title: 'Acerto registrado!' });
-    } catch (err: any) {
-      console.error('Error adding settlement:', err);
+    } catch (err: unknown) {
+      devLog('Error adding settlement:', err);
       toast({ title: 'Erro ao registrar acerto', variant: 'destructive' });
     }
   };
@@ -353,7 +404,6 @@ export function useCouple() {
       }
     });
 
-    // Subtract settlements
     couple.settlements.forEach((s) => {
       if (s.paid_by === 1) {
         person1Total -= s.amount;
