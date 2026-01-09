@@ -41,7 +41,18 @@ const Toast = React.forwardRef<
   React.ElementRef<typeof ToastPrimitives.Root>,
   React.ComponentPropsWithoutRef<typeof ToastPrimitives.Root> & VariantProps<typeof toastVariants>
 >(({ className, variant, ...props }, ref) => {
-  return <ToastPrimitives.Root ref={ref} className={cn(toastVariants({ variant }), className)} {...props} />;
+  return (
+    <ToastPrimitives.Root ref={ref} className={cn(toastVariants({ variant }), "relative overflow-hidden", className)} {...props}>
+      {props.children}
+      {/* Progress bar for expiration */}
+      <div className="absolute bottom-0 left-0 right-0 h-1 bg-primary/20">
+        <div 
+          className="h-full bg-primary animate-toast-progress"
+          style={{ transformOrigin: 'right' }}
+        />
+      </div>
+    </ToastPrimitives.Root>
+  );
 });
 Toast.displayName = ToastPrimitives.Root.displayName;
 
