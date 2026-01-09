@@ -1,11 +1,13 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Heart, ArrowRight, Sparkles, Users } from 'lucide-react';
+import { Heart, ArrowRight, Sparkles, Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
+import { useAuthContext } from '@/contexts/AuthContext';
 import { CAT_AVATARS } from '@/lib/constants';
+import { devLog } from '@/lib/validation';
 
 interface LastSpace {
   shareCode: string;
@@ -17,6 +19,7 @@ interface LastSpace {
 export default function Index() {
   const navigate = useNavigate();
   const { toast } = useToast();
+  const { loading: authLoading, validateShareCode, clearValidation } = useAuthContext();
   const [loading, setLoading] = useState(false);
   const [existingCode, setExistingCode] = useState('');
   const [lastSpace, setLastSpace] = useState<LastSpace | null>(null);
@@ -55,9 +58,15 @@ export default function Index() {
 
       if (error) throw error;
 
+      // Validate the new share code to set it in JWT
+      const result = await validateShareCode(data.share_code);
+      if (!result.success) {
+        devLog('Failed to validate new share code:', result.error);
+      }
+
       navigate(`/c/${data.share_code}`);
-    } catch (err: any) {
-      console.error('Error creating space:', err);
+    } catch (err: unknown) {
+      devLog('Error creating space:', err);
       toast({
         title: 'Erro ao criar espaço',
         description: 'Tente novamente.',
@@ -68,17 +77,27 @@ export default function Index() {
     }
   };
 
-  const handleJoinSpace = () => {
+  const handleJoinSpace = async () => {
     if (existingCode.trim()) {
+      // Clear any existing validation before joining a new space
+      await clearValidation();
       navigate(`/c/${existingCode.trim()}`);
     }
   };
 
-  const handleContinue = () => {
+  const handleContinue = async () => {
     if (lastSpace) {
       navigate(`/c/${lastSpace.shareCode}`);
     }
   };
+
+  if (authLoading) {
+    return (
+      <div className="min-h-screen bg-background flex items-center justify-center">
+        <Loader2 className="w-8 h-8 animate-spin text-primary" />
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-background flex flex-col items-center justify-center p-6">
