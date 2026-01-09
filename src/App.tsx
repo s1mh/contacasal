@@ -11,6 +11,7 @@ import NewExpense from "./pages/NewExpense";
 import History from "./pages/History";
 import Settings from "./pages/Settings";
 import Statistics from "./pages/Statistics";
+import ResetPin from "./pages/ResetPin";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -31,6 +32,7 @@ const App = () => (
               <Route path="ajustes" element={<Settings />} />
               <Route path="estatisticas" element={<Statistics />} />
             </Route>
+            <Route path="/reset-pin/:token" element={<ResetPin />} />
             <Route path="*" element={<NotFound />} />
           </Routes>
         </BrowserRouter>
