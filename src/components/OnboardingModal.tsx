@@ -115,13 +115,11 @@ export function OnboardingModal({ open, onClose, onComplete, profiles, shareCode
     }
   }, [isNewMember]);
 
-  // Check if modal can be closed (only if there are configured profiles)
-  const canClose = profiles.some(p => 
-    p.name !== 'Pessoa 1' && p.name !== 'Pessoa 2' && p.name !== 'Pessoa'
-  );
+  // Modal can always be closed - will navigate to home
+  const canClose = true;
 
   const handleOpenChange = (isOpen: boolean) => {
-    if (!isOpen && canClose && onClose) {
+    if (!isOpen && onClose) {
       onClose();
     }
   };
