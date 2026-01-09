@@ -14,6 +14,7 @@ Deno.serve(async (req) => {
   try {
     const authHeader = req.headers.get('Authorization')
     if (!authHeader?.startsWith('Bearer ')) {
+      console.log('Missing authorization header')
       return new Response(JSON.stringify({ error: 'Unauthorized' }), {
         status: 401,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
@@ -33,6 +34,7 @@ Deno.serve(async (req) => {
     const { data: claims, error: claimsError } = await supabaseUser.auth.getClaims(token)
 
     if (claimsError || !claims?.claims) {
+      console.log('Invalid JWT:', claimsError?.message)
       return new Response(JSON.stringify({ error: 'Unauthorized' }), {
         status: 401,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
@@ -40,6 +42,7 @@ Deno.serve(async (req) => {
     }
 
     const userId = claims.claims.sub
+    console.log('Creating couple for user:', userId)
 
     // Create couple using service role
     const supabaseAdmin = createClient(supabaseUrl, supabaseServiceKey)
@@ -58,6 +61,8 @@ Deno.serve(async (req) => {
       })
     }
 
+    console.log('Couple created:', couple.id, 'share_code:', couple.share_code)
+
     // Bind current user to couple in JWT claims via app_metadata
     const { error: updateError } = await supabaseAdmin.auth.admin.updateUserById(userId, {
       app_metadata: { couple_id: couple.id },
@@ -70,6 +75,8 @@ Deno.serve(async (req) => {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       })
     }
+
+    console.log('User metadata updated with couple_id')
 
     return new Response(
       JSON.stringify({ success: true, couple_id: couple.id, share_code: couple.share_code }),

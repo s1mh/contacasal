@@ -1,14 +1,17 @@
 import { useState, useEffect } from 'react';
-import { Outlet, useParams, Navigate } from 'react-router-dom';
+import { Outlet, useParams, Navigate, useNavigate } from 'react-router-dom';
 import { BottomNav } from '@/components/BottomNav';
 import { OnboardingModal } from '@/components/OnboardingModal';
 import { useCouple } from '@/hooks/useCouple';
 import { useAuthContext } from '@/contexts/AuthContext';
-import { Loader2 } from 'lucide-react';
+import { Loader2, AlertCircle, RefreshCw } from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import { CAT_AVATARS } from '@/lib/constants';
 
 export default function CoupleLayout() {
   const { shareCode } = useParams();
-  const { couple, loading, error, updateProfile } = useCouple();
+  const navigate = useNavigate();
+  const { couple, loading, error, updateProfile, refetch } = useCouple();
   const { loading: authLoading, isValidated, coupleId, validateShareCode } = useAuthContext();
   const [showOnboarding, setShowOnboarding] = useState(false);
   const [myPosition, setMyPosition] = useState<number | null>(null);
@@ -20,8 +23,7 @@ export default function CoupleLayout() {
     const doValidation = async () => {
       if (!shareCode || authLoading) return;
       
-      // Always validate if not validated, or if the couple_id doesn't match what we expect
-      // This ensures each device/session gets proper validation
+      // Check if we need validation
       const needsValidation = !isValidated || !coupleId;
       
       if (needsValidation) {
@@ -41,16 +43,21 @@ export default function CoupleLayout() {
     doValidation();
   }, [shareCode, authLoading, isValidated, coupleId, validateShareCode]);
 
-  // Check for existing device recognition
+  // Check for existing device recognition or show onboarding
   useEffect(() => {
     if (couple && shareCode && isValidated && coupleId === couple.id) {
       const stored = localStorage.getItem(`couple_${shareCode}`);
       if (stored) {
-        const data = JSON.parse(stored);
-        setMyPosition(data.position);
-        setShowOnboarding(false);
+        try {
+          const data = JSON.parse(stored);
+          setMyPosition(data.position);
+          setShowOnboarding(false);
+        } catch {
+          // Invalid stored data, show onboarding
+          setShowOnboarding(true);
+        }
       } else {
-        // First time visiting - show onboarding
+        // First time visiting - always show onboarding for new users
         setShowOnboarding(true);
       }
     }
@@ -60,6 +67,7 @@ export default function CoupleLayout() {
     const profile = couple?.profiles.find(p => p.position === position);
     if (profile) {
       await updateProfile(profile.id, { name, avatar_index: avatarIndex, color });
+      await refetch();
     }
     setMyPosition(position);
     setShowOnboarding(false);
@@ -69,11 +77,25 @@ export default function CoupleLayout() {
     return <Navigate to="/" replace />;
   }
 
+  // Loading states with animated cats
   if (authLoading || loading || validating) {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center">
-        <div className="flex flex-col items-center gap-3">
-          <Loader2 className="w-8 h-8 animate-spin text-primary" />
+        <div className="flex flex-col items-center gap-4 animate-fade-in">
+          <div className="flex gap-2">
+            <img 
+              src={CAT_AVATARS[0]} 
+              alt="" 
+              className="w-12 h-12 rounded-full shadow-lg animate-bounce-gentle" 
+            />
+            <img 
+              src={CAT_AVATARS[1]} 
+              alt="" 
+              className="w-12 h-12 rounded-full shadow-lg animate-bounce-gentle" 
+              style={{ animationDelay: '200ms' }}
+            />
+          </div>
+          <Loader2 className="w-6 h-6 animate-spin text-primary" />
           <p className="text-sm text-muted-foreground">
             {validating ? 'Validando acesso...' : 'Carregando...'}
           </p>
@@ -82,19 +104,35 @@ export default function CoupleLayout() {
     );
   }
 
+  // Error states
   if (validationError || error || !couple) {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center p-6">
-        <div className="text-center">
+        <div className="text-center max-w-sm animate-fade-in">
+          <div className="w-16 h-16 mx-auto mb-4 rounded-full bg-destructive/10 flex items-center justify-center">
+            <AlertCircle className="w-8 h-8 text-destructive" />
+          </div>
           <h1 className="text-xl font-semibold text-foreground mb-2">
             {validationError ? 'Acesso negado' : 'Espaço não encontrado'}
           </h1>
-          <p className="text-muted-foreground mb-4">
+          <p className="text-muted-foreground mb-6">
             {validationError || 'O código pode estar incorreto ou o espaço foi removido.'}
           </p>
-          <a href="/" className="text-primary hover:underline">
-            Voltar ao início
-          </a>
+          <div className="flex flex-col gap-2">
+            <Button onClick={() => navigate('/')} className="w-full">
+              Voltar ao início
+            </Button>
+            {validationError && (
+              <Button 
+                variant="outline" 
+                onClick={() => window.location.reload()}
+                className="w-full"
+              >
+                <RefreshCw className="w-4 h-4 mr-2" />
+                Tentar novamente
+              </Button>
+            )}
+          </div>
         </div>
       </div>
     );
@@ -104,8 +142,21 @@ export default function CoupleLayout() {
   if (!isValidated || coupleId !== couple.id) {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center">
-        <div className="flex flex-col items-center gap-3">
-          <Loader2 className="w-8 h-8 animate-spin text-primary" />
+        <div className="flex flex-col items-center gap-4 animate-fade-in">
+          <div className="flex gap-2">
+            <img 
+              src={CAT_AVATARS[0]} 
+              alt="" 
+              className="w-12 h-12 rounded-full shadow-lg animate-bounce-gentle" 
+            />
+            <img 
+              src={CAT_AVATARS[1]} 
+              alt="" 
+              className="w-12 h-12 rounded-full shadow-lg animate-bounce-gentle" 
+              style={{ animationDelay: '200ms' }}
+            />
+          </div>
+          <Loader2 className="w-6 h-6 animate-spin text-primary" />
           <p className="text-sm text-muted-foreground">Validando acesso...</p>
         </div>
       </div>
@@ -117,7 +168,7 @@ export default function CoupleLayout() {
       <Outlet context={{ couple, myPosition }} />
       <BottomNav />
       
-      {/* Onboarding Modal */}
+      {/* Onboarding Modal - Forces profile creation before accessing the space */}
       <OnboardingModal
         open={showOnboarding}
         onComplete={handleOnboardingComplete}
