@@ -127,18 +127,24 @@ export type Database = {
           created_at: string
           id: string
           share_code: string
+          share_code_expires_at: string | null
+          share_code_used_at: string | null
           updated_at: string
         }
         Insert: {
           created_at?: string
           id?: string
           share_code?: string
+          share_code_expires_at?: string | null
+          share_code_used_at?: string | null
           updated_at?: string
         }
         Update: {
           created_at?: string
           id?: string
           share_code?: string
+          share_code_expires_at?: string | null
+          share_code_used_at?: string | null
           updated_at?: string
         }
         Relationships: []
