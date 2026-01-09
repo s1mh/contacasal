@@ -2,11 +2,11 @@ import { useState, useEffect } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { InputOTP, InputOTPGroup, InputOTPSlotMasked } from '@/components/ui/input-otp';
+import { InputOTP, InputOTPGroup, InputOTPSlot, InputOTPSlotMasked } from '@/components/ui/input-otp';
 import { cn } from '@/lib/utils';
 import { CAT_AVATARS, PERSON_COLORS } from '@/lib/constants';
 import { Profile } from '@/contexts/CoupleContext';
-import { Check, Heart, Sparkles, Lock, ArrowRight, ArrowLeft, Mail, SkipForward, AtSign, Loader2 } from 'lucide-react';
+import { Check, Heart, Sparkles, Lock, ArrowRight, ArrowLeft, Mail, SkipForward, AtSign, Loader2, Eye, EyeOff, PartyPopper } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 
 interface OnboardingModalProps {
@@ -15,6 +15,7 @@ interface OnboardingModalProps {
   onComplete: (position: number, name: string, avatarIndex: number, color: string, pinCode: string, email?: string, username?: string) => void;
   profiles: Profile[];
   shareCode: string;
+  isNewMember?: boolean;
 }
 
 // List of cute compliments for valid names
@@ -52,12 +53,45 @@ const isValidEmail = (email: string): boolean => {
   return emailRegex.test(email.trim());
 };
 
-export function OnboardingModal({ open, onClose, onComplete, profiles, shareCode }: OnboardingModalProps) {
-  const [step, setStep] = useState<'profile' | 'pin' | 'email'>('profile');
+// Check if PIN is weak
+const isWeakPin = (pin: string): { weak: boolean; reason?: string } => {
+  if (pin.length !== 4) return { weak: false };
+  
+  // Check for repeated digits (1111, 0000, etc.)
+  if (/^(\d)\1{3}$/.test(pin)) {
+    return { weak: true, reason: 'Não use 4 dígitos iguais' };
+  }
+  
+  // Check for common weak PINs
+  const commonPins = ['1234', '4321', '0000', '1111', '2222', '3333', '4444', '5555', '6666', '7777', '8888', '9999', '1212', '2121', '1010', '0101', '1122', '2211'];
+  if (commonPins.includes(pin)) {
+    return { weak: true, reason: 'Esse código é muito comum' };
+  }
+  
+  // Check for ascending sequence (1234, 2345, 3456, etc.)
+  const digits = pin.split('').map(Number);
+  const isAscending = digits.every((d, i) => i === 0 || d === digits[i - 1] + 1);
+  if (isAscending) {
+    return { weak: true, reason: 'Evite sequências simples' };
+  }
+  
+  // Check for descending sequence (4321, 5432, etc.)
+  const isDescending = digits.every((d, i) => i === 0 || d === digits[i - 1] - 1);
+  if (isDescending) {
+    return { weak: true, reason: 'Evite sequências simples' };
+  }
+  
+  return { weak: false };
+};
+
+export function OnboardingModal({ open, onClose, onComplete, profiles, shareCode, isNewMember = false }: OnboardingModalProps) {
+  const [step, setStep] = useState<'welcome' | 'profile' | 'pin' | 'email'>(isNewMember ? 'welcome' : 'profile');
   const [name, setName] = useState('');
   const [avatarIndex, setAvatarIndex] = useState(1);
   const [color, setColor] = useState(PERSON_COLORS[0].value);
   const [pinCode, setPinCode] = useState('');
+  const [pinError, setPinError] = useState('');
+  const [showPin, setShowPin] = useState(false);
   const [email, setEmail] = useState('');
   const [emailError, setEmailError] = useState('');
   const [emailExists, setEmailExists] = useState(false);
@@ -70,6 +104,16 @@ export function OnboardingModal({ open, onClose, onComplete, profiles, shareCode
   const [hoveredAvatar, setHoveredAvatar] = useState<number | null>(null);
   const [complimentTimeout, setComplimentTimeout] = useState<NodeJS.Timeout | null>(null);
   const [isTransitioning, setIsTransitioning] = useState(false);
+
+  // Get the host profile name for welcome message
+  const hostProfile = profiles.find(p => p.name !== 'Pessoa 1' && p.name !== 'Pessoa 2' && p.name !== 'Pessoa');
+
+  // Update step when isNewMember changes
+  useEffect(() => {
+    if (isNewMember && step === 'profile') {
+      setStep('welcome');
+    }
+  }, [isNewMember]);
 
   // Check if modal can be closed (only if there are configured profiles)
   const canClose = profiles.some(p => 
@@ -153,8 +197,26 @@ export function OnboardingModal({ open, onClose, onComplete, profiles, shareCode
     }
   };
 
+  const handlePinChange = (value: string) => {
+    setPinCode(value);
+    setPinError('');
+    
+    // Check for weak PIN when complete
+    if (value.length === 4) {
+      const weakCheck = isWeakPin(value);
+      if (weakCheck.weak) {
+        setPinError(weakCheck.reason || 'Código muito fraco');
+      }
+    }
+  };
+
   const handlePinComplete = () => {
     if (pinCode.length === 4) {
+      const weakCheck = isWeakPin(pinCode);
+      if (weakCheck.weak) {
+        setPinError(weakCheck.reason || 'Código muito fraco');
+        return;
+      }
       setStep('email');
     }
   };
@@ -261,10 +323,6 @@ export function OnboardingModal({ open, onClose, onComplete, profiles, shareCode
     onComplete(position, formattedName, avatarIndex, color, pinCode, undefined, username || undefined);
   };
 
-  const handlePinChange = (value: string) => {
-    setPinCode(value);
-  };
-
   const handleSendRecoveryLink = async () => {
     if (!email.trim()) return;
     
@@ -281,6 +339,28 @@ export function OnboardingModal({ open, onClose, onComplete, profiles, shareCode
     }
   };
 
+  // Render PIN slots based on visibility
+  const renderPinSlots = () => {
+    if (showPin) {
+      return (
+        <>
+          <InputOTPSlot index={0} className="w-12 h-12 text-xl" />
+          <InputOTPSlot index={1} className="w-12 h-12 text-xl" />
+          <InputOTPSlot index={2} className="w-12 h-12 text-xl" />
+          <InputOTPSlot index={3} className="w-12 h-12 text-xl" />
+        </>
+      );
+    }
+    return (
+      <>
+        <InputOTPSlotMasked index={0} className="w-12 h-12 text-xl" />
+        <InputOTPSlotMasked index={1} className="w-12 h-12 text-xl" />
+        <InputOTPSlotMasked index={2} className="w-12 h-12 text-xl" />
+        <InputOTPSlotMasked index={3} className="w-12 h-12 text-xl" />
+      </>
+    );
+  };
+
   return (
     <Dialog open={open} onOpenChange={handleOpenChange}>
       <DialogContent 
@@ -289,11 +369,23 @@ export function OnboardingModal({ open, onClose, onComplete, profiles, shareCode
       >
         <DialogHeader>
           <DialogTitle className="text-center flex items-center justify-center gap-2 animate-fade-in">
-            <Heart className="w-5 h-5 text-primary animate-pulse" />
-            {step === 'profile' ? 'Olá! Crie seu perfil' : step === 'pin' ? 'Crie seu código' : 'Adicione seu e-mail'}
+            {step === 'welcome' ? (
+              <PartyPopper className="w-5 h-5 text-primary" />
+            ) : (
+              <Heart className="w-5 h-5 text-primary animate-pulse" />
+            )}
+            {step === 'welcome' 
+              ? 'Bem-vindo!' 
+              : step === 'profile' 
+              ? 'Olá! Crie seu perfil' 
+              : step === 'pin' 
+              ? 'Crie seu código' 
+              : 'Adicione seu e-mail'}
           </DialogTitle>
           <DialogDescription className="text-center animate-fade-in">
-            {step === 'profile' 
+            {step === 'welcome'
+              ? `${hostProfile?.name || 'Alguém'} convidou você para compartilhar despesas`
+              : step === 'profile' 
               ? 'Personalize como você aparecerá no app'
               : step === 'pin'
               ? 'Código de 4 dígitos para entrar em outros dispositivos'
@@ -303,7 +395,45 @@ export function OnboardingModal({ open, onClose, onComplete, profiles, shareCode
         </DialogHeader>
 
         <div className="space-y-6 py-4">
-          {step === 'profile' ? (
+          {step === 'welcome' ? (
+            <>
+              {/* Welcome Step */}
+              <div className="flex flex-col items-center gap-6 animate-fade-in">
+                {/* Host avatar */}
+                {hostProfile && (
+                  <div className="flex flex-col items-center gap-3">
+                    <div 
+                      className="w-24 h-24 rounded-full overflow-hidden ring-4 animate-bounce-gentle"
+                      style={{ boxShadow: `0 0 0 4px ${hostProfile.color}` }}
+                    >
+                      <img 
+                        src={CAT_AVATARS[hostProfile.avatar_index - 1]} 
+                        alt={hostProfile.name}
+                        className="w-full h-full object-cover"
+                      />
+                    </div>
+                    <span className="font-semibold text-lg">{hostProfile.name}</span>
+                  </div>
+                )}
+
+                <div className="text-center px-4">
+                  <p className="text-muted-foreground">
+                    Vocês poderão dividir gastos, acompanhar despesas e manter tudo organizado juntos! 💕
+                  </p>
+                </div>
+
+                <Button 
+                  onClick={() => setStep('profile')}
+                  className="w-full"
+                  size="lg"
+                >
+                  <Sparkles className="w-4 h-4 mr-2" />
+                  Criar meu perfil
+                  <ArrowRight className="w-4 h-4 ml-2" />
+                </Button>
+              </div>
+            </>
+          ) : step === 'profile' ? (
             <>
               {/* Name Input */}
               <div className="space-y-2 animate-fade-in" style={{ animationDelay: '100ms' }}>
@@ -482,18 +612,37 @@ export function OnboardingModal({ open, onClose, onComplete, profiles, shareCode
                     <span>Crie um código pessoal</span>
                   </div>
                   
-                  <InputOTP 
-                    maxLength={4} 
-                    value={pinCode} 
-                    onChange={handlePinChange}
-                  >
-                    <InputOTPGroup>
-                      <InputOTPSlotMasked index={0} className="w-12 h-12 text-xl" />
-                      <InputOTPSlotMasked index={1} className="w-12 h-12 text-xl" />
-                      <InputOTPSlotMasked index={2} className="w-12 h-12 text-xl" />
-                      <InputOTPSlotMasked index={3} className="w-12 h-12 text-xl" />
-                    </InputOTPGroup>
-                  </InputOTP>
+                  <div className="flex items-center gap-2">
+                    <InputOTP 
+                      maxLength={4} 
+                      value={pinCode} 
+                      onChange={handlePinChange}
+                    >
+                      <InputOTPGroup>
+                        {renderPinSlots()}
+                      </InputOTPGroup>
+                    </InputOTP>
+                    
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="icon"
+                      onClick={() => setShowPin(!showPin)}
+                      className="h-10 w-10"
+                    >
+                      {showPin ? (
+                        <EyeOff className="w-4 h-4 text-muted-foreground" />
+                      ) : (
+                        <Eye className="w-4 h-4 text-muted-foreground" />
+                      )}
+                    </Button>
+                  </div>
+                  
+                  {pinError && (
+                    <p className="text-sm text-destructive animate-fade-in">
+                      {pinError}
+                    </p>
+                  )}
                 </div>
 
                 {/* Step indicator */}
@@ -514,7 +663,7 @@ export function OnboardingModal({ open, onClose, onComplete, profiles, shareCode
                   </Button>
                   <Button 
                     onClick={handlePinComplete} 
-                    disabled={pinCode.length !== 4} 
+                    disabled={pinCode.length !== 4 || !!pinError} 
                     className="flex-1"
                   >
                     Continuar

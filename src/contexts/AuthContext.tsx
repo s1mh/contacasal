@@ -8,7 +8,7 @@ interface AuthContextType {
   coupleId: string | null;
   loading: boolean;
   isValidated: boolean;
-  validateShareCode: (shareCode: string) => Promise<{ success: boolean; error?: string; coupleId?: string }>;
+  validateShareCode: (shareCode: string) => Promise<{ success: boolean; error?: string; coupleId?: string; isMember?: boolean }>;
   joinSpace: (shareCode: string) => Promise<{ success: boolean; error?: string; coupleId?: string; profileId?: string }>;
   hasAccessToCouple: (coupleId: string) => boolean;
   clearValidation: () => Promise<void>;
