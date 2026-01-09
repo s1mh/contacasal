@@ -1,4 +1,4 @@
-import { Home, Clock, Plus, Settings } from 'lucide-react';
+import { Home, Clock, Plus, Settings, BarChart3 } from 'lucide-react';
 import { useLocation, useNavigate, useParams } from 'react-router-dom';
 import { cn } from '@/lib/utils';
 
@@ -15,9 +15,13 @@ export function BottomNav() {
 
   const basePath = `/c/${shareCode}`;
 
-  const navItems: NavItem[] = [
+  const leftItems: NavItem[] = [
     { icon: Home, label: 'Resumo', path: basePath },
     { icon: Clock, label: 'Histórico', path: `${basePath}/historico` },
+  ];
+
+  const rightItems: NavItem[] = [
+    { icon: BarChart3, label: 'Stats', path: `${basePath}/estatisticas` },
     { icon: Settings, label: 'Ajustes', path: `${basePath}/ajustes` },
   ];
 
@@ -28,25 +32,28 @@ export function BottomNav() {
     return location.pathname.startsWith(path);
   };
 
+  const NavButton = ({ item }: { item: NavItem }) => (
+    <button
+      onClick={() => navigate(item.path)}
+      className={cn(
+        'flex flex-col items-center gap-0.5 px-3 py-2 rounded-full transition-all duration-200',
+        isActive(item.path)
+          ? 'bg-primary/10 text-primary'
+          : 'text-muted-foreground hover:text-foreground hover:bg-muted/50'
+      )}
+    >
+      <item.icon className="w-5 h-5" />
+      <span className="text-[10px] font-medium">{item.label}</span>
+    </button>
+  );
+
   return (
     <nav className="fixed bottom-4 left-1/2 -translate-x-1/2 z-50 px-4 w-full max-w-md">
-      <div className="glass-nav rounded-full px-2 py-2 flex items-center justify-between gap-1">
+      <div className="glass-nav rounded-full px-3 py-2 flex items-center justify-between">
         {/* Left nav items */}
         <div className="flex items-center gap-1">
-          {navItems.slice(0, 2).map((item) => (
-            <button
-              key={item.path}
-              onClick={() => navigate(item.path)}
-              className={cn(
-                'flex flex-col items-center gap-0.5 px-4 py-2 rounded-full transition-all duration-200',
-                isActive(item.path)
-                  ? 'bg-primary/10 text-primary'
-                  : 'text-muted-foreground hover:text-foreground hover:bg-muted/50'
-              )}
-            >
-              <item.icon className="w-5 h-5" />
-              <span className="text-[10px] font-medium">{item.label}</span>
-            </button>
+          {leftItems.map((item) => (
+            <NavButton key={item.path} item={item} />
           ))}
         </div>
 
@@ -54,7 +61,7 @@ export function BottomNav() {
         <button
           onClick={() => navigate(`${basePath}/novo`)}
           className={cn(
-            'fab w-14 h-14 flex items-center justify-center -mt-8',
+            'fab w-14 h-14 flex items-center justify-center -my-6 mx-2',
             location.pathname.includes('/novo') && 'scale-95 opacity-80'
           )}
         >
@@ -63,20 +70,8 @@ export function BottomNav() {
 
         {/* Right nav items */}
         <div className="flex items-center gap-1">
-          {navItems.slice(2).map((item) => (
-            <button
-              key={item.path}
-              onClick={() => navigate(item.path)}
-              className={cn(
-                'flex flex-col items-center gap-0.5 px-4 py-2 rounded-full transition-all duration-200',
-                isActive(item.path)
-                  ? 'bg-primary/10 text-primary'
-                  : 'text-muted-foreground hover:text-foreground hover:bg-muted/50'
-              )}
-            >
-              <item.icon className="w-5 h-5" />
-              <span className="text-[10px] font-medium">{item.label}</span>
-            </button>
+          {rightItems.map((item) => (
+            <NavButton key={item.path} item={item} />
           ))}
         </div>
       </div>

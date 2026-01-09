@@ -1,7 +1,6 @@
 import { cn } from '@/lib/utils';
-import { formatCurrency, formatDate } from '@/lib/constants';
-import { Avatar } from './Avatar';
-import { Expense, Profile, Tag } from '@/hooks/useCouple';
+import { formatCurrency, formatDate, CAT_AVATARS } from '@/lib/constants';
+import { Expense, Profile, Tag, Card } from '@/hooks/useCouple';
 import { 
   Tag as TagIcon, 
   Utensils, 
@@ -16,6 +15,8 @@ import {
   Plane, 
   Music,
   Trash2,
+  CreditCard,
+  Calendar,
   LucideIcon
 } from 'lucide-react';
 
@@ -23,7 +24,9 @@ interface ExpenseCardProps {
   expense: Expense;
   profiles: Profile[];
   tags: Tag[];
+  cards?: Card[];
   onDelete?: () => void;
+  isNew?: boolean;
 }
 
 const iconMap: Record<string, LucideIcon> = {
@@ -41,9 +44,10 @@ const iconMap: Record<string, LucideIcon> = {
   music: Music,
 };
 
-export function ExpenseCard({ expense, profiles, tags, onDelete }: ExpenseCardProps) {
+export function ExpenseCard({ expense, profiles, tags, cards = [], onDelete, isNew }: ExpenseCardProps) {
   const paidByProfile = profiles.find(p => p.position === expense.paid_by);
   const tag = tags.find(t => t.id === expense.tag_id);
+  const card = cards.find(c => c.id === expense.card_id);
 
   const TagIconComponent = tag ? (iconMap[tag.icon] || TagIcon) : TagIcon;
 
@@ -62,16 +66,23 @@ export function ExpenseCard({ expense, profiles, tags, onDelete }: ExpenseCardPr
     }
   };
 
+  const isInstallment = expense.installments > 1;
+
   return (
-    <div className="expense-card bg-card rounded-2xl p-4 shadow-glass group">
+    <div 
+      className={cn(
+        'expense-card bg-card rounded-3xl p-4 shadow-lg border border-border/50 group transition-all duration-200 hover:shadow-xl hover:scale-[1.01]',
+        isNew && 'animate-fade-in'
+      )}
+    >
       <div className="flex items-start gap-3">
         {/* Tag icon */}
         <div
-          className="w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0"
+          className="w-12 h-12 rounded-2xl flex items-center justify-center flex-shrink-0"
           style={{ backgroundColor: tag?.color ? `${tag.color}20` : 'hsl(var(--muted))' }}
         >
           <TagIconComponent 
-            className="w-5 h-5" 
+            className="w-6 h-6" 
             style={{ color: tag?.color || 'hsl(var(--muted-foreground))' }} 
           />
         </div>
@@ -79,12 +90,13 @@ export function ExpenseCard({ expense, profiles, tags, onDelete }: ExpenseCardPr
         {/* Content */}
         <div className="flex-1 min-w-0">
           <div className="flex items-start justify-between gap-2">
-            <div>
-              <p className="font-medium text-foreground truncate">
+            <div className="min-w-0">
+              <p className="font-semibold text-foreground truncate">
                 {expense.description || tag?.name || 'Gasto'}
               </p>
-              <div className="flex items-center gap-2 mt-1">
-                <span className="text-xs text-muted-foreground">
+              <div className="flex items-center gap-2 mt-0.5">
+                <span className="text-xs text-muted-foreground flex items-center gap-1">
+                  <Calendar className="w-3 h-3" />
                   {formatDate(expense.expense_date)}
                 </span>
                 <span className="text-xs text-muted-foreground">•</span>
@@ -93,39 +105,57 @@ export function ExpenseCard({ expense, profiles, tags, onDelete }: ExpenseCardPr
                 </span>
               </div>
             </div>
-            <p className="font-semibold text-foreground whitespace-nowrap">
+            <p className="text-lg font-bold text-primary whitespace-nowrap">
               {formatCurrency(expense.total_amount)}
             </p>
           </div>
 
-          {/* Paid by */}
+          {/* Footer: Paid by + Payment info */}
           <div className="flex items-center justify-between mt-3">
             <div className="flex items-center gap-2">
               {paidByProfile && (
-                <>
-                  <Avatar 
-                    avatarIndex={paidByProfile.avatar_index} 
-                    size="sm" 
-                    ringColor={paidByProfile.color}
-                  />
-                  <span className="text-xs text-muted-foreground">
-                    pago por <span style={{ color: paidByProfile.color }}>{paidByProfile.name}</span>
-                  </span>
-                </>
+                <div className="flex items-center gap-1.5">
+                  <div 
+                    className="w-6 h-6 rounded-full overflow-hidden"
+                    style={{ boxShadow: `0 0 0 2px ${paidByProfile.color}` }}
+                  >
+                    <img 
+                      src={CAT_AVATARS[paidByProfile.avatar_index - 1]} 
+                      alt={paidByProfile.name}
+                      className="w-full h-full object-cover"
+                    />
+                  </div>
+                  <span className="text-xs text-muted-foreground">pagou</span>
+                </div>
               )}
             </div>
 
-            {onDelete && (
-              <button
-                onClick={(e) => {
-                  e.stopPropagation();
-                  onDelete();
-                }}
-                className="opacity-0 group-hover:opacity-100 p-2 text-muted-foreground hover:text-destructive transition-all rounded-lg hover:bg-destructive/10"
-              >
-                <Trash2 className="w-4 h-4" />
-              </button>
-            )}
+            <div className="flex items-center gap-2">
+              {/* Payment type badge */}
+              {expense.payment_type === 'credit' && (
+                <div className="flex items-center gap-1 text-xs px-2 py-0.5 rounded-full bg-muted">
+                  <CreditCard className="w-3 h-3" />
+                  <span>{card?.name || 'Crédito'}</span>
+                  {isInstallment && (
+                    <span className="font-medium">
+                      {expense.installment_number}/{expense.installments}
+                    </span>
+                  )}
+                </div>
+              )}
+
+              {onDelete && (
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    onDelete();
+                  }}
+                  className="opacity-0 group-hover:opacity-100 p-1.5 text-muted-foreground hover:text-destructive transition-all rounded-lg hover:bg-destructive/10"
+                >
+                  <Trash2 className="w-4 h-4" />
+                </button>
+              )}
+            </div>
           </div>
         </div>
       </div>
