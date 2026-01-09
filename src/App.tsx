@@ -9,6 +9,7 @@ import Summary from "./pages/Summary";
 import NewExpense from "./pages/NewExpense";
 import History from "./pages/History";
 import Settings from "./pages/Settings";
+import Statistics from "./pages/Statistics";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -26,6 +27,7 @@ const App = () => (
             <Route path="novo" element={<NewExpense />} />
             <Route path="historico" element={<History />} />
             <Route path="ajustes" element={<Settings />} />
+            <Route path="estatisticas" element={<Statistics />} />
           </Route>
           <Route path="*" element={<NotFound />} />
         </Routes>
