@@ -14,6 +14,114 @@ export type Database = {
   }
   public: {
     Tables: {
+      agreements: {
+        Row: {
+          amount: number
+          couple_id: string
+          created_at: string | null
+          day_of_month: number | null
+          id: string
+          is_active: boolean | null
+          name: string
+          paid_by: number
+          split_type: string
+          split_value: Json
+          tag_id: string | null
+        }
+        Insert: {
+          amount: number
+          couple_id: string
+          created_at?: string | null
+          day_of_month?: number | null
+          id?: string
+          is_active?: boolean | null
+          name: string
+          paid_by: number
+          split_type: string
+          split_value?: Json
+          tag_id?: string | null
+        }
+        Update: {
+          amount?: number
+          couple_id?: string
+          created_at?: string | null
+          day_of_month?: number | null
+          id?: string
+          is_active?: boolean | null
+          name?: string
+          paid_by?: number
+          split_type?: string
+          split_value?: Json
+          tag_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "agreements_couple_id_fkey"
+            columns: ["couple_id"]
+            isOneToOne: false
+            referencedRelation: "couples"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "agreements_tag_id_fkey"
+            columns: ["tag_id"]
+            isOneToOne: false
+            referencedRelation: "tags"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      cards: {
+        Row: {
+          closing_day: number | null
+          color: string | null
+          couple_id: string
+          created_at: string | null
+          due_day: number | null
+          id: string
+          name: string
+          profile_id: string
+          type: string
+        }
+        Insert: {
+          closing_day?: number | null
+          color?: string | null
+          couple_id: string
+          created_at?: string | null
+          due_day?: number | null
+          id?: string
+          name: string
+          profile_id: string
+          type: string
+        }
+        Update: {
+          closing_day?: number | null
+          color?: string | null
+          couple_id?: string
+          created_at?: string | null
+          due_day?: number | null
+          id?: string
+          name?: string
+          profile_id?: string
+          type?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "cards_couple_id_fkey"
+            columns: ["couple_id"]
+            isOneToOne: false
+            referencedRelation: "couples"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "cards_profile_id_fkey"
+            columns: ["profile_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       couples: {
         Row: {
           created_at: string
@@ -35,44 +143,118 @@ export type Database = {
         }
         Relationships: []
       }
+      expense_payments: {
+        Row: {
+          amount: number
+          card_id: string | null
+          created_at: string | null
+          expense_id: string
+          id: string
+          payment_type: string | null
+          profile_id: string
+        }
+        Insert: {
+          amount: number
+          card_id?: string | null
+          created_at?: string | null
+          expense_id: string
+          id?: string
+          payment_type?: string | null
+          profile_id: string
+        }
+        Update: {
+          amount?: number
+          card_id?: string | null
+          created_at?: string | null
+          expense_id?: string
+          id?: string
+          payment_type?: string | null
+          profile_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "expense_payments_card_id_fkey"
+            columns: ["card_id"]
+            isOneToOne: false
+            referencedRelation: "cards"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "expense_payments_expense_id_fkey"
+            columns: ["expense_id"]
+            isOneToOne: false
+            referencedRelation: "expenses"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "expense_payments_profile_id_fkey"
+            columns: ["profile_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       expenses: {
         Row: {
+          billing_month: string | null
+          card_id: string | null
           couple_id: string
           created_at: string
           description: string | null
           expense_date: string
           id: string
+          installment_number: number | null
+          installments: number | null
           paid_by: number
+          payment_type: string | null
           split_type: string
           split_value: Json
           tag_id: string | null
           total_amount: number
         }
         Insert: {
+          billing_month?: string | null
+          card_id?: string | null
           couple_id: string
           created_at?: string
           description?: string | null
           expense_date?: string
           id?: string
+          installment_number?: number | null
+          installments?: number | null
           paid_by: number
+          payment_type?: string | null
           split_type: string
           split_value?: Json
           tag_id?: string | null
           total_amount: number
         }
         Update: {
+          billing_month?: string | null
+          card_id?: string | null
           couple_id?: string
           created_at?: string
           description?: string | null
           expense_date?: string
           id?: string
+          installment_number?: number | null
+          installments?: number | null
           paid_by?: number
+          payment_type?: string | null
           split_type?: string
           split_value?: Json
           tag_id?: string | null
           total_amount?: number
         }
         Relationships: [
+          {
+            foreignKeyName: "expenses_card_id_fkey"
+            columns: ["card_id"]
+            isOneToOne: false
+            referencedRelation: "cards"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "expenses_couple_id_fkey"
             columns: ["couple_id"]
@@ -123,6 +305,41 @@ export type Database = {
         Relationships: [
           {
             foreignKeyName: "profiles_couple_id_fkey"
+            columns: ["couple_id"]
+            isOneToOne: false
+            referencedRelation: "couples"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      settlements: {
+        Row: {
+          amount: number
+          couple_id: string
+          id: string
+          note: string | null
+          paid_by: number
+          settled_at: string | null
+        }
+        Insert: {
+          amount: number
+          couple_id: string
+          id?: string
+          note?: string | null
+          paid_by: number
+          settled_at?: string | null
+        }
+        Update: {
+          amount?: number
+          couple_id?: string
+          id?: string
+          note?: string | null
+          paid_by?: number
+          settled_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "settlements_couple_id_fkey"
             columns: ["couple_id"]
             isOneToOne: false
             referencedRelation: "couples"
