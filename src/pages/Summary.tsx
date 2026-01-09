@@ -4,13 +4,13 @@ import { BalanceCard } from '@/components/BalanceCard';
 import { ExpenseCard } from '@/components/ExpenseCard';
 import { Avatar } from '@/components/Avatar';
 import { AnimatedPage, AnimatedItem } from '@/components/AnimatedPage';
-import { Couple, useCouple } from '@/hooks/useCouple';
+import { Couple, useCoupleContext } from '@/contexts/CoupleContext';
 import { useToast } from '@/hooks/use-toast';
 import { Button } from '@/components/ui/button';
 
 export default function Summary() {
   const { couple } = useOutletContext<{ couple: Couple }>();
-  const { calculateBalance, deleteExpense } = useCouple();
+  const { calculateBalance, deleteExpense } = useCoupleContext();
   const { shareCode } = useParams();
   const { toast } = useToast();
   const balance = calculateBalance();

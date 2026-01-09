@@ -5,7 +5,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Avatar } from '@/components/Avatar';
 import { TagPill } from '@/components/TagPill';
-import { Couple, useCouple } from '@/hooks/useCouple';
+import { Couple, useCoupleContext } from '@/contexts/CoupleContext';
 import { formatCurrency, SPLIT_TYPES } from '@/lib/constants';
 import { cn } from '@/lib/utils';
 import { Slider } from '@/components/ui/slider';
@@ -19,7 +19,7 @@ type PaymentType = 'debit' | 'credit';
 
 export default function NewExpense() {
   const { couple } = useOutletContext<{ couple: Couple }>();
-  const { addExpense } = useCouple();
+  const { addExpense } = useCoupleContext();
   const { shareCode } = useParams();
   const navigate = useNavigate();
 
@@ -436,6 +436,17 @@ export default function NewExpense() {
       <div className="bg-card rounded-3xl p-4 shadow-lg border border-border/50 mb-4">
         <label className="text-sm text-muted-foreground mb-3 block">Categoria</label>
         <div className="flex flex-wrap gap-2">
+          <button
+            onClick={() => setSelectedTagId(null)}
+            className={cn(
+              'px-3 py-1.5 rounded-full text-xs font-medium transition-all',
+              !selectedTagId
+                ? 'bg-primary text-primary-foreground'
+                : 'bg-muted text-muted-foreground hover:bg-muted/80'
+            )}
+          >
+            Sem categoria
+          </button>
           {couple.tags.map((tag) => (
             <TagPill
               key={tag.id}
@@ -443,44 +454,49 @@ export default function NewExpense() {
               icon={tag.icon}
               color={tag.color}
               selected={selectedTagId === tag.id}
-              onClick={() => setSelectedTagId(selectedTagId === tag.id ? null : tag.id)}
+              onClick={() => setSelectedTagId(tag.id)}
             />
           ))}
         </div>
       </div>
 
-      {/* Preview */}
+      {/* Split Preview */}
       {numericAmount > 0 && (
-        <div className="bg-muted rounded-2xl p-4 mb-4 animate-fade-in">
-          <div className="flex items-center gap-2 text-sm text-muted-foreground mb-2">
-            <Calculator className="w-4 h-4" />
-            Prévia da divisão {installments > 1 && `(por parcela)`}
+        <div className="bg-muted/50 rounded-2xl p-4 mb-4 animate-fade-in">
+          <div className="flex items-center gap-2 mb-3">
+            <Calculator className="w-4 h-4 text-muted-foreground" />
+            <span className="text-sm font-medium">Resumo da divisão</span>
           </div>
-          <div className="flex justify-between">
-            <div className="flex items-center gap-2">
-              {person1 && <Avatar avatarIndex={person1.avatar_index} size="sm" />}
-              <span className="font-medium">
-                {formatCurrency(installments > 1 ? splitPreview.person1 / installments : splitPreview.person1)}
-              </span>
-            </div>
-            <div className="flex items-center gap-2">
-              <span className="font-medium">
-                {formatCurrency(installments > 1 ? splitPreview.person2 / installments : splitPreview.person2)}
-              </span>
-              {person2 && <Avatar avatarIndex={person2.avatar_index} size="sm" />}
-            </div>
+          <div className="space-y-2">
+            {[person1, person2].map((person) => person && (
+              <div key={person.position} className="flex justify-between items-center">
+                <div className="flex items-center gap-2">
+                  <Avatar avatarIndex={person.avatar_index} size="sm" />
+                  <span className="text-sm">{person.name}</span>
+                </div>
+                <span className="font-medium" style={{ color: person.color }}>
+                  {formatCurrency(person.position === 1 ? splitPreview.person1 : splitPreview.person2)}
+                </span>
+              </div>
+            ))}
           </div>
         </div>
       )}
 
-      {/* Submit */}
+      {/* Submit Button */}
       <Button
         onClick={handleSubmit}
-        disabled={!numericAmount || loading}
-        className="w-full h-14 rounded-2xl text-lg bg-primary hover:bg-primary/90"
+        disabled={!numericAmount || loading || (paymentType === 'credit' && !selectedCardId && creditCards.length > 0)}
+        className="w-full py-6 rounded-2xl text-lg"
       >
-        {loading ? 'Salvando...' : `Registrar gasto${installments > 1 ? ` (${installments}x)` : ''}`}
-        <Check className="w-5 h-5 ml-2" />
+        {loading ? (
+          <>Salvando...</>
+        ) : (
+          <>
+            <Check className="w-5 h-5 mr-2" />
+            Salvar gasto
+          </>
+        )}
       </Button>
     </div>
   );

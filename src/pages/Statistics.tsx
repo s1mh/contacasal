@@ -1,7 +1,7 @@
 import { useState, useMemo } from 'react';
 import { useOutletContext } from 'react-router-dom';
-import { Couple } from '@/hooks/useCouple';
-import { Charts, ExpensesByTagChart, ExpensesByPersonChart, MonthlyEvolutionChart } from '@/components/Charts';
+import { Couple } from '@/contexts/CoupleContext';
+import { ExpensesByTagChart, ExpensesByPersonChart, MonthlyEvolutionChart } from '@/components/Charts';
 import { ExportButton } from '@/components/ExportButton';
 import { AnimatedPage, AnimatedItem } from '@/components/AnimatedPage';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';

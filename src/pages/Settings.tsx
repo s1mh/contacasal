@@ -8,7 +8,7 @@ import { TagPill } from '@/components/TagPill';
 import { CardManager } from '@/components/CardManager';
 import { AgreementManager } from '@/components/AgreementManager';
 import { AnimatedPage, AnimatedItem } from '@/components/AnimatedPage';
-import { Couple, useCouple } from '@/hooks/useCouple';
+import { Couple, useCoupleContext } from '@/contexts/CoupleContext';
 import { CAT_AVATARS, PERSON_COLORS, TAG_ICONS } from '@/lib/constants';
 import { cn } from '@/lib/utils';
 import { useToast } from '@/hooks/use-toast';
@@ -27,7 +27,7 @@ export default function Settings() {
     addAgreement,
     updateAgreement,
     deleteAgreement
-  } = useCouple();
+  } = useCoupleContext();
   const { shareCode } = useParams();
   const { toast } = useToast();
 
