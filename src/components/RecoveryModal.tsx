@@ -8,7 +8,7 @@ import { supabase } from '@/integrations/supabase/client';
 interface RecoveryModalProps {
   open: boolean;
   onClose: () => void;
-  shareCode: string;
+  shareCode?: string; // Now optional
 }
 
 export function RecoveryModal({ open, onClose, shareCode }: RecoveryModalProps) {
@@ -36,11 +36,17 @@ export function RecoveryModal({ open, onClose, shareCode }: RecoveryModalProps) 
     setError('');
 
     try {
+      // Build request body - share_code is optional now
+      const body: { email: string; share_code?: string } = {
+        email: email.trim().toLowerCase()
+      };
+      
+      if (shareCode) {
+        body.share_code = shareCode;
+      }
+
       const { data, error: funcError } = await supabase.functions.invoke('request-pin-recovery', {
-        body: { 
-          share_code: shareCode, 
-          email: email.trim().toLowerCase() 
-        },
+        body,
       });
 
       if (funcError) {
@@ -96,7 +102,10 @@ export function RecoveryModal({ open, onClose, shareCode }: RecoveryModalProps) 
               </div>
               <div className="text-center">
                 <p className="text-sm text-muted-foreground mb-2">
-                  Se este e-mail estiver cadastrado, você receberá um link para redefinir seu código.
+                  {shareCode 
+                    ? 'Se este e-mail estiver cadastrado neste espaço, você receberá um link para redefinir seu código.'
+                    : 'Se este e-mail estiver cadastrado, você receberá um link para redefinir seu código em cada espaço associado.'
+                  }
                 </p>
                 <p className="text-xs text-muted-foreground">
                   O link expira em 15 minutos.
@@ -159,7 +168,10 @@ export function RecoveryModal({ open, onClose, shareCode }: RecoveryModalProps) 
               </div>
 
               <p className="text-xs text-muted-foreground text-center">
-                Um link de recuperação será enviado para seu e-mail.
+                {shareCode 
+                  ? 'Um link de recuperação será enviado para seu e-mail.'
+                  : 'Um link de recuperação será enviado para cada espaço associado ao seu e-mail.'
+                }
               </p>
             </form>
           )}
