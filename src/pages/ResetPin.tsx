@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { InputOTP, InputOTPGroup, InputOTPSlot } from '@/components/ui/input-otp';
+import { InputOTP, InputOTPGroup, InputOTPSlotMasked } from '@/components/ui/input-otp';
 import { Button } from '@/components/ui/button';
 import { Loader2, Lock, CheckCircle, AlertCircle, ArrowRight } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
@@ -251,10 +251,10 @@ export default function ResetPin() {
               disabled={validating}
             >
               <InputOTPGroup>
-                <InputOTPSlot index={0} className="w-14 h-14 text-xl" />
-                <InputOTPSlot index={1} className="w-14 h-14 text-xl" />
-                <InputOTPSlot index={2} className="w-14 h-14 text-xl" />
-                <InputOTPSlot index={3} className="w-14 h-14 text-xl" />
+                <InputOTPSlotMasked index={0} className="w-14 h-14 text-xl" />
+                <InputOTPSlotMasked index={1} className="w-14 h-14 text-xl" />
+                <InputOTPSlotMasked index={2} className="w-14 h-14 text-xl" />
+                <InputOTPSlotMasked index={3} className="w-14 h-14 text-xl" />
               </InputOTPGroup>
             </InputOTP>
 
