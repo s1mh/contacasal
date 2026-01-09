@@ -66,16 +66,16 @@ export function CardManager({ profile, cards, onAddCard, onDeleteCard }: CardMan
   };
 
   return (
-    <div className="space-y-2">
+    <div className="space-y-1.5 sm:space-y-2">
       <div className="flex items-center justify-between">
-        <h4 className="text-xs font-medium text-muted-foreground flex items-center gap-1.5">
-          <CreditCard className="w-3.5 h-3.5" />
+        <h4 className="text-[10px] sm:text-xs font-medium text-muted-foreground flex items-center gap-1">
+          <CreditCard className="w-3 h-3 sm:w-3.5 sm:h-3.5" />
           Cartões
         </h4>
         <Dialog open={isOpen} onOpenChange={setIsOpen}>
           <DialogTrigger asChild>
-            <Button variant="ghost" size="sm" className="h-7 text-xs px-2">
-              <Plus className="w-3.5 h-3.5 mr-1" />
+            <Button size="sm" className="h-6 sm:h-7 text-[10px] sm:text-xs px-2">
+              <Plus className="w-3 h-3 sm:w-3.5 sm:h-3.5 mr-1" />
               Adicionar
             </Button>
           </DialogTrigger>
@@ -168,24 +168,24 @@ export function CardManager({ profile, cards, onAddCard, onDeleteCard }: CardMan
       </div>
 
       {profileCards.length === 0 ? (
-        <p className="text-xs text-muted-foreground text-center py-1.5">
+        <p className="text-[10px] sm:text-xs text-muted-foreground text-center py-1">
           Nenhum cartão cadastrado
         </p>
       ) : (
-        <div className="space-y-1.5">
+        <div className="space-y-1 sm:space-y-1.5">
           {profileCards.map((card) => (
             <div
               key={card.id}
-              className="flex items-center justify-between p-2 rounded-lg bg-muted/50 border border-border"
+              className="flex items-center justify-between p-1.5 sm:p-2 rounded-lg bg-muted/50 border border-border"
             >
-              <div className="flex items-center gap-2">
+              <div className="flex items-center gap-1.5 sm:gap-2">
                 <div 
-                  className="w-6 h-4 rounded-sm"
+                  className="w-5 h-3 sm:w-6 sm:h-4 rounded-sm"
                   style={{ backgroundColor: card.color }}
                 />
                 <div>
-                  <p className="font-medium text-xs">{card.name}</p>
-                  <p className="text-[10px] text-muted-foreground">
+                  <p className="font-medium text-[10px] sm:text-xs">{card.name}</p>
+                  <p className="text-[9px] sm:text-[10px] text-muted-foreground">
                     {card.type === 'credit' ? (
                       <>Crédito • Fecha {card.closing_day} • Vence {card.due_day}</>
                     ) : (
@@ -197,10 +197,10 @@ export function CardManager({ profile, cards, onAddCard, onDeleteCard }: CardMan
               <Button
                 variant="ghost"
                 size="icon"
-                className="h-6 w-6 text-muted-foreground hover:text-destructive"
+                className="h-5 w-5 sm:h-6 sm:w-6 text-muted-foreground hover:text-destructive"
                 onClick={() => onDeleteCard(card.id)}
               >
-                <Trash2 className="w-3 h-3" />
+                <Trash2 className="w-2.5 h-2.5 sm:w-3 sm:h-3" />
               </Button>
             </div>
           ))}

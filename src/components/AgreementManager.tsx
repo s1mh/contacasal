@@ -73,16 +73,16 @@ export function AgreementManager({
   const person2 = profiles.find(p => p.position === 2);
 
   return (
-    <div className="space-y-3">
+    <div className="space-y-2 sm:space-y-3">
       <div className="flex items-center justify-between">
-        <h3 className="text-xs font-medium text-muted-foreground flex items-center gap-1.5">
-          <RefreshCw className="w-3.5 h-3.5" />
+        <h3 className="text-[10px] sm:text-xs font-medium text-muted-foreground flex items-center gap-1">
+          <RefreshCw className="w-3 h-3 sm:w-3.5 sm:h-3.5" />
           Acordos Recorrentes
         </h3>
         <Dialog open={isOpen} onOpenChange={setIsOpen}>
           <DialogTrigger asChild>
-            <Button size="sm" className="h-7 text-xs px-2">
-              <Plus className="w-3.5 h-3.5 mr-1" />
+            <Button size="sm" className="h-6 sm:h-7 text-[10px] sm:text-xs px-2">
+              <Plus className="w-3 h-3 sm:w-3.5 sm:h-3.5 mr-1" />
               Novo Acordo
             </Button>
           </DialogTrigger>
@@ -185,11 +185,11 @@ export function AgreementManager({
       </div>
 
       {agreements.length === 0 ? (
-        <p className="text-xs text-muted-foreground text-center py-3">
-          Nenhum acordo cadastrado. Acordos são regras automáticas que facilitam gastos recorrentes.
+        <p className="text-[10px] sm:text-xs text-muted-foreground text-center py-2">
+          Nenhum acordo cadastrado. Acordos facilitam gastos recorrentes.
         </p>
       ) : (
-        <div className="space-y-2">
+        <div className="space-y-1.5 sm:space-y-2">
           {agreements.map((agreement) => {
             const payer = profiles.find(p => p.position === agreement.paid_by);
             const tag = tags.find(t => t.id === agreement.tag_id);
@@ -197,48 +197,48 @@ export function AgreementManager({
             return (
               <div
                 key={agreement.id}
-                className={`p-3 rounded-xl border ${agreement.is_active ? 'bg-card' : 'bg-muted/30 opacity-60'}`}
+                className={`p-2 sm:p-3 rounded-xl border ${agreement.is_active ? 'bg-card' : 'bg-muted/30 opacity-60'}`}
               >
-                <div className="flex items-start justify-between gap-2">
+                <div className="flex items-start justify-between gap-1.5 sm:gap-2">
                   <div className="space-y-0.5 min-w-0 flex-1">
-                    <div className="flex items-center gap-1.5 flex-wrap">
-                      <h4 className="font-semibold text-sm truncate">{agreement.name}</h4>
+                    <div className="flex items-center gap-1 sm:gap-1.5 flex-wrap">
+                      <h4 className="font-semibold text-xs sm:text-sm truncate">{agreement.name}</h4>
                       {tag && (
                         <span 
-                          className="text-[10px] px-1.5 py-0.5 rounded-full flex-shrink-0"
+                          className="text-[9px] sm:text-[10px] px-1 sm:px-1.5 py-0.5 rounded-full flex-shrink-0"
                           style={{ backgroundColor: `${tag.color}20`, color: tag.color }}
                         >
                           {tag.name}
                         </span>
                       )}
                     </div>
-                    <p className="text-sm font-bold text-primary">
+                    <p className="text-xs sm:text-sm font-bold text-primary">
                       {formatCurrency(agreement.amount)}
                     </p>
-                    <p className="text-[10px] text-muted-foreground">
+                    <p className="text-[9px] sm:text-[10px] text-muted-foreground">
                       Dia {agreement.day_of_month} • {payer?.name} • {agreement.split_value.person1}%/{agreement.split_value.person2}%
                     </p>
                   </div>
-                  <div className="flex items-center gap-1 flex-shrink-0">
+                  <div className="flex items-center gap-0.5 sm:gap-1 flex-shrink-0">
                     <Button
                       variant="ghost"
                       size="icon"
-                      className="h-6 w-6"
+                      className="h-5 w-5 sm:h-6 sm:w-6"
                       onClick={() => onUpdateAgreement(agreement.id, { is_active: !agreement.is_active })}
                     >
                       {agreement.is_active ? (
-                        <Pause className="w-3 h-3 text-muted-foreground" />
+                        <Pause className="w-2.5 h-2.5 sm:w-3 sm:h-3 text-muted-foreground" />
                       ) : (
-                        <Play className="w-3 h-3 text-green-500" />
+                        <Play className="w-2.5 h-2.5 sm:w-3 sm:h-3 text-green-500" />
                       )}
                     </Button>
                     <Button
                       variant="ghost"
                       size="icon"
-                      className="h-6 w-6 hover:text-destructive"
+                      className="h-5 w-5 sm:h-6 sm:w-6 hover:text-destructive"
                       onClick={() => onDeleteAgreement(agreement.id)}
                     >
-                      <Trash2 className="w-3 h-3" />
+                      <Trash2 className="w-2.5 h-2.5 sm:w-3 sm:h-3" />
                     </Button>
                   </div>
                 </div>

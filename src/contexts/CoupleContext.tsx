@@ -285,10 +285,17 @@ export function CoupleProvider({ children, shareCode }: CoupleProviderProps) {
     try {
       const { error } = await supabase.from('profiles').update(updates).eq('id', profileId);
       if (error) throw error;
-      toast({ title: 'Perfil atualizado!' });
+      toast({ 
+        title: 'Perfil atualizado! ✨',
+        description: 'Suas alterações foram salvas'
+      });
     } catch (err: unknown) {
       console.error('Error updating profile:', err);
-      toast({ title: 'Erro ao atualizar perfil', variant: 'destructive' });
+      toast({ 
+        title: 'Ops! Algo deu errado 😕',
+        description: 'Não foi possível atualizar o perfil',
+        variant: 'destructive' 
+      });
       // Revert on error
       await refetch();
     }
@@ -305,11 +312,18 @@ export function CoupleProvider({ children, shareCode }: CoupleProviderProps) {
       
       localStorage.removeItem(`couple_${code}`);
       
-      toast({ title: 'Perfil removido' });
+      toast({ 
+        title: 'Até logo! 👋',
+        description: 'Seu perfil foi desvinculado'
+      });
       return true;
     } catch (err: unknown) {
       console.error('Error deleting profile:', err);
-      toast({ title: 'Erro ao remover perfil', variant: 'destructive' });
+      toast({ 
+        title: 'Ops! Algo deu errado 😕',
+        description: 'Não foi possível remover o perfil',
+        variant: 'destructive' 
+      });
       return false;
     }
   };
@@ -347,12 +361,19 @@ export function CoupleProvider({ children, shareCode }: CoupleProviderProps) {
         ...expense,
       });
       if (error) throw error;
-      toast({ title: 'Gasto registrado!' });
+      toast({ 
+        title: 'Gasto registrado! 💸',
+        description: 'Já está na conta do casal'
+      });
       // Refetch to get real ID
       await refetch();
     } catch (err: unknown) {
       console.error('Error adding expense:', err);
-      toast({ title: 'Erro ao adicionar gasto', variant: 'destructive' });
+      toast({ 
+        title: 'Ops! Algo deu errado 😕',
+        description: 'Não foi possível registrar o gasto',
+        variant: 'destructive' 
+      });
       // Revert on error
       setCouple(prev => {
         if (!prev) return prev;
@@ -380,10 +401,17 @@ export function CoupleProvider({ children, shareCode }: CoupleProviderProps) {
     try {
       const { error } = await supabase.from('expenses').delete().eq('id', expenseId);
       if (error) throw error;
-      toast({ title: 'Gasto removido' });
+      toast({ 
+        title: 'Gasto removido! 🗑️',
+        description: 'Retirado da conta'
+      });
     } catch (err: unknown) {
       console.error('Error deleting expense:', err);
-      toast({ title: 'Erro ao remover gasto', variant: 'destructive' });
+      toast({ 
+        title: 'Ops! Algo deu errado 😕',
+        description: 'Não foi possível remover o gasto',
+        variant: 'destructive' 
+      });
       // Revert on error
       setCouple(prev => {
         if (!prev) return prev;
@@ -412,11 +440,18 @@ export function CoupleProvider({ children, shareCode }: CoupleProviderProps) {
     try {
       const { error } = await supabase.from('tags').insert({ couple_id: couple.id, ...tag });
       if (error) throw error;
-      toast({ title: 'Categoria adicionada!' });
+      toast({ 
+        title: 'Nova categoria! 🏷️',
+        description: 'Pronta para usar'
+      });
       await refetch();
     } catch (err: unknown) {
       console.error('Error adding tag:', err);
-      toast({ title: 'Erro ao adicionar categoria', variant: 'destructive' });
+      toast({ 
+        title: 'Ops! Algo deu errado 😕',
+        description: 'Não foi possível criar a categoria',
+        variant: 'destructive' 
+      });
       setCouple(prev => {
         if (!prev) return prev;
         return { ...prev, tags: prev.tags.filter(t => t.id !== tempId) };
@@ -435,10 +470,17 @@ export function CoupleProvider({ children, shareCode }: CoupleProviderProps) {
     try {
       const { error } = await supabase.from('tags').delete().eq('id', tagId);
       if (error) throw error;
-      toast({ title: 'Categoria removida' });
+      toast({ 
+        title: 'Categoria removida! 🗑️',
+        description: 'Não afeta gastos anteriores'
+      });
     } catch (err: unknown) {
       console.error('Error deleting tag:', err);
-      toast({ title: 'Erro ao remover categoria', variant: 'destructive' });
+      toast({ 
+        title: 'Ops! Algo deu errado 😕',
+        description: 'Não foi possível remover a categoria',
+        variant: 'destructive' 
+      });
       setCouple(prev => {
         if (!prev) return prev;
         return { ...prev, tags: previousTags };
@@ -464,11 +506,18 @@ export function CoupleProvider({ children, shareCode }: CoupleProviderProps) {
     try {
       const { error } = await supabase.from('cards').insert(card);
       if (error) throw error;
-      toast({ title: 'Cartão adicionado!' });
+      toast({ 
+        title: 'Cartão adicionado! 💳',
+        description: 'Pronto para registrar gastos'
+      });
       await refetch();
     } catch (err: unknown) {
       console.error('Error adding card:', err);
-      toast({ title: 'Erro ao adicionar cartão', variant: 'destructive' });
+      toast({ 
+        title: 'Ops! Algo deu errado 😕',
+        description: 'Não foi possível adicionar o cartão',
+        variant: 'destructive' 
+      });
       setCouple(prev => {
         if (!prev) return prev;
         return { ...prev, cards: prev.cards.filter(c => c.id !== tempId) };
@@ -487,10 +536,17 @@ export function CoupleProvider({ children, shareCode }: CoupleProviderProps) {
     try {
       const { error } = await supabase.from('cards').delete().eq('id', cardId);
       if (error) throw error;
-      toast({ title: 'Cartão removido' });
+      toast({ 
+        title: 'Cartão removido! 🗑️',
+        description: 'Retirado da lista'
+      });
     } catch (err: unknown) {
       console.error('Error deleting card:', err);
-      toast({ title: 'Erro ao remover cartão', variant: 'destructive' });
+      toast({ 
+        title: 'Ops! Algo deu errado 😕',
+        description: 'Não foi possível remover o cartão',
+        variant: 'destructive' 
+      });
       setCouple(prev => {
         if (!prev) return prev;
         return { ...prev, cards: previousCards };
@@ -516,11 +572,18 @@ export function CoupleProvider({ children, shareCode }: CoupleProviderProps) {
     try {
       const { error } = await supabase.from('agreements').insert(agreement);
       if (error) throw error;
-      toast({ title: 'Acordo criado!' });
+      toast({ 
+        title: 'Acordo criado! 🤝',
+        description: 'Facilita gastos recorrentes'
+      });
       await refetch();
     } catch (err: unknown) {
       console.error('Error adding agreement:', err);
-      toast({ title: 'Erro ao criar acordo', variant: 'destructive' });
+      toast({ 
+        title: 'Ops! Algo deu errado 😕',
+        description: 'Não foi possível criar o acordo',
+        variant: 'destructive' 
+      });
       setCouple(prev => {
         if (!prev) return prev;
         return { ...prev, agreements: prev.agreements.filter(a => a.id !== tempId) };
@@ -544,7 +607,11 @@ export function CoupleProvider({ children, shareCode }: CoupleProviderProps) {
       if (error) throw error;
     } catch (err: unknown) {
       console.error('Error updating agreement:', err);
-      toast({ title: 'Erro ao atualizar acordo', variant: 'destructive' });
+      toast({ 
+        title: 'Ops! Algo deu errado 😕',
+        description: 'Não foi possível atualizar o acordo',
+        variant: 'destructive' 
+      });
       setCouple(prev => {
         if (!prev) return prev;
         return { ...prev, agreements: previousAgreements };
@@ -563,10 +630,17 @@ export function CoupleProvider({ children, shareCode }: CoupleProviderProps) {
     try {
       const { error } = await supabase.from('agreements').delete().eq('id', id);
       if (error) throw error;
-      toast({ title: 'Acordo removido' });
+      toast({ 
+        title: 'Acordo removido! 🗑️',
+        description: 'Não afeta gastos anteriores'
+      });
     } catch (err: unknown) {
       console.error('Error deleting agreement:', err);
-      toast({ title: 'Erro ao remover acordo', variant: 'destructive' });
+      toast({ 
+        title: 'Ops! Algo deu errado 😕',
+        description: 'Não foi possível remover o acordo',
+        variant: 'destructive' 
+      });
       setCouple(prev => {
         if (!prev) return prev;
         return { ...prev, agreements: previousAgreements };
@@ -594,11 +668,18 @@ export function CoupleProvider({ children, shareCode }: CoupleProviderProps) {
     try {
       const { error } = await supabase.from('settlements').insert(settlement);
       if (error) throw error;
-      toast({ title: 'Acerto registrado!' });
+      toast({ 
+        title: 'Acerto registrado! 💰',
+        description: 'Saldo atualizado'
+      });
       await refetch();
     } catch (err: unknown) {
       console.error('Error adding settlement:', err);
-      toast({ title: 'Erro ao registrar acerto', variant: 'destructive' });
+      toast({ 
+        title: 'Ops! Algo deu errado 😕',
+        description: 'Não foi possível registrar o acerto',
+        variant: 'destructive' 
+      });
       setCouple(prev => {
         if (!prev) return prev;
         return { ...prev, settlements: prev.settlements.filter(s => s.id !== tempId) };
