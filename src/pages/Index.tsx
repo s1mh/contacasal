@@ -78,10 +78,16 @@ export default function Index() {
   };
 
   const handleJoinSpace = async () => {
-    if (existingCode.trim()) {
-      // Clear any existing validation before joining a new space
-      await clearValidation();
-      navigate(`/c/${existingCode.trim()}`);
+    const code = existingCode.trim();
+    if (code) {
+      setLoading(true);
+      try {
+        // Clear any existing validation before joining a new space
+        await clearValidation();
+        navigate(`/c/${code}`);
+      } finally {
+        setLoading(false);
+      }
     }
   };
 
