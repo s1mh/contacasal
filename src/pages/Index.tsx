@@ -18,6 +18,7 @@ interface LastSpace {
   name: string;
   avatarIndex: number;
   username?: string;
+  timestamp?: number;
 }
 
 export default function Index() {
@@ -40,27 +41,36 @@ export default function Index() {
   const [showRecovery, setShowRecovery] = useState(false);
   const [showUsernamePin, setShowUsernamePin] = useState(false);
 
-  // Check for saved space on mount
+  // Check for saved space on mount - get the most recent one
   useEffect(() => {
+    const spaces: LastSpace[] = [];
+    
     for (let i = 0; i < localStorage.length; i++) {
       const key = localStorage.key(i);
       if (key?.startsWith("couple_")) {
         try {
           const data = JSON.parse(localStorage.getItem(key) || "{}");
           if (data.position && data.name) {
-            setLastSpace({
+            spaces.push({
               shareCode: key.replace("couple_", ""),
               position: data.position,
               name: data.name,
               avatarIndex: data.avatarIndex || 1,
               username: data.username,
+              timestamp: data.timestamp || 0,
             });
-            break;
           }
         } catch (e) {
           // Ignore invalid data
         }
       }
+    }
+    
+    // Sort by timestamp descending (most recent first)
+    spaces.sort((a, b) => (b.timestamp || 0) - (a.timestamp || 0));
+    
+    if (spaces.length > 0) {
+      setLastSpace(spaces[0]);
     }
   }, []);
 
@@ -245,28 +255,32 @@ export default function Index() {
           <p className="text-muted-foreground">Dividam gastos com clareza</p>
         </div>
 
-        {/* Continue as saved user */}
+        {/* Continue as saved user - Vertical layout with avatar on top */}
         {lastSpace && !showUsernameLogin && (
           <button
             onClick={handleContinue}
-            className="w-full mb-4 p-4 bg-card rounded-3xl border-2 border-primary/30 hover:border-primary shadow-lg transition-all duration-300 flex items-center justify-between group animate-fade-slide-up hover:scale-[1.02]"
+            className="w-full mb-4 p-4 bg-card rounded-3xl border-2 border-primary/30 hover:border-primary shadow-lg transition-all duration-300 group animate-fade-slide-up hover:scale-[1.02]"
             style={{ animationDelay: "100ms" }}
           >
-            <div className="flex items-center gap-3">
-              <div className="w-12 h-12 rounded-full overflow-hidden ring-2 ring-primary animate-bounce-gentle">
+            <div className="flex flex-col items-center gap-3">
+              <div className="w-16 h-16 rounded-full overflow-hidden ring-2 ring-primary animate-bounce-gentle">
                 <img
                   src={CAT_AVATARS[(lastSpace.avatarIndex || 1) - 1]}
                   alt={lastSpace.name}
                   className="w-full h-full object-cover"
                 />
               </div>
-              <div className="text-left">
+              <div className="text-center">
                 <p className="text-xs text-muted-foreground">Continuar como</p>
-                <p className="font-semibold">{lastSpace.name}</p>
-                {lastSpace.username && <p className="text-xs text-muted-foreground">@{lastSpace.username}</p>}
+                <p className="font-semibold text-lg">{lastSpace.name}</p>
+                {lastSpace.username && (
+                  <p className="text-sm text-muted-foreground">@{lastSpace.username}</p>
+                )}
               </div>
             </div>
-            <ArrowRight className="w-5 h-5 text-primary group-hover:translate-x-1 transition-transform" />
+            <div className="flex justify-center mt-3">
+              <ArrowRight className="w-5 h-5 text-primary group-hover:translate-x-1 transition-transform" />
+            </div>
           </button>
         )}
 

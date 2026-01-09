@@ -309,12 +309,14 @@ export type Database = {
           email: string | null
           id: string
           name: string
+          pending_expires_at: string | null
           pin_attempts: number | null
           pin_code: string | null
           pin_locked_until: string | null
           position: number
           recovery_token: string | null
           recovery_token_expires_at: string | null
+          status: string | null
           updated_at: string
           user_id: string | null
           username: string | null
@@ -327,12 +329,14 @@ export type Database = {
           email?: string | null
           id?: string
           name?: string
+          pending_expires_at?: string | null
           pin_attempts?: number | null
           pin_code?: string | null
           pin_locked_until?: string | null
           position: number
           recovery_token?: string | null
           recovery_token_expires_at?: string | null
+          status?: string | null
           updated_at?: string
           user_id?: string | null
           username?: string | null
@@ -345,12 +349,14 @@ export type Database = {
           email?: string | null
           id?: string
           name?: string
+          pending_expires_at?: string | null
           pin_attempts?: number | null
           pin_code?: string | null
           pin_locked_until?: string | null
           position?: number
           recovery_token?: string | null
           recovery_token_expires_at?: string | null
+          status?: string | null
           updated_at?: string
           user_id?: string | null
           username?: string | null
