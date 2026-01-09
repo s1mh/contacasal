@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { Outlet, useParams, Navigate, useNavigate } from 'react-router-dom';
 import { BottomNav } from '@/components/BottomNav';
 import { OnboardingModal } from '@/components/OnboardingModal';
@@ -13,261 +13,212 @@ import { CAT_AVATARS } from '@/lib/constants';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 
+interface SpaceInfo {
+  coupleId: string;
+  hasVacancy: boolean;
+  currentMembers: number;
+  maxMembers: number;
+  hostName: string | null;
+}
+
 function CoupleLayoutContent() {
   const { shareCode } = useParams();
   const navigate = useNavigate();
   const { toast } = useToast();
-  const { couple, loading, error, isSyncing, updateProfile, refetch } = useCoupleContext();
-  const { loading: authLoading, isValidated, coupleId, validateShareCode, joinSpace } = useAuthContext();
+  const { couple, loading, error, isSyncing, refetch } = useCoupleContext();
+  const { loading: authLoading, isValidated, coupleId } = useAuthContext();
   const [showOnboarding, setShowOnboarding] = useState(false);
   const [showReconnect, setShowReconnect] = useState(false);
-  const [showReturningModal, setShowReturningModal] = useState(false);
   const [myPosition, setMyPosition] = useState<number | null>(null);
-  const [validating, setValidating] = useState(false);
+  const [validating, setValidating] = useState(true);
   const [validationError, setValidationError] = useState<string | null>(null);
-  const [newProfileId, setNewProfileId] = useState<string | null>(null);
   const [isNewMember, setIsNewMember] = useState(false);
   const [profileNotFound, setProfileNotFound] = useState(false);
   const [storedProfileInfo, setStoredProfileInfo] = useState<{ name: string; position: number } | null>(null);
-  const [cancellingPending, setCancellingPending] = useState(false);
+  const [spaceInfo, setSpaceInfo] = useState<SpaceInfo | null>(null);
+  const [joiningSpace, setJoiningSpace] = useState(false);
+  const hasValidatedRef = useRef(false);
+  const timestampUpdatedRef = useRef(false);
 
-  // Validate share code when accessing a couple space
+  // Step 1: Validate share code publicly (no auth required)
   useEffect(() => {
-    const doValidation = async () => {
-      if (!shareCode || authLoading) return;
+    const validatePublic = async () => {
+      if (!shareCode || hasValidatedRef.current) return;
       
-      // Wait for session to be ready
-      const { data: { session } } = await supabase.auth.getSession();
-      if (!session) {
-        console.log('Session not ready, waiting...');
-        return;
-      }
-      
+      hasValidatedRef.current = true;
       setValidating(true);
       setValidationError(null);
       
-      // Always validate the share code to check membership for THIS specific space
-      const validateResult = await validateShareCode(shareCode);
+      console.log('Validating share code publicly:', shareCode);
       
-      if (!validateResult.success) {
-        // Validation failed completely
-        setValidationError(validateResult.error || 'Código inválido');
-        setValidating(false);
-        return;
-      }
-      
-      if (validateResult.isMember) {
-        // User is already a member of this space - just proceed
-        console.log('User is already a member of this space');
-        setValidating(false);
-        return;
-      }
-      
-      // Valid code but user is not a member yet - join as new member
-      console.log('User is not a member - joining space');
-      const joinResult = await joinSpace(shareCode);
-      
-      if (!joinResult.success) {
-        setValidationError(joinResult.error || 'Falha ao entrar no espaço');
-      } else if (joinResult.profileId) {
-        // Store profile ID for onboarding
-        setNewProfileId(joinResult.profileId);
+      try {
+        const { data, error: fnError } = await supabase.functions.invoke('validate-share-code-public', {
+          body: { share_code: shareCode },
+        });
         
-        // Check if returning user (has pending profile)
-        if ((joinResult as { is_returning?: boolean }).is_returning) {
-          console.log('Returning user with pending profile:', joinResult.profileId);
-          setShowReturningModal(true);
-        } else {
-          setIsNewMember(true);
-          console.log('New member joined with profile:', joinResult.profileId);
+        if (fnError || !data?.success) {
+          console.log('Public validation failed:', fnError || data?.error);
+          setValidationError(data?.error || 'Código inválido');
+          setValidating(false);
+          return;
         }
+        
+        console.log('Space validated:', data);
+        
+        setSpaceInfo({
+          coupleId: data.couple_id,
+          hasVacancy: data.has_vacancy,
+          currentMembers: data.current_members,
+          maxMembers: data.max_members,
+          hostName: data.host_name
+        });
+        
+        // Check if user has local access to this space
+        const stored = localStorage.getItem(`couple_${shareCode}`);
+        if (stored) {
+          try {
+            const localData = JSON.parse(stored);
+            console.log('Found local storage data:', localData);
+            setMyPosition(localData.position);
+            setValidating(false);
+            return;
+          } catch {
+            // Invalid stored data
+            localStorage.removeItem(`couple_${shareCode}`);
+          }
+        }
+        
+        // No local access - check if space has vacancy for new member
+        if (data.has_vacancy) {
+          console.log('Space has vacancy - showing onboarding');
+          setIsNewMember(true);
+          setShowOnboarding(true);
+        } else {
+          // Space is full - try to reconnect
+          console.log('Space is full - showing reconnect');
+          setShowReconnect(true);
+        }
+        
+        setValidating(false);
+        
+      } catch (err) {
+        console.error('Error in public validation:', err);
+        setValidationError('Erro ao validar código');
+        setValidating(false);
       }
-      
-      setValidating(false);
     };
     
-    doValidation();
-  }, [shareCode, authLoading, validateShareCode, joinSpace]);
+    validatePublic();
+  }, [shareCode]);
 
-  // Check for existing device recognition or show appropriate modal
+  // Step 2: Check if stored profile still exists when couple data loads
   useEffect(() => {
-    if (couple && shareCode && isValidated && coupleId === couple.id) {
-      // Don't process if returning modal is showing
-      if (showReturningModal) return;
+    if (couple && shareCode && myPosition && !showOnboarding && !showReconnect) {
+      const profileExists = couple.profiles.find(p => 
+        p.position === myPosition && 
+        p.name !== 'Pessoa 1' && p.name !== 'Pessoa 2' && p.name !== 'Pessoa'
+      );
       
+      if (!profileExists) {
+        const stored = localStorage.getItem(`couple_${shareCode}`);
+        if (stored) {
+          try {
+            const data = JSON.parse(stored);
+            setStoredProfileInfo({ name: data.name, position: data.position });
+            setProfileNotFound(true);
+          } catch {
+            localStorage.removeItem(`couple_${shareCode}`);
+            setShowReconnect(true);
+          }
+        } else {
+          setShowReconnect(true);
+        }
+      }
+    }
+  }, [couple, shareCode, myPosition, showOnboarding, showReconnect]);
+
+  // Step 3: Update timestamp when accessing space (for "last accessed" feature)
+  useEffect(() => {
+    if (couple && shareCode && myPosition && !timestampUpdatedRef.current) {
       const stored = localStorage.getItem(`couple_${shareCode}`);
       if (stored) {
         try {
           const data = JSON.parse(stored);
-          
-          // Verify the stored profile still exists in the database
-          const profileExists = couple.profiles.find(p => 
-            p.position === data.position && 
-            p.name !== 'Pessoa 1' && p.name !== 'Pessoa 2' && p.name !== 'Pessoa'
-          );
-          
-          if (!profileExists) {
-            // Profile was deleted from the database - show not found dialog
-            setStoredProfileInfo({ name: data.name, position: data.position });
-            setProfileNotFound(true);
-            return;
+          const now = Date.now();
+          // Only update if more than 1 minute has passed
+          if (!data.timestamp || now - data.timestamp > 60000) {
+            localStorage.setItem(`couple_${shareCode}`, JSON.stringify({
+              ...data,
+              timestamp: now
+            }));
+            console.log('Updated last access timestamp');
           }
-          
-          setMyPosition(data.position);
-          setShowOnboarding(false);
-          setShowReconnect(false);
+          timestampUpdatedRef.current = true;
         } catch {
-          // Invalid stored data, check for configured profiles
-          checkProfilesAndShowModal();
+          // Ignore
         }
-      } else {
-        // No local storage - check if there are configured profiles or if user just joined
-        checkProfilesAndShowModal();
       }
     }
-  }, [couple, shareCode, isValidated, coupleId, newProfileId, showReturningModal]);
+  }, [couple, shareCode, myPosition]);
 
-  const checkProfilesAndShowModal = () => {
-    if (!couple) return;
+  // Handler: Complete onboarding (sign in + join space)
+  const handleOnboardingComplete = async (
+    position: number, 
+    name: string, 
+    avatarIndex: number, 
+    color: string, 
+    pinCode: string, 
+    email?: string, 
+    username?: string
+  ) => {
+    if (!shareCode) return;
     
-    // If user just joined (has newProfileId), show onboarding for their new profile
-    if (newProfileId) {
-      const myProfile = couple.profiles.find(p => p.id === newProfileId);
-      if (myProfile && (myProfile.name === 'Pessoa 1' || myProfile.name === 'Pessoa 2' || myProfile.name === 'Pessoa')) {
-        setIsNewMember(true);
-        setShowOnboarding(true);
-        setShowReconnect(false);
-        return;
-      }
-    }
+    setJoiningSpace(true);
     
-    // Filter out pending profiles
-    const activeProfiles = couple.profiles.filter(p => 
-      (p as Profile & { status?: string }).status !== 'pending'
-    );
-    
-    const configuredProfiles = activeProfiles.filter(p => 
-      p.name !== 'Pessoa 1' && p.name !== 'Pessoa 2' && p.name !== 'Pessoa'
-    );
-    
-    const unconfiguredProfiles = activeProfiles.filter(p => 
-      p.name === 'Pessoa 1' || p.name === 'Pessoa 2' || p.name === 'Pessoa'
-    );
-    
-    // No localStorage for this space = show welcome screen for new devices
-    const stored = localStorage.getItem(`couple_${shareCode}`);
-    if (!stored && configuredProfiles.length > 0) {
-      // Device doesn't have this space saved but there are configured profiles
-      // Show welcome screen first, then reconnect
-      setIsNewMember(true);
-    }
-    
-    if (configuredProfiles.length > 0 && unconfiguredProfiles.length === 0) {
-      // All profiles configured - show reconnect modal
-      setShowReconnect(true);
-      setShowOnboarding(false);
-    } else if (unconfiguredProfiles.length > 0) {
-      // Has unconfigured profiles - show onboarding
-      setShowOnboarding(true);
-      setShowReconnect(false);
-    } else {
-      // Fallback to reconnect
-      setShowReconnect(true);
-      setShowOnboarding(false);
-    }
-  };
-
-  const handleRemoveAccess = () => {
-    if (shareCode) {
-      localStorage.removeItem(`couple_${shareCode}`);
-    }
-    setProfileNotFound(false);
-    navigate('/');
-  };
-
-  const handleReconnectFromNotFound = () => {
-    if (shareCode) {
-      localStorage.removeItem(`couple_${shareCode}`);
-    }
-    setProfileNotFound(false);
-    setShowReconnect(true);
-  };
-
-  const handleCancelPending = async () => {
-    if (!newProfileId) return;
-    
-    setCancellingPending(true);
     try {
-      const { data, error } = await supabase.functions.invoke('cancel-pending-profile', {
-        body: { profile_id: newProfileId }
-      });
+      // Step 1: Ensure we have a session
+      let session = (await supabase.auth.getSession()).data.session;
       
-      if (error || !data?.success) {
-        console.error('Failed to cancel pending profile:', error);
-        toast({
-          title: 'Erro ao cancelar',
-          description: 'Tente novamente',
-          variant: 'destructive'
-        });
-      } else {
-        toast({
-          title: 'Vaga liberada',
-          description: 'Você pode entrar novamente quando quiser'
-        });
-        navigate('/');
+      if (!session) {
+        console.log('No session - signing in anonymously');
+        const { data: authData, error: authError } = await supabase.auth.signInAnonymously();
+        if (authError) {
+          throw new Error('Falha na autenticação: ' + authError.message);
+        }
+        session = authData.session;
       }
-    } finally {
-      setCancellingPending(false);
-      setShowReturningModal(false);
-    }
-  };
-
-  const handleContinuePending = () => {
-    setShowReturningModal(false);
-    setIsNewMember(true);
-    setShowOnboarding(true);
-  };
-
-  const handleOnboardingComplete = async (position: number, name: string, avatarIndex: number, color: string, pinCode: string, email?: string, username?: string) => {
-    // If this is a new member with pending profile, use activate-profile
-    if (newProfileId) {
-      const { data, error } = await supabase.functions.invoke('activate-profile', {
+      
+      if (!session) {
+        throw new Error('Não foi possível criar sessão');
+      }
+      
+      console.log('Session ready, calling join-and-activate');
+      
+      // Step 2: Call join-and-activate with all data
+      const { data: joinResult, error: joinError } = await supabase.functions.invoke('join-and-activate', {
         body: {
-          profile_id: newProfileId,
+          share_code: shareCode,
           name,
           avatar_index: avatarIndex,
           color,
           pin_code: pinCode,
           email: email || null,
           username: username || null,
-        }
+        },
       });
-
-      if (error || !data?.success) {
-        console.error('Error activating profile:', error);
-        
-        // Check if expired
-        if (data?.expired) {
-          toast({
-            title: 'Reserva expirou',
-            description: 'Por favor, entre novamente pelo link de convite',
-            variant: 'destructive'
-          });
-          navigate('/');
-          return;
-        }
-        
-        toast({ 
-          title: 'Ops! Algo deu errado 😕',
-          description: 'Não foi possível criar o perfil',
-          variant: 'destructive'
-        });
-        return;
+      
+      if (joinError || !joinResult?.success) {
+        throw new Error(joinResult?.error || 'Falha ao entrar no espaço');
       }
       
-      // Save to localStorage
+      console.log('Joined space successfully:', joinResult);
+      
+      // Step 3: Refresh session to get updated JWT with couple_id
+      await supabase.auth.refreshSession();
+      
+      // Step 4: Save to localStorage
       localStorage.setItem(`couple_${shareCode}`, JSON.stringify({
-        position,
+        position: joinResult.position,
         name,
         avatarIndex,
         color,
@@ -275,66 +226,31 @@ function CoupleLayoutContent() {
         timestamp: Date.now()
       }));
       
-      await refetch();
-      setMyPosition(position);
+      setMyPosition(joinResult.position);
       setShowOnboarding(false);
+      await refetch();
       
       toast({ 
         title: 'Bem-vindo! 🎉',
         description: username ? `Seu @ é @${username}` : 'Seu perfil foi criado'
       });
-      return;
+      
+    } catch (err) {
+      console.error('Error in onboarding complete:', err);
+      toast({
+        title: 'Ops! Algo deu errado 😕',
+        description: err instanceof Error ? err.message : 'Não foi possível criar o perfil',
+        variant: 'destructive'
+      });
+    } finally {
+      setJoiningSpace(false);
     }
-    
-    // Existing flow for non-pending profiles
-    const profile = couple?.profiles.find(p => p.position === position);
-    if (profile) {
-      const updateData: Record<string, unknown> = { 
-        name, 
-        avatar_index: avatarIndex, 
-        color,
-        pin_code: pinCode 
-      };
-      
-      if (email) {
-        updateData.email = email;
-      }
-
-      if (username) {
-        updateData.username = username;
-      }
-
-      const { error } = await supabase
-        .from('profiles')
-        .update(updateData)
-        .eq('id', profile.id);
-      
-      if (error) {
-        console.error('Error updating profile:', error);
-        toast({ 
-          title: 'Ops! Algo deu errado 😕',
-          description: 'Não foi possível criar o perfil',
-          variant: 'destructive'
-        });
-        return;
-      }
-      
-      await refetch();
-    }
-    setMyPosition(position);
-    setShowOnboarding(false);
-    
-    toast({ 
-      title: 'Espaço criado! 🎉',
-      description: username ? `Seu @ é @${username}` : 'Seu cantinho do casal está pronto'
-    });
   };
 
   const handleReconnect = async (profile: Profile, pin: string): Promise<boolean> => {
-    // PIN verification is now done via edge function in ReconnectModal
+    // PIN verification is done via edge function in ReconnectModal
     // This function just handles the localStorage and state update
     
-    // PIN correct - save to localStorage and proceed
     localStorage.setItem(`couple_${shareCode}`, JSON.stringify({
       position: profile.position,
       name: profile.name,
@@ -355,17 +271,46 @@ function CoupleLayoutContent() {
     return true;
   };
 
+  const handleRemoveAccess = () => {
+    if (shareCode) {
+      localStorage.removeItem(`couple_${shareCode}`);
+    }
+    setProfileNotFound(false);
+    navigate('/');
+  };
+
+  const handleReconnectFromNotFound = () => {
+    if (shareCode) {
+      localStorage.removeItem(`couple_${shareCode}`);
+    }
+    setProfileNotFound(false);
+    setShowReconnect(true);
+  };
+
   const handleCreateNewFromReconnect = () => {
+    if (!spaceInfo?.hasVacancy) {
+      toast({
+        title: 'Espaço cheio',
+        description: 'Não há vagas disponíveis',
+        variant: 'destructive'
+      });
+      return;
+    }
     setShowReconnect(false);
+    setIsNewMember(true);
     setShowOnboarding(true);
+  };
+
+  const handleCloseOnboarding = () => {
+    navigate('/');
   };
 
   if (!shareCode) {
     return <Navigate to="/" replace />;
   }
 
-  // Loading states with animated cats
-  if (authLoading || loading || validating) {
+  // Loading states
+  if (validating || (loading && myPosition)) {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center">
         <div className="flex flex-col items-center gap-4 animate-fade-in">
@@ -392,7 +337,7 @@ function CoupleLayoutContent() {
   }
 
   // Error states
-  if (validationError || error || !couple) {
+  if (validationError) {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center p-6">
         <div className="text-center max-w-sm animate-fade-in">
@@ -400,60 +345,92 @@ function CoupleLayoutContent() {
             <AlertCircle className="w-8 h-8 text-destructive" />
           </div>
           <h1 className="text-xl font-semibold text-foreground mb-2">
-            {validationError ? 'Acesso negado' : 'Espaço não encontrado'}
+            Acesso negado
           </h1>
           <p className="text-muted-foreground mb-6">
-            {validationError || 'O código pode estar incorreto ou o espaço foi removido.'}
+            {validationError}
           </p>
           <div className="flex flex-col gap-2">
             <Button onClick={() => navigate('/')} className="w-full">
               Voltar ao início
             </Button>
-            {validationError && (
-              <Button 
-                variant="outline" 
-                onClick={() => window.location.reload()}
-                className="w-full"
-              >
-                <RefreshCw className="w-4 h-4 mr-2" />
-                Tentar novamente
-              </Button>
-            )}
+            <Button 
+              variant="outline" 
+              onClick={() => {
+                hasValidatedRef.current = false;
+                window.location.reload();
+              }}
+              className="w-full"
+            >
+              <RefreshCw className="w-4 h-4 mr-2" />
+              Tentar novamente
+            </Button>
           </div>
         </div>
       </div>
     );
   }
 
-  // Don't show content until validated
-  if (!isValidated || coupleId !== couple.id) {
+  // Show onboarding or reconnect modals without couple data
+  if (!couple && (showOnboarding || showReconnect)) {
+    return (
+      <div className="min-h-screen bg-background">
+        <OnboardingModal
+          open={showOnboarding}
+          onClose={handleCloseOnboarding}
+          onComplete={handleOnboardingComplete}
+          profiles={[]}
+          shareCode={shareCode}
+          isNewMember={isNewMember}
+          hostName={spaceInfo?.hostName}
+          isJoining={joiningSpace}
+        />
+        
+        <ReconnectModal
+          open={showReconnect}
+          profiles={[]}
+          onReconnect={handleReconnect}
+          onCreateNew={handleCreateNewFromReconnect}
+          shareCode={shareCode}
+          hasVacancy={spaceInfo?.hasVacancy}
+        />
+      </div>
+    );
+  }
+
+  // Waiting for couple data with position set
+  if (!couple && myPosition) {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center">
         <div className="flex flex-col items-center gap-4 animate-fade-in">
-          <div className="flex gap-2">
-            <img 
-              src={CAT_AVATARS[0]} 
-              alt="" 
-              className="w-12 h-12 rounded-full shadow-lg animate-bounce-gentle" 
-            />
-            <img 
-              src={CAT_AVATARS[1]} 
-              alt="" 
-              className="w-12 h-12 rounded-full shadow-lg animate-bounce-gentle" 
-              style={{ animationDelay: '200ms' }}
-            />
-          </div>
           <Loader2 className="w-6 h-6 animate-spin text-primary" />
-          <p className="text-sm text-muted-foreground">Validando acesso...</p>
+          <p className="text-sm text-muted-foreground">Carregando espaço...</p>
         </div>
       </div>
     );
   }
 
-  const handleCloseOnboarding = () => {
-    // Always navigate back to home when X is clicked
-    navigate('/');
-  };
+  // No couple and no modals to show
+  if (!couple) {
+    return (
+      <div className="min-h-screen bg-background flex items-center justify-center p-6">
+        <div className="text-center max-w-sm animate-fade-in">
+          <div className="w-16 h-16 mx-auto mb-4 rounded-full bg-destructive/10 flex items-center justify-center">
+            <AlertCircle className="w-8 h-8 text-destructive" />
+          </div>
+          <h1 className="text-xl font-semibold text-foreground mb-2">
+            Espaço não encontrado
+          </h1>
+          <p className="text-muted-foreground mb-6">
+            O código pode estar incorreto ou o espaço foi removido.
+          </p>
+          <Button onClick={() => navigate('/')} className="w-full">
+            Voltar ao início
+          </Button>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-background pb-24">
@@ -461,41 +438,7 @@ function CoupleLayoutContent() {
       <Outlet context={{ couple, myPosition }} />
       <BottomNav />
       
-      {/* Returning User Modal - When user has a pending profile */}
-      <Dialog open={showReturningModal} onOpenChange={() => {}}>
-        <DialogContent className="sm:max-w-md" onPointerDownOutside={(e) => e.preventDefault()}>
-          <DialogHeader>
-            <DialogTitle className="flex items-center gap-2">
-              <Hand className="w-5 h-5 text-primary" />
-              Bem-vindo de volta! 👋
-            </DialogTitle>
-            <DialogDescription>
-              Você começou a configurar seu perfil mas não finalizou. Deseja continuar de onde parou?
-            </DialogDescription>
-          </DialogHeader>
-          <div className="flex flex-col gap-3 pt-4">
-            <Button 
-              onClick={handleContinuePending}
-              className="w-full"
-            >
-              Continuar configuração
-            </Button>
-            <Button 
-              variant="outline"
-              onClick={handleCancelPending}
-              disabled={cancellingPending}
-              className="w-full"
-            >
-              {cancellingPending ? (
-                <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-              ) : null}
-              Cancelar e liberar vaga
-            </Button>
-          </div>
-        </DialogContent>
-      </Dialog>
-      
-      {/* Profile Not Found Modal - When stored profile was deleted */}
+      {/* Profile Not Found Modal */}
       <Dialog open={profileNotFound} onOpenChange={() => {}}>
         <DialogContent className="sm:max-w-md" onPointerDownOutside={(e) => e.preventDefault()}>
           <DialogHeader>
@@ -527,7 +470,7 @@ function CoupleLayoutContent() {
         </DialogContent>
       </Dialog>
       
-      {/* Onboarding Modal - For first time profile creation */}
+      {/* Onboarding Modal */}
       <OnboardingModal
         open={showOnboarding}
         onClose={handleCloseOnboarding}
@@ -535,15 +478,18 @@ function CoupleLayoutContent() {
         profiles={couple.profiles}
         shareCode={shareCode}
         isNewMember={isNewMember}
+        hostName={spaceInfo?.hostName}
+        isJoining={joiningSpace}
       />
 
-      {/* Reconnect Modal - For returning users on new devices */}
+      {/* Reconnect Modal */}
       <ReconnectModal
         open={showReconnect}
         profiles={couple.profiles}
         onReconnect={handleReconnect}
         onCreateNew={handleCreateNewFromReconnect}
         shareCode={shareCode}
+        hasVacancy={spaceInfo?.hasVacancy}
       />
     </div>
   );

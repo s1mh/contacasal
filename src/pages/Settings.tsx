@@ -264,7 +264,7 @@ export default function Settings() {
           {/* Username - Editable */}
           <div className="mb-4">
             <label className="text-sm text-muted-foreground mb-2 block flex items-center gap-2">
-              <AtSign className="w-4 h-4" /> Username
+              <AtSign className="w-4 h-4" /> Seu @ <span className="text-xs font-normal">(toque para editar)</span>
             </label>
             {editingUsername ? (
               <div className="flex gap-2">
@@ -487,16 +487,11 @@ export default function Settings() {
               ))}
           </div>
           
-          {/* Admin management section */}
+          {/* Note: Use Settings to manage member roles */}
           {myProfile && isAdmin(myProfile.id) && (
-            <div className="mt-4 pt-4 border-t border-border/50">
-              <MemberManagement
-                profiles={couple.profiles}
-                roles={couple.roles}
-                myProfileId={myProfile.id}
-                onRefresh={refetch}
-              />
-            </div>
+            <p className="text-xs text-muted-foreground mt-4 text-center">
+              Para gerenciar membros, use os ajustes do espaço
+            </p>
           )}
         </div>
       </AnimatedItem>

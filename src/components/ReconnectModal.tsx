@@ -15,9 +15,10 @@ interface ReconnectModalProps {
   onReconnect: (profile: Profile, pin: string) => Promise<boolean>;
   onCreateNew: () => void;
   shareCode: string;
+  hasVacancy?: boolean;
 }
 
-export function ReconnectModal({ open, profiles, onReconnect, onCreateNew, shareCode }: ReconnectModalProps) {
+export function ReconnectModal({ open, profiles, onReconnect, onCreateNew, shareCode, hasVacancy = true }: ReconnectModalProps) {
   const [selectedProfile, setSelectedProfile] = useState<Profile | null>(null);
   const [pin, setPin] = useState('');
   const [error, setError] = useState('');
@@ -178,17 +179,19 @@ export function ReconnectModal({ open, profiles, onReconnect, onCreateNew, share
                   ))}
                 </div>
 
-                {/* Create New Profile Option */}
-                <div className="pt-4 border-t border-border/50">
-                  <Button
-                    variant="ghost"
-                    onClick={onCreateNew}
-                    className="w-full text-muted-foreground hover:text-foreground"
-                  >
-                    <UserPlus className="w-4 h-4 mr-2" />
-                    Criar novo perfil
-                  </Button>
-                </div>
+                {/* Create New Profile Option - only if vacancy available */}
+                {hasVacancy && (
+                  <div className="pt-4 border-t border-border/50">
+                    <Button
+                      variant="ghost"
+                      onClick={onCreateNew}
+                      className="w-full text-muted-foreground hover:text-foreground"
+                    >
+                      <UserPlus className="w-4 h-4 mr-2" />
+                      Criar novo perfil
+                    </Button>
+                  </div>
+                )}
               </>
             ) : (
               <>

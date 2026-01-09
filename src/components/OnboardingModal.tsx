@@ -12,10 +12,12 @@ import { supabase } from '@/integrations/supabase/client';
 interface OnboardingModalProps {
   open: boolean;
   onClose?: () => void;
-  onComplete: (position: number, name: string, avatarIndex: number, color: string, pinCode: string, email?: string, username?: string) => void;
+  onComplete: (position: number, name: string, avatarIndex: number, color: string, pinCode: string, email?: string, username?: string) => void | Promise<void>;
   profiles: Profile[];
   shareCode: string;
   isNewMember?: boolean;
+  hostName?: string | null;
+  isJoining?: boolean;
 }
 
 // List of cute compliments for valid names
@@ -84,7 +86,7 @@ const isWeakPin = (pin: string): { weak: boolean; reason?: string } => {
   return { weak: false };
 };
 
-export function OnboardingModal({ open, onClose, onComplete, profiles, shareCode, isNewMember = false }: OnboardingModalProps) {
+export function OnboardingModal({ open, onClose, onComplete, profiles, shareCode, isNewMember = false, hostName, isJoining = false }: OnboardingModalProps) {
   const [step, setStep] = useState<'welcome' | 'profile' | 'pin' | 'email'>(isNewMember ? 'welcome' : 'profile');
   const [name, setName] = useState('');
   const [avatarIndex, setAvatarIndex] = useState(1);
@@ -105,8 +107,9 @@ export function OnboardingModal({ open, onClose, onComplete, profiles, shareCode
   const [complimentTimeout, setComplimentTimeout] = useState<NodeJS.Timeout | null>(null);
   const [isTransitioning, setIsTransitioning] = useState(false);
 
-  // Get the host profile name for welcome message
+  // Get the host profile name for welcome message (use prop or find from profiles)
   const hostProfile = profiles.find(p => p.name !== 'Pessoa 1' && p.name !== 'Pessoa 2' && p.name !== 'Pessoa');
+  const displayHostName = hostName || hostProfile?.name;
 
   // Update step when isNewMember changes
   useEffect(() => {
@@ -382,8 +385,8 @@ export function OnboardingModal({ open, onClose, onComplete, profiles, shareCode
           </DialogTitle>
           <DialogDescription className="text-center animate-fade-in">
             {step === 'welcome'
-              ? `${hostProfile?.name || 'Alguém'} convidou você para compartilhar despesas`
-              : step === 'profile' 
+              ? `${displayHostName || 'Alguém'} convidou você para compartilhar despesas`
+              : step === 'profile'
               ? 'Personalize como você aparecerá no app'
               : step === 'pin'
               ? 'Código de 4 dígitos para entrar em outros dispositivos'
@@ -397,20 +400,31 @@ export function OnboardingModal({ open, onClose, onComplete, profiles, shareCode
             <>
               {/* Welcome Step */}
               <div className="flex flex-col items-center gap-6 animate-fade-in">
-                {/* Host avatar */}
-                {hostProfile && (
+                {/* Host info */}
+                {(hostProfile || displayHostName) && (
                   <div className="flex flex-col items-center gap-3">
-                    <div 
-                      className="w-24 h-24 rounded-full overflow-hidden ring-4 animate-bounce-gentle"
-                      style={{ boxShadow: `0 0 0 4px ${hostProfile.color}` }}
-                    >
-                      <img 
-                        src={CAT_AVATARS[hostProfile.avatar_index - 1]} 
-                        alt={hostProfile.name}
-                        className="w-full h-full object-cover"
-                      />
-                    </div>
-                    <span className="font-semibold text-lg">{hostProfile.name}</span>
+                    {hostProfile ? (
+                      <>
+                        <div 
+                          className="w-24 h-24 rounded-full overflow-hidden ring-4 animate-bounce-gentle"
+                          style={{ boxShadow: `0 0 0 4px ${hostProfile.color}` }}
+                        >
+                          <img 
+                            src={CAT_AVATARS[hostProfile.avatar_index - 1]} 
+                            alt={hostProfile.name}
+                            className="w-full h-full object-cover"
+                          />
+                        </div>
+                        <span className="font-semibold text-lg">{hostProfile.name}</span>
+                      </>
+                    ) : displayHostName ? (
+                      <>
+                        <div className="w-24 h-24 rounded-full bg-primary/20 flex items-center justify-center animate-bounce-gentle">
+                          <Heart className="w-10 h-10 text-primary" />
+                        </div>
+                        <span className="font-semibold text-lg">{displayHostName}</span>
+                      </>
+                    ) : null}
                   </div>
                 )}
 
@@ -452,6 +466,28 @@ export function OnboardingModal({ open, onClose, onComplete, profiles, shareCode
                   <Sparkles className="w-4 h-4 text-primary animate-spin-slow" />
                   <span className="text-sm text-primary font-medium">{compliment}</span>
                 </div>
+              </div>
+
+              {/* Username - Editable field */}
+              <div className="space-y-2 animate-fade-in" style={{ animationDelay: '150ms' }}>
+                <label className="text-sm font-medium text-muted-foreground flex items-center gap-2">
+                  <AtSign className="w-4 h-4" />
+                  Seu @ <span className="text-xs font-normal">(você pode personalizar)</span>
+                </label>
+                <div className="flex items-center gap-2 bg-muted/30 rounded-xl p-3 border-2 border-dashed border-border/50 hover:border-primary/30 transition-colors">
+                  <span className="text-muted-foreground">@</span>
+                  <Input
+                    value={username}
+                    onChange={(e) => setUsername(e.target.value.replace(/[@\s]/g, '').toLowerCase())}
+                    placeholder={generatingUsername ? "gerando..." : "seu_username"}
+                    className="border-0 bg-transparent p-0 focus-visible:ring-0 h-auto"
+                    maxLength={20}
+                  />
+                  {generatingUsername && <Loader2 className="w-4 h-4 animate-spin text-muted-foreground" />}
+                </div>
+                <p className="text-xs text-muted-foreground">
+                  Use para fazer login de qualquer dispositivo
+                </p>
               </div>
 
               {/* Avatar Selection */}
@@ -770,10 +806,14 @@ export function OnboardingModal({ open, onClose, onComplete, profiles, shareCode
                   <Button 
                     onClick={handleComplete} 
                     className="flex-1"
-                    disabled={emailExists || checkingEmail}
+                    disabled={emailExists || checkingEmail || isJoining}
                   >
-                    <Heart className="w-4 h-4 mr-2" />
-                    Criar perfil
+                    {isJoining ? (
+                      <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                    ) : (
+                      <Heart className="w-4 h-4 mr-2" />
+                    )}
+                    {isJoining ? 'Criando...' : 'Criar perfil'}
                   </Button>
                 </div>
 
@@ -781,7 +821,7 @@ export function OnboardingModal({ open, onClose, onComplete, profiles, shareCode
                   variant="link" 
                   onClick={handleSkipEmail}
                   className="text-muted-foreground"
-                  disabled={emailExists}
+                  disabled={emailExists || isJoining}
                 >
                   <SkipForward className="w-4 h-4 mr-2" />
                   Pular esta etapa
