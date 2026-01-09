@@ -71,8 +71,8 @@ export function BalanceCard({ profiles, balance }: BalanceCardProps) {
 
       <p className="text-center text-xs text-muted-foreground mt-4">
         {isBalanced 
-          ? 'Continue registrando para manter o equilíbrio'
-          : `No momento, ${owingPerson.name} deve ${formatCurrency(amount)} para ${receivingPerson.name}`
+          ? 'Continue registrando para manter o equilíbrio 💕'
+          : `O equilíbrio está em ${formatCurrency(amount)} com ${receivingPerson.name}`
         }
       </p>
     </div>

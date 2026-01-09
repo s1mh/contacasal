@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useOutletContext, useParams } from 'react-router-dom';
-import { User, Palette, Tag, Plus, Trash2, Check, CreditCard } from 'lucide-react';
+import { User, Palette, Tag, Plus, Trash2, Check, Copy } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Avatar } from '@/components/Avatar';
@@ -10,9 +10,10 @@ import { AgreementManager } from '@/components/AgreementManager';
 import { Couple, useCouple } from '@/hooks/useCouple';
 import { CAT_AVATARS, PERSON_COLORS, TAG_ICONS } from '@/lib/constants';
 import { cn } from '@/lib/utils';
+import { useToast } from '@/hooks/use-toast';
 
 export default function Settings() {
-  const { couple } = useOutletContext<{ couple: Couple }>();
+  const { couple, myPosition } = useOutletContext<{ couple: Couple; myPosition: number | null }>();
   const { 
     updateProfile, 
     addTag, 
@@ -24,38 +25,43 @@ export default function Settings() {
     deleteAgreement
   } = useCouple();
   const { shareCode } = useParams();
+  const { toast } = useToast();
 
-  const [editingProfile, setEditingProfile] = useState<number | null>(null);
-  const [editingName, setEditingName] = useState('');
+  const [editingName, setEditingName] = useState(false);
+  const [nameValue, setNameValue] = useState('');
   const [newTagName, setNewTagName] = useState('');
   const [newTagIcon, setNewTagIcon] = useState('tag');
   const [newTagColor, setNewTagColor] = useState('#94A3B8');
   const [showAddTag, setShowAddTag] = useState(false);
 
-  const person1 = couple.profiles.find(p => p.position === 1);
-  const person2 = couple.profiles.find(p => p.position === 2);
+  // Get only MY profile
+  const myProfile = couple.profiles.find(p => p.position === myPosition);
 
-  const handleStartEditing = (profile: typeof person1) => {
-    if (profile) {
-      setEditingProfile(profile.position);
-      setEditingName(profile.name);
+  const handleStartEditing = () => {
+    if (myProfile) {
+      setEditingName(true);
+      setNameValue(myProfile.name);
     }
   };
 
-  const handleUpdateName = async (profileId: string) => {
-    if (editingName.trim()) {
-      await updateProfile(profileId, { name: editingName.trim() });
+  const handleUpdateName = async () => {
+    if (myProfile && nameValue.trim()) {
+      await updateProfile(myProfile.id, { name: nameValue.trim() });
     }
-    setEditingProfile(null);
-    setEditingName('');
+    setEditingName(false);
+    setNameValue('');
   };
 
-  const handleUpdateAvatar = async (profileId: string, avatarIndex: number) => {
-    await updateProfile(profileId, { avatar_index: avatarIndex });
+  const handleUpdateAvatar = async (avatarIndex: number) => {
+    if (myProfile) {
+      await updateProfile(myProfile.id, { avatar_index: avatarIndex });
+    }
   };
 
-  const handleUpdateColor = async (profileId: string, color: string) => {
-    await updateProfile(profileId, { color });
+  const handleUpdateColor = async (color: string) => {
+    if (myProfile) {
+      await updateProfile(myProfile.id, { color });
+    }
   };
 
   const handleAddTag = async () => {
@@ -71,108 +77,122 @@ export default function Settings() {
     setShowAddTag(false);
   };
 
+  const handleCopyCode = () => {
+    navigator.clipboard.writeText(shareCode || '');
+    toast({ title: 'Código copiado!' });
+  };
+
+  if (!myProfile) {
+    return (
+      <div className="p-4 safe-top">
+        <h1 className="text-xl font-semibold mb-6">Ajustes</h1>
+        <p className="text-muted-foreground">Perfil não encontrado. Complete o onboarding primeiro.</p>
+      </div>
+    );
+  }
+
   return (
     <div className="p-4 safe-top space-y-4">
-      <h1 className="text-xl font-semibold mb-6">Ajustes</h1>
+      <h1 className="text-xl font-semibold mb-6">Meu Perfil</h1>
 
-      {/* Profiles */}
-      {[person1, person2].map((person) => person && (
-        <div key={person.id} className="bg-card rounded-3xl p-4 shadow-lg border border-border/50">
-          <div className="flex items-center gap-3 mb-4">
-            <User className="w-4 h-4 text-muted-foreground" />
-            <span className="text-sm font-medium text-muted-foreground">
-              Perfil {person.position}
-            </span>
-          </div>
+      {/* My Profile */}
+      <div className="bg-card rounded-3xl p-4 shadow-lg border border-border/50">
+        <div className="flex items-center gap-3 mb-4">
+          <User className="w-4 h-4 text-muted-foreground" />
+          <span className="text-sm font-medium text-muted-foreground">
+            Meus dados
+          </span>
+        </div>
 
-          {/* Avatar Selection */}
-          <div className="flex items-center gap-4 mb-4">
-            <Avatar avatarIndex={person.avatar_index} size="xl" ringColor={person.color} />
-            <div className="flex-1">
-              <p className="text-sm text-muted-foreground mb-2">Escolha o gatinho</p>
-              <div className="flex gap-2">
-                {[1, 2, 3, 4].map((idx) => (
-                  <button
-                    key={idx}
-                    onClick={() => handleUpdateAvatar(person.id, idx)}
-                    className={cn(
-                      'rounded-full transition-all',
-                      person.avatar_index === idx && 'ring-2 ring-primary ring-offset-2'
-                    )}
-                  >
-                    <Avatar avatarIndex={idx} size="sm" />
-                  </button>
-                ))}
-              </div>
-            </div>
-          </div>
-
-          {/* Name */}
-          <div className="mb-4">
-            <label className="text-sm text-muted-foreground mb-2 block">Nome</label>
-            {editingProfile === person.position ? (
-              <div className="flex gap-2">
-                <Input
-                  value={editingName}
-                  onChange={(e) => setEditingName(e.target.value)}
-                  onKeyDown={(e) => {
-                    if (e.key === 'Enter') {
-                      handleUpdateName(person.id);
-                    } else if (e.key === 'Escape') {
-                      setEditingProfile(null);
-                      setEditingName('');
-                    }
-                  }}
-                  autoFocus
-                  className="rounded-xl"
-                />
-                <Button
-                  size="icon"
-                  onClick={() => handleUpdateName(person.id)}
-                >
-                  <Check className="w-4 h-4" />
-                </Button>
-              </div>
-            ) : (
-              <button
-                onClick={() => handleStartEditing(person)}
-                className="w-full text-left p-3 bg-muted rounded-xl hover:bg-muted/80 transition-colors"
-              >
-                {person.name}
-              </button>
-            )}
-          </div>
-
-          {/* Color */}
-          <div className="mb-4">
-            <label className="text-sm text-muted-foreground mb-2 block flex items-center gap-2">
-              <Palette className="w-4 h-4" /> Cor
-            </label>
-            <div className="flex gap-2">
-              {PERSON_COLORS.map((color) => (
+        {/* Avatar Selection */}
+        <div className="flex items-center gap-4 mb-4">
+          <Avatar avatarIndex={myProfile.avatar_index} size="xl" ringColor={myProfile.color} />
+          <div className="flex-1">
+            <p className="text-sm text-muted-foreground mb-2">Escolha o gatinho</p>
+            <div className="flex gap-2 flex-wrap">
+              {CAT_AVATARS.map((_, idx) => (
                 <button
-                  key={color.value}
-                  onClick={() => handleUpdateColor(person.id, color.value)}
+                  key={idx}
+                  onClick={() => handleUpdateAvatar(idx + 1)}
                   className={cn(
-                    'w-8 h-8 rounded-full transition-all',
-                    person.color === color.value && 'ring-2 ring-offset-2 ring-foreground'
+                    'rounded-full transition-all',
+                    myProfile.avatar_index === idx + 1 && 'ring-2 ring-primary ring-offset-2'
                   )}
-                  style={{ backgroundColor: color.value }}
-                  title={color.name}
-                />
+                >
+                  <Avatar avatarIndex={idx + 1} size="sm" />
+                </button>
               ))}
             </div>
           </div>
-
-          {/* Cards */}
-          <CardManager
-            profile={person}
-            cards={couple.cards}
-            onAddCard={addCard}
-            onDeleteCard={deleteCard}
-          />
         </div>
-      ))}
+
+        {/* Name */}
+        <div className="mb-4">
+          <label className="text-sm text-muted-foreground mb-2 block">Nome</label>
+          {editingName ? (
+            <div className="flex gap-2">
+              <Input
+                value={nameValue}
+                onChange={(e) => setNameValue(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter') {
+                    handleUpdateName();
+                  } else if (e.key === 'Escape') {
+                    setEditingName(false);
+                    setNameValue('');
+                  }
+                }}
+                autoFocus
+                className="rounded-xl"
+              />
+              <Button
+                size="icon"
+                onClick={handleUpdateName}
+              >
+                <Check className="w-4 h-4" />
+              </Button>
+            </div>
+          ) : (
+            <button
+              onClick={handleStartEditing}
+              className="w-full text-left p-3 bg-muted rounded-xl hover:bg-muted/80 transition-colors"
+            >
+              {myProfile.name}
+            </button>
+          )}
+        </div>
+
+        {/* Color */}
+        <div>
+          <label className="text-sm text-muted-foreground mb-2 block flex items-center gap-2">
+            <Palette className="w-4 h-4" /> Cor
+          </label>
+          <div className="flex gap-2 flex-wrap">
+            {PERSON_COLORS.map((color) => (
+              <button
+                key={color.value}
+                onClick={() => handleUpdateColor(color.value)}
+                className={cn(
+                  'w-8 h-8 rounded-full transition-all',
+                  myProfile.color === color.value && 'ring-2 ring-offset-2 ring-foreground'
+                )}
+                style={{ backgroundColor: color.value }}
+                title={color.name}
+              />
+            ))}
+          </div>
+        </div>
+      </div>
+
+      {/* My Cards */}
+      <div className="bg-card rounded-3xl p-4 shadow-lg border border-border/50">
+        <CardManager
+          profile={myProfile}
+          cards={couple.cards}
+          onAddCard={addCard}
+          onDeleteCard={deleteCard}
+        />
+      </div>
 
       {/* Agreements */}
       <div className="bg-card rounded-3xl p-4 shadow-lg border border-border/50">
@@ -216,7 +236,7 @@ export default function Settings() {
             <div className="flex items-center gap-2 mb-3">
               <span className="text-xs text-muted-foreground">Ícone:</span>
               <div className="flex gap-1 flex-wrap">
-                {Object.keys(TAG_ICONS).slice(0, 6).map((icon) => (
+                {Object.keys(TAG_ICONS).map((icon) => (
                   <button
                     key={icon}
                     onClick={() => setNewTagIcon(icon)}
@@ -276,12 +296,20 @@ export default function Settings() {
       </div>
 
       {/* Share Code */}
-      <div className="bg-muted rounded-2xl p-4 text-center">
-        <p className="text-xs text-muted-foreground mb-1">Código do espaço</p>
-        <p className="font-mono text-lg font-semibold">{shareCode}</p>
-        <p className="text-xs text-muted-foreground mt-2">
-          Compartilhe este código com seu parceiro(a)
-        </p>
+      <div className="bg-muted rounded-2xl p-4 flex items-center justify-between">
+        <div>
+          <p className="text-xs text-muted-foreground mb-1">Código do espaço</p>
+          <p className="font-mono text-lg font-semibold">{shareCode}</p>
+          <p className="text-xs text-muted-foreground mt-1">
+            Compartilhe com seu parceiro(a)
+          </p>
+        </div>
+        <button
+          onClick={handleCopyCode}
+          className="p-3 hover:bg-background rounded-xl transition-colors"
+        >
+          <Copy className="w-5 h-5 text-muted-foreground" />
+        </button>
       </div>
     </div>
   );
