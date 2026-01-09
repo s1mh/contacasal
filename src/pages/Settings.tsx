@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useOutletContext, useParams, useNavigate } from 'react-router-dom';
-import { User, Palette, Tag, Plus, Trash2, Check, Copy, LogOut, UserX, AtSign, RefreshCw, Users } from 'lucide-react';
+import { User, Palette, Tag, Plus, Trash2, Check, Copy, LogOut, UserX, AtSign, RefreshCw, Users, Crown } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Avatar } from '@/components/Avatar';
@@ -451,19 +451,55 @@ export default function Settings() {
         </div>
       </AnimatedItem>
 
-      {/* Member Management - only for admins */}
-      {myProfile && isAdmin(myProfile.id) && (
-        <AnimatedItem delay={350}>
-          <div className="bg-card rounded-3xl p-4 shadow-lg border border-border/50">
-            <MemberManagement
-              profiles={couple.profiles}
-              roles={couple.roles}
-              myProfileId={myProfile.id}
-              onRefresh={refetch}
-            />
+      {/* Members List - Visible for everyone */}
+      <AnimatedItem delay={350}>
+        <div className="bg-card rounded-3xl p-4 shadow-lg border border-border/50">
+          <div className="flex items-center gap-2 mb-4">
+            <Users className="w-4 h-4 text-muted-foreground" />
+            <span className="text-sm font-medium text-muted-foreground">
+              Membros ({couple.profiles.filter(p => 
+                p.name !== 'Pessoa 1' && p.name !== 'Pessoa 2' && p.name !== 'Pessoa'
+              ).length}/{couple.max_members || 5})
+            </span>
           </div>
-        </AnimatedItem>
-      )}
+          
+          <div className="space-y-3">
+            {couple.profiles
+              .filter(p => p.name !== 'Pessoa 1' && p.name !== 'Pessoa 2' && p.name !== 'Pessoa')
+              .map((profile) => (
+                <div key={profile.id} className="flex items-center gap-3 p-3 bg-muted/50 rounded-2xl">
+                  <Avatar avatarIndex={profile.avatar_index} size="md" ringColor={profile.color} />
+                  <div className="flex-1">
+                    <div className="flex items-center gap-2">
+                      <span className="font-medium">{profile.name}</span>
+                      {profile.id === myProfile?.id && (
+                        <span className="text-xs text-muted-foreground">(você)</span>
+                      )}
+                      {isAdmin(profile.id) && (
+                        <Crown className="w-4 h-4 text-amber-500" />
+                      )}
+                    </div>
+                    {profile.username && (
+                      <p className="text-xs text-muted-foreground">@{profile.username}</p>
+                    )}
+                  </div>
+                </div>
+              ))}
+          </div>
+          
+          {/* Admin management section */}
+          {myProfile && isAdmin(myProfile.id) && (
+            <div className="mt-4 pt-4 border-t border-border/50">
+              <MemberManagement
+                profiles={couple.profiles}
+                roles={couple.roles}
+                myProfileId={myProfile.id}
+                onRefresh={refetch}
+              />
+            </div>
+          )}
+        </div>
+      </AnimatedItem>
 
       {/* Share Code */}
       <AnimatedItem delay={400}>

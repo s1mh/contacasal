@@ -6,7 +6,7 @@ import { ReconnectModal } from '@/components/ReconnectModal';
 import { SyncIndicator } from '@/components/SyncIndicator';
 import { CoupleProvider, useCoupleContext, Profile } from '@/contexts/CoupleContext';
 import { useAuthContext } from '@/contexts/AuthContext';
-import { Loader2, AlertCircle, RefreshCw, Trash2, UserX } from 'lucide-react';
+import { Loader2, AlertCircle, RefreshCw, Trash2, UserX, Hand } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
 import { CAT_AVATARS } from '@/lib/constants';
@@ -21,6 +21,7 @@ function CoupleLayoutContent() {
   const { loading: authLoading, isValidated, coupleId, validateShareCode, joinSpace } = useAuthContext();
   const [showOnboarding, setShowOnboarding] = useState(false);
   const [showReconnect, setShowReconnect] = useState(false);
+  const [showReturningModal, setShowReturningModal] = useState(false);
   const [myPosition, setMyPosition] = useState<number | null>(null);
   const [validating, setValidating] = useState(false);
   const [validationError, setValidationError] = useState<string | null>(null);
@@ -28,11 +29,19 @@ function CoupleLayoutContent() {
   const [isNewMember, setIsNewMember] = useState(false);
   const [profileNotFound, setProfileNotFound] = useState(false);
   const [storedProfileInfo, setStoredProfileInfo] = useState<{ name: string; position: number } | null>(null);
+  const [cancellingPending, setCancellingPending] = useState(false);
 
   // Validate share code when accessing a couple space
   useEffect(() => {
     const doValidation = async () => {
       if (!shareCode || authLoading) return;
+      
+      // Wait for session to be ready
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) {
+        console.log('Session not ready, waiting...');
+        return;
+      }
       
       setValidating(true);
       setValidationError(null);
@@ -61,10 +70,17 @@ function CoupleLayoutContent() {
       if (!joinResult.success) {
         setValidationError(joinResult.error || 'Falha ao entrar no espaço');
       } else if (joinResult.profileId) {
-        // New member joined - store profile ID to show onboarding with welcome
+        // Store profile ID for onboarding
         setNewProfileId(joinResult.profileId);
-        setIsNewMember(true);
-        console.log('New member joined with profile:', joinResult.profileId);
+        
+        // Check if returning user (has pending profile)
+        if ((joinResult as { is_returning?: boolean }).is_returning) {
+          console.log('Returning user with pending profile:', joinResult.profileId);
+          setShowReturningModal(true);
+        } else {
+          setIsNewMember(true);
+          console.log('New member joined with profile:', joinResult.profileId);
+        }
       }
       
       setValidating(false);
@@ -76,6 +92,9 @@ function CoupleLayoutContent() {
   // Check for existing device recognition or show appropriate modal
   useEffect(() => {
     if (couple && shareCode && isValidated && coupleId === couple.id) {
+      // Don't process if returning modal is showing
+      if (showReturningModal) return;
+      
       const stored = localStorage.getItem(`couple_${shareCode}`);
       if (stored) {
         try {
@@ -106,7 +125,7 @@ function CoupleLayoutContent() {
         checkProfilesAndShowModal();
       }
     }
-  }, [couple, shareCode, isValidated, coupleId, newProfileId]);
+  }, [couple, shareCode, isValidated, coupleId, newProfileId, showReturningModal]);
 
   const checkProfilesAndShowModal = () => {
     if (!couple) return;
@@ -122,11 +141,16 @@ function CoupleLayoutContent() {
       }
     }
     
-    const configuredProfiles = couple.profiles.filter(p => 
+    // Filter out pending profiles
+    const activeProfiles = couple.profiles.filter(p => 
+      (p as Profile & { status?: string }).status !== 'pending'
+    );
+    
+    const configuredProfiles = activeProfiles.filter(p => 
       p.name !== 'Pessoa 1' && p.name !== 'Pessoa 2' && p.name !== 'Pessoa'
     );
     
-    const unconfiguredProfiles = couple.profiles.filter(p => 
+    const unconfiguredProfiles = activeProfiles.filter(p => 
       p.name === 'Pessoa 1' || p.name === 'Pessoa 2' || p.name === 'Pessoa'
     );
     
@@ -169,10 +193,102 @@ function CoupleLayoutContent() {
     setShowReconnect(true);
   };
 
+  const handleCancelPending = async () => {
+    if (!newProfileId) return;
+    
+    setCancellingPending(true);
+    try {
+      const { data, error } = await supabase.functions.invoke('cancel-pending-profile', {
+        body: { profile_id: newProfileId }
+      });
+      
+      if (error || !data?.success) {
+        console.error('Failed to cancel pending profile:', error);
+        toast({
+          title: 'Erro ao cancelar',
+          description: 'Tente novamente',
+          variant: 'destructive'
+        });
+      } else {
+        toast({
+          title: 'Vaga liberada',
+          description: 'Você pode entrar novamente quando quiser'
+        });
+        navigate('/');
+      }
+    } finally {
+      setCancellingPending(false);
+      setShowReturningModal(false);
+    }
+  };
+
+  const handleContinuePending = () => {
+    setShowReturningModal(false);
+    setIsNewMember(true);
+    setShowOnboarding(true);
+  };
+
   const handleOnboardingComplete = async (position: number, name: string, avatarIndex: number, color: string, pinCode: string, email?: string, username?: string) => {
+    // If this is a new member with pending profile, use activate-profile
+    if (newProfileId) {
+      const { data, error } = await supabase.functions.invoke('activate-profile', {
+        body: {
+          profile_id: newProfileId,
+          name,
+          avatar_index: avatarIndex,
+          color,
+          pin_code: pinCode,
+          email: email || null,
+          username: username || null,
+        }
+      });
+
+      if (error || !data?.success) {
+        console.error('Error activating profile:', error);
+        
+        // Check if expired
+        if (data?.expired) {
+          toast({
+            title: 'Reserva expirou',
+            description: 'Por favor, entre novamente pelo link de convite',
+            variant: 'destructive'
+          });
+          navigate('/');
+          return;
+        }
+        
+        toast({ 
+          title: 'Ops! Algo deu errado 😕',
+          description: 'Não foi possível criar o perfil',
+          variant: 'destructive'
+        });
+        return;
+      }
+      
+      // Save to localStorage
+      localStorage.setItem(`couple_${shareCode}`, JSON.stringify({
+        position,
+        name,
+        avatarIndex,
+        color,
+        username,
+        timestamp: Date.now()
+      }));
+      
+      await refetch();
+      setMyPosition(position);
+      setShowOnboarding(false);
+      
+      toast({ 
+        title: 'Bem-vindo! 🎉',
+        description: username ? `Seu @ é @${username}` : 'Seu perfil foi criado'
+      });
+      return;
+    }
+    
+    // Existing flow for non-pending profiles
     const profile = couple?.profiles.find(p => p.position === position);
     if (profile) {
-      // Hash PIN on server - for now store plain, will be hashed on first verify
       const updateData: Record<string, unknown> = { 
         name, 
         avatar_index: avatarIndex, 
@@ -208,7 +324,6 @@ function CoupleLayoutContent() {
     setMyPosition(position);
     setShowOnboarding(false);
     
-    // Show success toast after profile creation
     toast({ 
       title: 'Espaço criado! 🎉',
       description: username ? `Seu @ é @${username}` : 'Seu cantinho do casal está pronto'
@@ -225,6 +340,7 @@ function CoupleLayoutContent() {
       name: profile.name,
       avatarIndex: profile.avatar_index,
       color: profile.color,
+      username: (profile as Profile & { username?: string }).username,
       timestamp: Date.now()
     }));
     
@@ -344,6 +460,40 @@ function CoupleLayoutContent() {
       <SyncIndicator isSyncing={isSyncing} />
       <Outlet context={{ couple, myPosition }} />
       <BottomNav />
+      
+      {/* Returning User Modal - When user has a pending profile */}
+      <Dialog open={showReturningModal} onOpenChange={() => {}}>
+        <DialogContent className="sm:max-w-md" onPointerDownOutside={(e) => e.preventDefault()}>
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Hand className="w-5 h-5 text-primary" />
+              Bem-vindo de volta! 👋
+            </DialogTitle>
+            <DialogDescription>
+              Você começou a configurar seu perfil mas não finalizou. Deseja continuar de onde parou?
+            </DialogDescription>
+          </DialogHeader>
+          <div className="flex flex-col gap-3 pt-4">
+            <Button 
+              onClick={handleContinuePending}
+              className="w-full"
+            >
+              Continuar configuração
+            </Button>
+            <Button 
+              variant="outline"
+              onClick={handleCancelPending}
+              disabled={cancellingPending}
+              className="w-full"
+            >
+              {cancellingPending ? (
+                <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+              ) : null}
+              Cancelar e liberar vaga
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
       
       {/* Profile Not Found Modal - When stored profile was deleted */}
       <Dialog open={profileNotFound} onOpenChange={() => {}}>

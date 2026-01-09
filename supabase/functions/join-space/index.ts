@@ -69,14 +69,57 @@ Deno.serve(async (req) => {
       })
     }
 
-    // Count current members
-    const { count: memberCount } = await supabaseAdmin
+    // Check if user already has a pending profile in this space
+    const { data: existingPending } = await supabaseAdmin
+      .from('profiles')
+      .select('id, pending_expires_at, status')
+      .eq('couple_id', space.id)
+      .eq('user_id', userId)
+      .eq('status', 'pending')
+      .single()
+
+    if (existingPending) {
+      // Check if expired
+      if (existingPending.pending_expires_at && new Date(existingPending.pending_expires_at) < new Date()) {
+        // Expired - delete and proceed as new
+        console.log('Existing pending profile expired, deleting:', existingPending.id)
+        await supabaseAdmin.from('profiles').delete().eq('id', existingPending.id)
+      } else {
+        // Still valid - renew expiration and return as returning user
+        const newExpiration = new Date(Date.now() + 30 * 60 * 1000).toISOString()
+        await supabaseAdmin
+          .from('profiles')
+          .update({ pending_expires_at: newExpiration })
+          .eq('id', existingPending.id)
+        
+        console.log('Renewed pending profile expiration:', existingPending.id)
+        
+        // Update user's app_metadata with couple_id
+        await supabaseAdmin.auth.admin.updateUserById(userId, {
+          app_metadata: { couple_id: space.id },
+        })
+        
+        return new Response(
+          JSON.stringify({ 
+            success: true, 
+            couple_id: space.id, 
+            profile_id: existingPending.id,
+            is_returning: true,
+          }),
+          { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } },
+        )
+      }
+    }
+
+    // Count current ACTIVE members (not pending)
+    const { count: activeCount } = await supabaseAdmin
       .from('profiles')
       .select('*', { count: 'exact', head: true })
       .eq('couple_id', space.id)
+      .or('status.eq.active,status.is.null')
 
     const maxMembers = space.max_members || 5
-    if ((memberCount || 0) >= maxMembers) {
+    if ((activeCount || 0) >= maxMembers) {
       return new Response(JSON.stringify({ error: 'Espaço cheio (máximo 5 pessoas)' }), {
         status: 400,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
@@ -101,41 +144,33 @@ Deno.serve(async (req) => {
     // Default colors for new members
     const defaultColors = ['#F5A9B8', '#A8D5BA', '#B5A8D5', '#D5A8C8', '#A8C5D5']
 
-    // Create new profile for this member with user_id
+    // Create new PENDING profile (30 min expiration)
+    const pendingExpiresAt = new Date(Date.now() + 30 * 60 * 1000).toISOString()
+    
     const { data: newProfile, error: profileError } = await supabaseAdmin
       .from('profiles')
       .insert({
         couple_id: space.id,
         user_id: userId,
-        name: `Pessoa ${nextPosition}`,
+        name: 'Pessoa',
         color: defaultColors[nextPosition - 1] || '#94A3B8',
         avatar_index: nextPosition,
         position: nextPosition,
+        status: 'pending',
+        pending_expires_at: pendingExpiresAt,
       })
       .select('id')
       .single()
 
     if (profileError || !newProfile) {
-      console.error('Failed to create profile:', profileError?.message)
+      console.error('Failed to create pending profile:', profileError?.message)
       return new Response(JSON.stringify({ error: 'Falha ao criar perfil' }), {
         status: 500,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       })
     }
 
-    // Assign 'member' role to this profile
-    const { error: roleError } = await supabaseAdmin
-      .from('space_roles')
-      .insert({
-        space_id: space.id,
-        profile_id: newProfile.id,
-        role: 'member',
-      })
-
-    if (roleError) {
-      console.error('Failed to assign role:', roleError.message)
-      // Continue anyway - profile was created
-    }
+    // NOTE: We do NOT create space_roles here - only when profile is activated!
 
     // Update user's app_metadata with couple_id
     const { error: updateError } = await supabaseAdmin.auth.admin.updateUserById(userId, {
@@ -150,7 +185,7 @@ Deno.serve(async (req) => {
       })
     }
 
-    console.log('User joined space successfully:', userId, 'as position', nextPosition)
+    console.log('Created pending profile:', newProfile.id, 'expires at:', pendingExpiresAt)
 
     return new Response(
       JSON.stringify({ 
@@ -158,6 +193,7 @@ Deno.serve(async (req) => {
         couple_id: space.id, 
         profile_id: newProfile.id,
         position: nextPosition,
+        is_returning: false,
       }),
       { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } },
     )
