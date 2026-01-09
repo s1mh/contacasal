@@ -316,6 +316,7 @@ export type Database = {
           recovery_token: string | null
           recovery_token_expires_at: string | null
           updated_at: string
+          user_id: string | null
           username: string | null
         }
         Insert: {
@@ -333,6 +334,7 @@ export type Database = {
           recovery_token?: string | null
           recovery_token_expires_at?: string | null
           updated_at?: string
+          user_id?: string | null
           username?: string | null
         }
         Update: {
@@ -350,6 +352,7 @@ export type Database = {
           recovery_token?: string | null
           recovery_token_expires_at?: string | null
           updated_at?: string
+          user_id?: string | null
           username?: string | null
         }
         Relationships: [

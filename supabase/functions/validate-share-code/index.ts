@@ -86,12 +86,12 @@ Deno.serve(async (req) => {
 
     console.log('Found couple:', couple.id)
 
-    // Check if user already has a profile in this space
+    // Check if user already has a profile in this space by user_id
     const { data: existingProfile, error: profileError } = await supabaseAdmin
       .from('profiles')
       .select('id, name')
       .eq('couple_id', couple.id)
-      .eq('id', userId)
+      .eq('user_id', userId)
       .maybeSingle()
 
     const isMember = !!existingProfile
