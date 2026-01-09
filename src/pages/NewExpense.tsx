@@ -49,16 +49,20 @@ export default function NewExpense() {
   const numericAmount = parseFloat(amount.replace(',', '.')) || 0;
 
   // Calculate billing month based on card closing day
+  // Rule: if expense day > closing day, expense goes to NEXT month's bill (paid in month after)
+  // Example: closing day 29, expense on day 30 of January → bill for February (paid in March)
   const billingMonth = useMemo(() => {
     if (paymentType !== 'credit' || !selectedCard?.closing_day) return null;
     
     const day = expenseDate.getDate();
     const closingDay = selectedCard.closing_day;
     
+    // If the purchase is AFTER the closing day, it goes to next month's bill
     if (day > closingDay) {
-      return addMonths(startOfMonth(expenseDate), 1);
+      return addMonths(startOfMonth(expenseDate), 2); // +2 because: next bill (month+1) is paid in (month+2)
     }
-    return startOfMonth(expenseDate);
+    // If purchase is on or before closing day, it goes to current month's bill
+    return addMonths(startOfMonth(expenseDate), 1); // Current bill is paid next month
   }, [expenseDate, paymentType, selectedCard]);
 
   const splitPreview = useMemo(() => {
