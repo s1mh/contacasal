@@ -42,35 +42,62 @@ Deno.serve(async (req) => {
     }
 
     const userId = claims.claims.sub
-    console.log('Creating couple for user:', userId)
+    console.log('Creating space for user:', userId)
 
-    // Create couple using service role
+    // Create space using service role
     const supabaseAdmin = createClient(supabaseUrl, supabaseServiceKey)
 
     const { data: couple, error: coupleError } = await supabaseAdmin
       .from('couples')
-      .insert({})
+      .insert({ max_members: 5 })
       .select('id, share_code')
       .single()
 
     if (coupleError || !couple) {
-      console.error('Failed to create couple:', coupleError?.message)
-      return new Response(JSON.stringify({ error: 'Failed to create couple' }), {
+      console.error('Failed to create space:', coupleError?.message)
+      return new Response(JSON.stringify({ error: 'Failed to create space' }), {
         status: 500,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       })
     }
 
-    console.log('Couple created:', couple.id, 'share_code:', couple.share_code)
+    console.log('Space created:', couple.id, 'share_code:', couple.share_code)
 
-    // Bind current user to couple in JWT claims via app_metadata
+    // Get the first profile (created by trigger) and assign admin role
+    const { data: firstProfile } = await supabaseAdmin
+      .from('profiles')
+      .select('id')
+      .eq('couple_id', couple.id)
+      .order('position')
+      .limit(1)
+      .single()
+
+    if (firstProfile) {
+      // Assign admin role to the first profile
+      const { error: roleError } = await supabaseAdmin
+        .from('space_roles')
+        .insert({
+          space_id: couple.id,
+          profile_id: firstProfile.id,
+          role: 'admin',
+        })
+
+      if (roleError) {
+        console.error('Failed to assign admin role:', roleError.message)
+        // Continue anyway - space was created
+      } else {
+        console.log('Admin role assigned to first profile:', firstProfile.id)
+      }
+    }
+
+    // Bind current user to space in JWT claims via app_metadata
     const { error: updateError } = await supabaseAdmin.auth.admin.updateUserById(userId, {
       app_metadata: { couple_id: couple.id },
     })
 
     if (updateError) {
       console.error('Failed to update user metadata:', updateError.message)
-      return new Response(JSON.stringify({ error: 'Failed to finalize couple creation' }), {
+      return new Response(JSON.stringify({ error: 'Failed to finalize space creation' }), {
         status: 500,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       })

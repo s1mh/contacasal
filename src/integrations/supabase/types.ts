@@ -24,6 +24,7 @@ export type Database = {
           is_active: boolean | null
           name: string
           paid_by: number
+          paid_by_profile_id: string | null
           split_type: string
           split_value: Json
           tag_id: string | null
@@ -37,6 +38,7 @@ export type Database = {
           is_active?: boolean | null
           name: string
           paid_by: number
+          paid_by_profile_id?: string | null
           split_type: string
           split_value?: Json
           tag_id?: string | null
@@ -50,6 +52,7 @@ export type Database = {
           is_active?: boolean | null
           name?: string
           paid_by?: number
+          paid_by_profile_id?: string | null
           split_type?: string
           split_value?: Json
           tag_id?: string | null
@@ -60,6 +63,13 @@ export type Database = {
             columns: ["couple_id"]
             isOneToOne: false
             referencedRelation: "couples"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "agreements_paid_by_profile_id_fkey"
+            columns: ["paid_by_profile_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
             referencedColumns: ["id"]
           },
           {
@@ -126,6 +136,7 @@ export type Database = {
         Row: {
           created_at: string
           id: string
+          max_members: number | null
           share_code: string
           share_code_expires_at: string | null
           share_code_used_at: string | null
@@ -134,6 +145,7 @@ export type Database = {
         Insert: {
           created_at?: string
           id?: string
+          max_members?: number | null
           share_code?: string
           share_code_expires_at?: string | null
           share_code_used_at?: string | null
@@ -142,6 +154,7 @@ export type Database = {
         Update: {
           created_at?: string
           id?: string
+          max_members?: number | null
           share_code?: string
           share_code_expires_at?: string | null
           share_code_used_at?: string | null
@@ -213,6 +226,7 @@ export type Database = {
           installment_number: number | null
           installments: number | null
           paid_by: number
+          paid_by_profile_id: string | null
           payment_type: string | null
           split_type: string
           split_value: Json
@@ -230,6 +244,7 @@ export type Database = {
           installment_number?: number | null
           installments?: number | null
           paid_by: number
+          paid_by_profile_id?: string | null
           payment_type?: string | null
           split_type: string
           split_value?: Json
@@ -247,6 +262,7 @@ export type Database = {
           installment_number?: number | null
           installments?: number | null
           paid_by?: number
+          paid_by_profile_id?: string | null
           payment_type?: string | null
           split_type?: string
           split_value?: Json
@@ -266,6 +282,13 @@ export type Database = {
             columns: ["couple_id"]
             isOneToOne: false
             referencedRelation: "couples"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "expenses_paid_by_profile_id_fkey"
+            columns: ["paid_by_profile_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
             referencedColumns: ["id"]
           },
           {
@@ -346,6 +369,8 @@ export type Database = {
           id: string
           note: string | null
           paid_by: number
+          paid_by_profile_id: string | null
+          received_by_profile_id: string | null
           settled_at: string | null
         }
         Insert: {
@@ -354,6 +379,8 @@ export type Database = {
           id?: string
           note?: string | null
           paid_by: number
+          paid_by_profile_id?: string | null
+          received_by_profile_id?: string | null
           settled_at?: string | null
         }
         Update: {
@@ -362,12 +389,67 @@ export type Database = {
           id?: string
           note?: string | null
           paid_by?: number
+          paid_by_profile_id?: string | null
+          received_by_profile_id?: string | null
           settled_at?: string | null
         }
         Relationships: [
           {
             foreignKeyName: "settlements_couple_id_fkey"
             columns: ["couple_id"]
+            isOneToOne: false
+            referencedRelation: "couples"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "settlements_paid_by_profile_id_fkey"
+            columns: ["paid_by_profile_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "settlements_received_by_profile_id_fkey"
+            columns: ["received_by_profile_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      space_roles: {
+        Row: {
+          created_at: string | null
+          id: string
+          profile_id: string
+          role: Database["public"]["Enums"]["space_role"]
+          space_id: string
+        }
+        Insert: {
+          created_at?: string | null
+          id?: string
+          profile_id: string
+          role?: Database["public"]["Enums"]["space_role"]
+          space_id: string
+        }
+        Update: {
+          created_at?: string | null
+          id?: string
+          profile_id?: string
+          role?: Database["public"]["Enums"]["space_role"]
+          space_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "space_roles_profile_id_fkey"
+            columns: ["profile_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "space_roles_space_id_fkey"
+            columns: ["space_id"]
             isOneToOne: false
             referencedRelation: "couples"
             referencedColumns: ["id"]
@@ -414,11 +496,24 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      count_space_members: { Args: { _space_id: string }; Returns: number }
       get_couple_id_by_share_code: { Args: { code: string }; Returns: string }
       get_current_couple_id: { Args: never; Returns: string }
+      get_next_available_position: {
+        Args: { _space_id: string }
+        Returns: number
+      }
+      get_space_admins: { Args: { _space_id: string }; Returns: string[] }
+      has_space_role: {
+        Args: {
+          _profile_id: string
+          _role: Database["public"]["Enums"]["space_role"]
+        }
+        Returns: boolean
+      }
     }
     Enums: {
-      [_ in never]: never
+      space_role: "admin" | "member"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -545,6 +640,8 @@ export type CompositeTypes<
 
 export const Constants = {
   public: {
-    Enums: {},
+    Enums: {
+      space_role: ["admin", "member"],
+    },
   },
 } as const
