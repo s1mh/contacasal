@@ -7,6 +7,7 @@ import { Avatar } from '@/components/Avatar';
 import { TagPill } from '@/components/TagPill';
 import { CardManager } from '@/components/CardManager';
 import { AgreementManager } from '@/components/AgreementManager';
+import { AnimatedPage, AnimatedItem } from '@/components/AnimatedPage';
 import { Couple, useCouple } from '@/hooks/useCouple';
 import { CAT_AVATARS, PERSON_COLORS, TAG_ICONS } from '@/lib/constants';
 import { cn } from '@/lib/utils';
@@ -104,253 +105,264 @@ export default function Settings() {
   }
 
   return (
-    <div className="p-4 safe-top space-y-4">
+    <AnimatedPage className="p-4 safe-top space-y-4">
       <h1 className="text-xl font-semibold mb-6">Meu Perfil</h1>
 
       {/* My Profile */}
-      <div className="bg-card rounded-3xl p-4 shadow-lg border border-border/50">
-        <div className="flex items-center gap-3 mb-4">
-          <User className="w-4 h-4 text-muted-foreground" />
-          <span className="text-sm font-medium text-muted-foreground">
-            Meus dados
-          </span>
-        </div>
-
-        {/* Avatar Selection */}
-        <div className="flex items-center gap-4 mb-4">
-          <Avatar avatarIndex={myProfile.avatar_index} size="xl" ringColor={myProfile.color} />
-          <div className="flex-1">
-            <p className="text-sm text-muted-foreground mb-2">Escolha o gatinho</p>
-            <div className="flex gap-2 flex-wrap">
-              {CAT_AVATARS.map((_, idx) => (
-                <button
-                  key={idx}
-                  onClick={() => handleUpdateAvatar(idx + 1)}
-                  className={cn(
-                    'rounded-full transition-all',
-                    myProfile.avatar_index === idx + 1 && 'ring-2 ring-primary ring-offset-2'
-                  )}
-                >
-                  <Avatar avatarIndex={idx + 1} size="sm" />
-                </button>
-              ))}
-            </div>
+      <AnimatedItem delay={0}>
+        <div className="bg-card rounded-3xl p-4 shadow-lg border border-border/50">
+          <div className="flex items-center gap-3 mb-4">
+            <User className="w-4 h-4 text-muted-foreground" />
+            <span className="text-sm font-medium text-muted-foreground">
+              Meus dados
+            </span>
           </div>
-        </div>
 
-        {/* Name */}
-        <div className="mb-4">
-          <label className="text-sm text-muted-foreground mb-2 block">Nome</label>
-          {editingName ? (
-            <div className="flex gap-2">
-              <Input
-                value={nameValue}
-                onChange={(e) => setNameValue(e.target.value)}
-                onKeyDown={(e) => {
-                  if (e.key === 'Enter') {
-                    handleUpdateName();
-                  } else if (e.key === 'Escape') {
-                    setEditingName(false);
-                    setNameValue('');
-                  }
-                }}
-                autoFocus
-                className="rounded-xl"
-              />
-              <Button
-                size="icon"
-                onClick={handleUpdateName}
-              >
-                <Check className="w-4 h-4" />
-              </Button>
-            </div>
-          ) : (
-            <button
-              onClick={handleStartEditing}
-              className="w-full text-left p-3 bg-muted rounded-xl hover:bg-muted/80 transition-colors"
-            >
-              {myProfile.name}
-            </button>
-          )}
-        </div>
-
-        {/* Color */}
-        <div>
-          <label className="text-sm text-muted-foreground mb-2 block flex items-center gap-2">
-            <Palette className="w-4 h-4" /> Cor
-          </label>
-          <div className="flex gap-2 flex-wrap">
-            {PERSON_COLORS.map((color) => (
-              <button
-                key={color.value}
-                onClick={() => handleUpdateColor(color.value)}
-                className={cn(
-                  'w-8 h-8 rounded-full transition-all',
-                  myProfile.color === color.value && 'ring-2 ring-offset-2 ring-foreground'
-                )}
-                style={{ backgroundColor: color.value }}
-                title={color.name}
-              />
-            ))}
-          </div>
-        </div>
-      </div>
-
-      {/* My Cards */}
-      <div className="bg-card rounded-3xl p-4 shadow-lg border border-border/50">
-        <CardManager
-          profile={myProfile}
-          cards={couple.cards}
-          onAddCard={addCard}
-          onDeleteCard={deleteCard}
-        />
-      </div>
-
-      {/* Agreements */}
-      <div className="bg-card rounded-3xl p-4 shadow-lg border border-border/50">
-        <AgreementManager
-          agreements={couple.agreements}
-          profiles={couple.profiles}
-          tags={couple.tags}
-          onAddAgreement={addAgreement}
-          onUpdateAgreement={updateAgreement}
-          onDeleteAgreement={deleteAgreement}
-          coupleId={couple.id}
-        />
-      </div>
-
-      {/* Tags */}
-      <div className="bg-card rounded-3xl p-4 shadow-lg border border-border/50">
-        <div className="flex items-center justify-between mb-4">
-          <div className="flex items-center gap-2">
-            <Tag className="w-4 h-4 text-muted-foreground" />
-            <span className="text-sm font-medium text-muted-foreground">Categorias</span>
-          </div>
-          <Button
-            size="sm"
-            variant="ghost"
-            onClick={() => setShowAddTag(!showAddTag)}
-            className="rounded-full"
-          >
-            <Plus className="w-4 h-4" />
-          </Button>
-        </div>
-
-        {/* Add Tag Form */}
-        {showAddTag && (
-          <div className="bg-muted rounded-xl p-4 mb-4 animate-fade-in">
-            <Input
-              value={newTagName}
-              onChange={(e) => setNewTagName(e.target.value)}
-              placeholder="Nome da categoria"
-              className="mb-3 rounded-xl"
-            />
-            <div className="flex items-center gap-2 mb-3">
-              <span className="text-xs text-muted-foreground">Ícone:</span>
-              <div className="flex gap-1 flex-wrap">
-                {Object.keys(TAG_ICONS).map((icon) => (
+          {/* Avatar Selection */}
+          <div className="flex items-center gap-4 mb-4">
+            <Avatar avatarIndex={myProfile.avatar_index} size="xl" ringColor={myProfile.color} />
+            <div className="flex-1">
+              <p className="text-sm text-muted-foreground mb-2">Escolha o gatinho</p>
+              <div className="flex gap-2 flex-wrap">
+                {CAT_AVATARS.map((_, idx) => (
                   <button
-                    key={icon}
-                    onClick={() => setNewTagIcon(icon)}
+                    key={idx}
+                    onClick={() => handleUpdateAvatar(idx + 1)}
                     className={cn(
-                      'p-2 rounded-lg transition-all',
-                      newTagIcon === icon ? 'bg-primary/20' : 'hover:bg-background'
+                      'rounded-full transition-all',
+                      myProfile.avatar_index === idx + 1 && 'ring-2 ring-primary ring-offset-2'
                     )}
                   >
-                    <TagPill name="" icon={icon} color={newTagColor} size="sm" />
+                    <Avatar avatarIndex={idx + 1} size="sm" />
                   </button>
                 ))}
               </div>
             </div>
-            <div className="flex items-center gap-2 mb-3">
-              <span className="text-xs text-muted-foreground">Cor:</span>
-              <div className="flex gap-1">
-                {['#F59E0B', '#3B82F6', '#EF4444', '#8B5CF6', '#06B6D4', '#10B981'].map((color) => (
-                  <button
-                    key={color}
-                    onClick={() => setNewTagColor(color)}
-                    className={cn(
-                      'w-6 h-6 rounded-full transition-all',
-                      newTagColor === color && 'ring-2 ring-offset-1'
-                    )}
-                    style={{ backgroundColor: color }}
-                  />
-                ))}
+          </div>
+
+          {/* Name */}
+          <div className="mb-4">
+            <label className="text-sm text-muted-foreground mb-2 block">Nome</label>
+            {editingName ? (
+              <div className="flex gap-2">
+                <Input
+                  value={nameValue}
+                  onChange={(e) => setNameValue(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter') {
+                      handleUpdateName();
+                    } else if (e.key === 'Escape') {
+                      setEditingName(false);
+                      setNameValue('');
+                    }
+                  }}
+                  autoFocus
+                />
+                <Button
+                  size="icon"
+                  onClick={handleUpdateName}
+                >
+                  <Check className="w-4 h-4" />
+                </Button>
               </div>
+            ) : (
+              <button
+                onClick={handleStartEditing}
+                className="w-full text-left p-3 bg-muted/50 rounded-2xl hover:bg-muted/80 transition-colors border-2 border-transparent hover:border-primary/30"
+              >
+                {myProfile.name}
+              </button>
+            )}
+          </div>
+
+          {/* Color */}
+          <div>
+            <label className="text-sm text-muted-foreground mb-2 block flex items-center gap-2">
+              <Palette className="w-4 h-4" /> Cor
+            </label>
+            <div className="flex gap-2 flex-wrap">
+              {PERSON_COLORS.map((color) => (
+                <button
+                  key={color.value}
+                  onClick={() => handleUpdateColor(color.value)}
+                  className={cn(
+                    'w-8 h-8 rounded-full transition-all',
+                    myProfile.color === color.value && 'ring-2 ring-offset-2 ring-foreground'
+                  )}
+                  style={{ backgroundColor: color.value }}
+                  title={color.name}
+                />
+              ))}
+            </div>
+          </div>
+        </div>
+      </AnimatedItem>
+
+      {/* My Cards */}
+      <AnimatedItem delay={100}>
+        <div className="bg-card rounded-3xl p-4 shadow-lg border border-border/50">
+          <CardManager
+            profile={myProfile}
+            cards={couple.cards}
+            onAddCard={addCard}
+            onDeleteCard={deleteCard}
+          />
+        </div>
+      </AnimatedItem>
+
+      {/* Agreements */}
+      <AnimatedItem delay={200}>
+        <div className="bg-card rounded-3xl p-4 shadow-lg border border-border/50">
+          <AgreementManager
+            agreements={couple.agreements}
+            profiles={couple.profiles}
+            tags={couple.tags}
+            onAddAgreement={addAgreement}
+            onUpdateAgreement={updateAgreement}
+            onDeleteAgreement={deleteAgreement}
+            coupleId={couple.id}
+          />
+        </div>
+      </AnimatedItem>
+
+      {/* Tags */}
+      <AnimatedItem delay={300}>
+        <div className="bg-card rounded-3xl p-4 shadow-lg border border-border/50">
+          <div className="flex items-center justify-between mb-4">
+            <div className="flex items-center gap-2">
+              <Tag className="w-4 h-4 text-muted-foreground" />
+              <span className="text-sm font-medium text-muted-foreground">Categorias</span>
             </div>
             <Button
-              onClick={handleAddTag}
-              disabled={!newTagName.trim()}
-              className="w-full rounded-xl"
+              size="sm"
+              variant="ghost"
+              onClick={() => setShowAddTag(!showAddTag)}
+              className="rounded-full"
             >
-              Adicionar categoria
+              <Plus className="w-4 h-4" />
             </Button>
           </div>
-        )}
 
-        {/* Tag List */}
-        <div className="space-y-2">
-          {couple.tags.map((tag) => (
-            <div
-              key={tag.id}
-              className="flex items-center justify-between p-3 bg-muted rounded-xl group"
-            >
-              <TagPill name={tag.name} icon={tag.icon} color={tag.color} />
-              <button
-                onClick={() => deleteTag(tag.id)}
-                className="p-2 opacity-0 group-hover:opacity-100 text-muted-foreground hover:text-destructive transition-all rounded-lg hover:bg-destructive/10"
+          {/* Add Tag Form */}
+          {showAddTag && (
+            <div className="bg-muted/50 rounded-2xl p-4 mb-4 animate-fade-in border-2 border-border/30">
+              <Input
+                value={newTagName}
+                onChange={(e) => setNewTagName(e.target.value)}
+                placeholder="Nome da categoria"
+                className="mb-3"
+              />
+              <div className="flex items-center gap-2 mb-3">
+                <span className="text-xs text-muted-foreground">Ícone:</span>
+                <div className="flex gap-1 flex-wrap">
+                  {Object.keys(TAG_ICONS).map((icon) => (
+                    <button
+                      key={icon}
+                      onClick={() => setNewTagIcon(icon)}
+                      className={cn(
+                        'p-2 rounded-lg transition-all',
+                        newTagIcon === icon ? 'bg-primary/20' : 'hover:bg-background'
+                      )}
+                    >
+                      <TagPill name="" icon={icon} color={newTagColor} size="sm" />
+                    </button>
+                  ))}
+                </div>
+              </div>
+              <div className="flex items-center gap-2 mb-3">
+                <span className="text-xs text-muted-foreground">Cor:</span>
+                <div className="flex gap-1">
+                  {['#F59E0B', '#3B82F6', '#EF4444', '#8B5CF6', '#06B6D4', '#10B981'].map((color) => (
+                    <button
+                      key={color}
+                      onClick={() => setNewTagColor(color)}
+                      className={cn(
+                        'w-6 h-6 rounded-full transition-all',
+                        newTagColor === color && 'ring-2 ring-offset-1'
+                      )}
+                      style={{ backgroundColor: color }}
+                    />
+                  ))}
+                </div>
+              </div>
+              <Button
+                onClick={handleAddTag}
+                disabled={!newTagName.trim()}
+                className="w-full"
               >
-                <Trash2 className="w-4 h-4" />
-              </button>
+                Adicionar categoria
+              </Button>
             </div>
-          ))}
+          )}
+
+          {/* Tag List */}
+          <div className="space-y-2">
+            {couple.tags.map((tag) => (
+              <div
+                key={tag.id}
+                className="flex items-center justify-between p-3 bg-muted/50 rounded-2xl group"
+              >
+                <TagPill name={tag.name} icon={tag.icon} color={tag.color} />
+                <button
+                  onClick={() => deleteTag(tag.id)}
+                  className="p-2 opacity-0 group-hover:opacity-100 text-muted-foreground hover:text-destructive transition-all rounded-lg hover:bg-destructive/10"
+                >
+                  <Trash2 className="w-4 h-4" />
+                </button>
+              </div>
+            ))}
+          </div>
         </div>
-      </div>
+      </AnimatedItem>
 
       {/* Share Code */}
-      <div className="bg-muted rounded-2xl p-4 flex items-center justify-between">
-        <div>
-          <p className="text-xs text-muted-foreground mb-1">Código do espaço</p>
-          <p className="font-mono text-lg font-semibold">{shareCode}</p>
-          <p className="text-xs text-muted-foreground mt-1">
-            Compartilhe com seu parceiro(a)
-          </p>
+      <AnimatedItem delay={400}>
+        <div className="bg-muted/50 rounded-2xl p-4 flex items-center justify-between border-2 border-border/30">
+          <div>
+            <p className="text-xs text-muted-foreground mb-1">Código do espaço</p>
+            <p className="font-mono text-lg font-semibold">{shareCode}</p>
+            <p className="text-xs text-muted-foreground mt-1">
+              Compartilhe com seu parceiro(a)
+            </p>
+          </div>
+          <button
+            onClick={handleCopyCode}
+            className="p-3 hover:bg-background rounded-xl transition-colors"
+          >
+            <Copy className="w-5 h-5 text-muted-foreground" />
+          </button>
         </div>
-        <button
-          onClick={handleCopyCode}
-          className="p-3 hover:bg-background rounded-xl transition-colors"
-        >
-          <Copy className="w-5 h-5 text-muted-foreground" />
-        </button>
-      </div>
+      </AnimatedItem>
 
       {/* Delete Profile */}
-      <AlertDialog>
-        <AlertDialogTrigger asChild>
-          <Button 
-            variant="ghost" 
-            className="w-full text-destructive hover:text-destructive hover:bg-destructive/10"
-          >
-            <LogOut className="w-4 h-4 mr-2" />
-            Sair deste espaço
-          </Button>
-        </AlertDialogTrigger>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Tem certeza?</AlertDialogTitle>
-            <AlertDialogDescription>
-              Seu perfil será resetado e você será redirecionado para a página inicial. 
-              Você poderá entrar novamente com o código do espaço.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>Cancelar</AlertDialogCancel>
-            <AlertDialogAction onClick={handleDeleteProfile} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
-              Sair
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
-    </div>
+      <AnimatedItem delay={500}>
+        <AlertDialog>
+          <AlertDialogTrigger asChild>
+            <Button 
+              variant="ghost" 
+              className="w-full text-destructive hover:text-destructive hover:bg-destructive/10"
+            >
+              <LogOut className="w-4 h-4 mr-2" />
+              Sair deste espaço
+            </Button>
+          </AlertDialogTrigger>
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle>Tem certeza?</AlertDialogTitle>
+              <AlertDialogDescription>
+                Seu perfil será resetado e você será redirecionado para a página inicial. 
+                Você poderá entrar novamente com o código do espaço.
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel>Cancelar</AlertDialogCancel>
+              <AlertDialogAction onClick={handleDeleteProfile} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
+                Sair
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
+      </AnimatedItem>
+    </AnimatedPage>
   );
 }
