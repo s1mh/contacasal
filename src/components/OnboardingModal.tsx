@@ -49,6 +49,7 @@ export function OnboardingModal({ open, onComplete, profiles, shareCode }: Onboa
   const [compliment, setCompliment] = useState('');
   const [showCompliment, setShowCompliment] = useState(false);
   const [hoveredAvatar, setHoveredAvatar] = useState<number | null>(null);
+  const [complimentTimeout, setComplimentTimeout] = useState<NodeJS.Timeout | null>(null);
 
   // Find an available profile (one that hasn't been customized yet)
   const getAvailablePosition = (): number => {
@@ -66,14 +67,25 @@ export function OnboardingModal({ open, onComplete, profiles, shareCode }: Onboa
     // Remove special characters as user types
     const cleanedValue = value.replace(/[^a-zA-ZÀ-ÿ\s'-]/g, '');
     setName(cleanedValue);
+    
+    // Hide compliment while typing and clear any pending timeout
+    setShowCompliment(false);
+    if (complimentTimeout) {
+      clearTimeout(complimentTimeout);
+    }
   };
 
-  // Show compliment when name is valid
+  // Show compliment 3 seconds after user stops typing
   useEffect(() => {
     if (isValidName(name) && looksLikeName(name)) {
-      const randomCompliment = NAME_COMPLIMENTS[Math.floor(Math.random() * NAME_COMPLIMENTS.length)];
-      setCompliment(randomCompliment);
-      setShowCompliment(true);
+      const timeout = setTimeout(() => {
+        const randomCompliment = NAME_COMPLIMENTS[Math.floor(Math.random() * NAME_COMPLIMENTS.length)];
+        setCompliment(randomCompliment);
+        setShowCompliment(true);
+      }, 3000);
+      
+      setComplimentTimeout(timeout);
+      return () => clearTimeout(timeout);
     } else {
       setShowCompliment(false);
     }
@@ -100,20 +112,6 @@ export function OnboardingModal({ open, onComplete, profiles, shareCode }: Onboa
     }
   };
 
-  // Animation classes for avatars
-  const getAvatarAnimation = (index: number) => {
-    const isSelected = avatarIndex === index + 1;
-    const isHovered = hoveredAvatar === index;
-    
-    if (isSelected) {
-      return 'animate-bounce-gentle';
-    }
-    if (isHovered) {
-      return 'animate-wiggle';
-    }
-    return '';
-  };
-
   return (
     <Dialog open={open}>
       <DialogContent 
@@ -134,24 +132,20 @@ export function OnboardingModal({ open, onComplete, profiles, shareCode }: Onboa
           {/* Name Input */}
           <div className="space-y-2 animate-fade-in" style={{ animationDelay: '100ms' }}>
             <label className="text-sm font-medium text-muted-foreground">Seu nome</label>
-            <div className="relative">
-              <Input
-                value={name}
-                onChange={(e) => handleNameChange(e.target.value)}
-                placeholder="Como você quer ser chamado(a)?"
-                className="text-center text-lg pr-10 transition-all duration-300 focus:ring-2 focus:ring-primary/50"
-                autoFocus
-                maxLength={20}
-              />
-              {showCompliment && (
-                <Sparkles className="absolute right-3 top-1/2 -translate-y-1/2 w-5 h-5 text-primary animate-spin-slow" />
-              )}
-            </div>
-            {/* Compliment message */}
+            <Input
+              value={name}
+              onChange={(e) => handleNameChange(e.target.value)}
+              placeholder="Como você quer ser chamado(a)?"
+              className="text-center text-lg transition-all duration-300 focus:ring-2 focus:ring-primary/50"
+              autoFocus
+              maxLength={20}
+            />
+            {/* Compliment message with AI sparkle */}
             <div className={cn(
-              "h-6 flex items-center justify-center transition-all duration-300",
+              "h-6 flex items-center justify-center gap-2 transition-all duration-300",
               showCompliment ? "opacity-100 translate-y-0" : "opacity-0 -translate-y-2"
             )}>
+              <Sparkles className="w-4 h-4 text-primary animate-spin-slow" />
               <span className="text-sm text-primary font-medium">{compliment}</span>
             </div>
           </div>
@@ -170,14 +164,17 @@ export function OnboardingModal({ open, onComplete, profiles, shareCode }: Onboa
                     "relative w-14 h-14 rounded-full overflow-hidden ring-2 transition-all duration-300",
                     avatarIndex === index + 1 
                       ? "ring-primary scale-110 shadow-lg" 
-                      : "ring-border hover:ring-primary/50 hover:scale-105",
-                    getAvatarAnimation(index)
+                      : "ring-border hover:ring-primary/50 hover:scale-105"
                   )}
                 >
                   <img 
                     src={avatar} 
                     alt={`Avatar ${index + 1}`} 
-                    className="w-full h-full object-cover transition-transform duration-300"
+                    className={cn(
+                      "w-full h-full object-cover transition-transform duration-300",
+                      avatarIndex === index + 1 && "animate-bounce-gentle",
+                      hoveredAvatar === index && avatarIndex !== index + 1 && "animate-wiggle"
+                    )}
                   />
                   {avatarIndex === index + 1 && (
                     <div className="absolute inset-0 bg-primary/20 flex items-center justify-center animate-fade-in">
@@ -219,10 +216,7 @@ export function OnboardingModal({ open, onComplete, profiles, shareCode }: Onboa
             style={{ animationDelay: '400ms' }}
           >
             <div 
-              className={cn(
-                "w-14 h-14 rounded-full overflow-hidden ring-4 transition-all duration-500",
-                name.trim() && "animate-bounce-gentle"
-              )}
+              className="w-14 h-14 rounded-full overflow-hidden ring-4 transition-all duration-500"
               style={{ 
                 boxShadow: `0 0 0 4px ${color}`,
                 transition: 'box-shadow 0.3s ease'
@@ -231,7 +225,10 @@ export function OnboardingModal({ open, onComplete, profiles, shareCode }: Onboa
               <img 
                 src={CAT_AVATARS[avatarIndex - 1]} 
                 alt="Preview"
-                className="w-full h-full object-cover"
+                className={cn(
+                  "w-full h-full object-cover transition-transform duration-300",
+                  name.trim() && "animate-bounce-gentle"
+                )}
               />
             </div>
             <div className="text-left">
