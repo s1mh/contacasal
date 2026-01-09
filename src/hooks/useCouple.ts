@@ -418,18 +418,78 @@ export function useCouple() {
   useEffect(() => {
     if (shareCode) {
       fetchCouple(shareCode);
-      const channel = supabase
-        .channel('couple-changes')
-        .on('postgres_changes', { event: '*', schema: 'public', table: 'expenses' }, () => fetchCouple(shareCode))
-        .on('postgres_changes', { event: '*', schema: 'public', table: 'profiles' }, () => fetchCouple(shareCode))
-        .on('postgres_changes', { event: '*', schema: 'public', table: 'tags' }, () => fetchCouple(shareCode))
-        .on('postgres_changes', { event: '*', schema: 'public', table: 'cards' }, () => fetchCouple(shareCode))
-        .on('postgres_changes', { event: '*', schema: 'public', table: 'agreements' }, () => fetchCouple(shareCode))
-        .on('postgres_changes', { event: '*', schema: 'public', table: 'settlements' }, () => fetchCouple(shareCode))
-        .subscribe();
-      return () => { supabase.removeChannel(channel); };
     }
   }, [shareCode]);
+
+  // Separate useEffect for realtime subscription - depends on couple.id
+  useEffect(() => {
+    if (!couple?.id) return;
+    
+    const channelName = `couple-realtime-${couple.id}`;
+    devLog('Setting up realtime channel:', channelName);
+    
+    const channel = supabase
+      .channel(channelName)
+      .on(
+        'postgres_changes', 
+        { event: '*', schema: 'public', table: 'expenses', filter: `couple_id=eq.${couple.id}` }, 
+        (payload) => {
+          devLog('Realtime expenses update:', payload);
+          if (shareCode) fetchCouple(shareCode);
+        }
+      )
+      .on(
+        'postgres_changes', 
+        { event: '*', schema: 'public', table: 'profiles', filter: `couple_id=eq.${couple.id}` }, 
+        (payload) => {
+          devLog('Realtime profiles update:', payload);
+          if (shareCode) fetchCouple(shareCode);
+        }
+      )
+      .on(
+        'postgres_changes', 
+        { event: '*', schema: 'public', table: 'tags', filter: `couple_id=eq.${couple.id}` }, 
+        (payload) => {
+          devLog('Realtime tags update:', payload);
+          if (shareCode) fetchCouple(shareCode);
+        }
+      )
+      .on(
+        'postgres_changes', 
+        { event: '*', schema: 'public', table: 'cards', filter: `couple_id=eq.${couple.id}` }, 
+        (payload) => {
+          devLog('Realtime cards update:', payload);
+          if (shareCode) fetchCouple(shareCode);
+        }
+      )
+      .on(
+        'postgres_changes', 
+        { event: '*', schema: 'public', table: 'agreements', filter: `couple_id=eq.${couple.id}` }, 
+        (payload) => {
+          devLog('Realtime agreements update:', payload);
+          if (shareCode) fetchCouple(shareCode);
+        }
+      )
+      .on(
+        'postgres_changes', 
+        { event: '*', schema: 'public', table: 'settlements', filter: `couple_id=eq.${couple.id}` }, 
+        (payload) => {
+          devLog('Realtime settlements update:', payload);
+          if (shareCode) fetchCouple(shareCode);
+        }
+      )
+      .subscribe((status) => {
+        devLog('Realtime subscription status:', status);
+        if (status === 'CHANNEL_ERROR') {
+          console.error('Realtime channel error for couple:', couple.id);
+        }
+      });
+      
+    return () => { 
+      devLog('Removing realtime channel:', channelName);
+      supabase.removeChannel(channel); 
+    };
+  }, [couple?.id, shareCode]);
 
   return {
     couple,
