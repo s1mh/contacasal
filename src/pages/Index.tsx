@@ -1,16 +1,16 @@
-import { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
-import { Heart, ArrowRight, Sparkles, Loader2, Users, AtSign, Lock, HelpCircle } from 'lucide-react';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { InputOTP, InputOTPGroup, InputOTPSlotMasked } from '@/components/ui/input-otp';
-import { supabase } from '@/integrations/supabase/client';
-import { useToast } from '@/hooks/use-toast';
-import { useAuthContext } from '@/contexts/AuthContext';
-import { CAT_AVATARS } from '@/lib/constants';
-import { devLog } from '@/lib/validation';
-import { cn } from '@/lib/utils';
-import { RecoveryModal } from '@/components/RecoveryModal';
+import { useState, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
+import { Heart, ArrowRight, Sparkles, Loader2, Users, AtSign, Lock, HelpCircle } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { InputOTP, InputOTPGroup, InputOTPSlotMasked } from "@/components/ui/input-otp";
+import { supabase } from "@/integrations/supabase/client";
+import { useToast } from "@/hooks/use-toast";
+import { useAuthContext } from "@/contexts/AuthContext";
+import { CAT_AVATARS } from "@/lib/constants";
+import { devLog } from "@/lib/validation";
+import { cn } from "@/lib/utils";
+import { RecoveryModal } from "@/components/RecoveryModal";
 
 interface LastSpace {
   shareCode: string;
@@ -25,15 +25,15 @@ export default function Index() {
   const { toast } = useToast();
   const { loading: authLoading, clearValidation, validateShareCode } = useAuthContext();
   const [loading, setLoading] = useState(false);
-  const [existingCode, setExistingCode] = useState('');
+  const [existingCode, setExistingCode] = useState("");
   const [lastSpace, setLastSpace] = useState<LastSpace | null>(null);
   const [catsAnimating, setCatsAnimating] = useState(false);
-  
+
   // Username login state
   const [showUsernameLogin, setShowUsernameLogin] = useState(false);
-  const [username, setUsername] = useState('');
-  const [usernamePin, setUsernamePin] = useState('');
-  const [usernameError, setUsernameError] = useState('');
+  const [username, setUsername] = useState("");
+  const [usernamePin, setUsernamePin] = useState("");
+  const [usernameError, setUsernameError] = useState("");
   const [usernameLoading, setUsernameLoading] = useState(false);
   const [attemptsRemaining, setAttemptsRemaining] = useState<number | null>(null);
   const [lockedUntil, setLockedUntil] = useState<string | null>(null);
@@ -43,12 +43,12 @@ export default function Index() {
   useEffect(() => {
     for (let i = 0; i < localStorage.length; i++) {
       const key = localStorage.key(i);
-      if (key?.startsWith('couple_')) {
+      if (key?.startsWith("couple_")) {
         try {
-          const data = JSON.parse(localStorage.getItem(key) || '{}');
+          const data = JSON.parse(localStorage.getItem(key) || "{}");
           if (data.position && data.name) {
             setLastSpace({
-              shareCode: key.replace('couple_', ''),
+              shareCode: key.replace("couple_", ""),
               position: data.position,
               name: data.name,
               avatarIndex: data.avatarIndex || 1,
@@ -73,37 +73,37 @@ export default function Index() {
   const handleCreateSpace = async () => {
     setLoading(true);
     setCatsAnimating(true);
-    
+
     try {
-      devLog('Creating new couple space...');
-      
-      const { data, error } = await supabase.functions.invoke('create-couple', {
+      devLog("Creating new couple space...");
+
+      const { data, error } = await supabase.functions.invoke("create-couple", {
         body: {},
       });
 
       if (error) {
-        devLog('Error creating couple (function):', error.message);
-        throw new Error(error.message || 'Erro ao criar espaço');
+        devLog("Error creating couple (function):", error.message);
+        throw new Error(error.message || "Erro ao criar espaço");
       }
 
       if (!data?.success || !data?.share_code) {
-        devLog('Invalid response from create-couple:', data);
-        throw new Error(data?.error || 'Falha ao criar espaço');
+        devLog("Invalid response from create-couple:", data);
+        throw new Error(data?.error || "Falha ao criar espaço");
       }
 
-      devLog('Couple created successfully:', data.share_code);
+      devLog("Couple created successfully:", data.share_code);
 
       // Refresh the session to pick up the new couple_id claim
       await supabase.auth.refreshSession();
 
       navigate(`/c/${data.share_code}`);
     } catch (err: unknown) {
-      const message = err instanceof Error ? err.message : 'Tente novamente.';
-      devLog('Error creating space:', err);
+      const message = err instanceof Error ? err.message : "Tente novamente.";
+      devLog("Error creating space:", err);
       toast({
-        title: 'Erro ao criar espaço',
+        title: "Erro ao criar espaço",
         description: message,
-        variant: 'destructive',
+        variant: "destructive",
       });
     } finally {
       setLoading(false);
@@ -133,16 +133,16 @@ export default function Index() {
 
   const handleUsernameLogin = async () => {
     if (!username.trim() || usernamePin.length !== 4) return;
-    
+
     setUsernameLoading(true);
-    setUsernameError('');
-    
+    setUsernameError("");
+
     try {
-      const { data, error } = await supabase.functions.invoke('login-with-username', {
-        body: { 
+      const { data, error } = await supabase.functions.invoke("login-with-username", {
+        body: {
           username: username.trim(),
-          pin: usernamePin 
-        }
+          pin: usernamePin,
+        },
       });
 
       if (error) {
@@ -150,46 +150,49 @@ export default function Index() {
       }
 
       if (!data.success) {
-        setUsernameError(data.error || 'Credenciais inválidas');
-        setUsernamePin('');
-        
+        setUsernameError(data.error || "Credenciais inválidas");
+        setUsernamePin("");
+
         if (data.attempts_remaining !== undefined) {
           setAttemptsRemaining(data.attempts_remaining);
         }
-        
+
         if (data.locked) {
           setLockedUntil(data.locked_until);
         }
-        
+
         return;
       }
 
       // Success! Save to localStorage and navigate
       const shareCode = data.share_code;
       const profile = data.profile;
-      
-      localStorage.setItem(`couple_${shareCode}`, JSON.stringify({
-        position: profile.position,
-        name: profile.name,
-        avatarIndex: profile.avatar_index,
-        color: profile.color,
-        username: username.trim().replace(/^@/, ''),
-        timestamp: Date.now()
-      }));
+
+      localStorage.setItem(
+        `couple_${shareCode}`,
+        JSON.stringify({
+          position: profile.position,
+          name: profile.name,
+          avatarIndex: profile.avatar_index,
+          color: profile.color,
+          username: username.trim().replace(/^@/, ""),
+          timestamp: Date.now(),
+        }),
+      );
 
       // Validate the share code to set up the session
       await validateShareCode(shareCode);
 
       toast({
         title: `Bem-vindo de volta, ${profile.name}! 🎉`,
-        description: 'Bom te ver novamente'
+        description: "Bom te ver novamente",
       });
 
       navigate(`/c/${shareCode}`);
     } catch (err) {
-      console.error('Username login error:', err);
-      setUsernameError('Erro ao fazer login. Tente novamente.');
-      setUsernamePin('');
+      console.error("Username login error:", err);
+      setUsernameError("Erro ao fazer login. Tente novamente.");
+      setUsernamePin("");
     } finally {
       setUsernameLoading(false);
     }
@@ -197,8 +200,8 @@ export default function Index() {
 
   const handleUsernamePinChange = (value: string) => {
     setUsernamePin(value);
-    setUsernameError('');
-    
+    setUsernameError("");
+
     // Auto-submit when 4 digits entered
     if (value.length === 4) {
       setTimeout(() => handleUsernameLogin(), 100);
@@ -210,9 +213,9 @@ export default function Index() {
     const now = new Date();
     const diffMs = lockDate.getTime() - now.getTime();
     const diffMins = Math.ceil(diffMs / 60000);
-    
-    if (diffMins <= 0) return 'agora';
-    if (diffMins === 1) return '1 minuto';
+
+    if (diffMins <= 0) return "agora";
+    if (diffMins === 1) return "1 minuto";
     return `${diffMins} minutos`;
   };
 
@@ -221,17 +224,17 @@ export default function Index() {
       <div className="min-h-screen bg-background flex items-center justify-center">
         <div className="flex flex-col items-center gap-4 animate-fade-in">
           <div className="flex gap-2">
-            <img 
-              src={CAT_AVATARS[0]} 
-              alt="" 
-              className="w-12 h-12 rounded-full shadow-lg animate-bounce-gentle" 
-              style={{ animationDelay: '0ms' }}
+            <img
+              src={CAT_AVATARS[0]}
+              alt=""
+              className="w-12 h-12 rounded-full shadow-lg animate-bounce-gentle"
+              style={{ animationDelay: "0ms" }}
             />
-            <img 
-              src={CAT_AVATARS[1]} 
-              alt="" 
-              className="w-12 h-12 rounded-full shadow-lg animate-bounce-gentle" 
-              style={{ animationDelay: '200ms' }}
+            <img
+              src={CAT_AVATARS[1]}
+              alt=""
+              className="w-12 h-12 rounded-full shadow-lg animate-bounce-gentle"
+              style={{ animationDelay: "200ms" }}
             />
           </div>
           <Loader2 className="w-6 h-6 animate-spin text-primary" />
@@ -247,36 +250,34 @@ export default function Index() {
         {/* Logo / Header */}
         <div className="text-center mb-8 animate-fade-slide-up">
           <div className="flex justify-center items-center gap-3 mb-4">
-            <img 
-              src={CAT_AVATARS[0]} 
-              alt="" 
+            <img
+              src={CAT_AVATARS[0]}
+              alt=""
               className={cn(
                 "w-16 h-16 rounded-full shadow-lg transition-all duration-500",
-                catsAnimating && "animate-jump"
-              )} 
+                catsAnimating && "animate-jump",
+              )}
             />
             <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center">
-              <Heart className={cn(
-                "w-5 h-5 text-primary fill-primary transition-transform",
-                catsAnimating && "animate-pulse"
-              )} />
+              <Heart
+                className={cn(
+                  "w-5 h-5 text-primary fill-primary transition-transform",
+                  catsAnimating && "animate-pulse",
+                )}
+              />
             </div>
-            <img 
-              src={CAT_AVATARS[1]} 
-              alt="" 
+            <img
+              src={CAT_AVATARS[1]}
+              alt=""
               className={cn(
                 "w-16 h-16 rounded-full shadow-lg transition-all duration-500",
-                catsAnimating && "animate-jump"
+                catsAnimating && "animate-jump",
               )}
-              style={{ animationDelay: '100ms' }}
+              style={{ animationDelay: "100ms" }}
             />
           </div>
-          <h1 className="text-3xl font-bold text-foreground mb-2">
-            Conta Compartilhada
-          </h1>
-          <p className="text-muted-foreground">
-            Dividam gastos com clareza (até 5 pessoas)
-          </p>
+          <h1 className="text-3xl font-bold text-foreground mb-2">Conta Compartilhada</h1>
+          <p className="text-muted-foreground">Dividam gastos com clareza</p>
         </div>
 
         {/* Continue as saved user */}
@@ -284,12 +285,12 @@ export default function Index() {
           <button
             onClick={handleContinue}
             className="w-full mb-4 p-4 bg-card rounded-3xl border-2 border-primary/30 hover:border-primary shadow-lg transition-all duration-300 flex items-center justify-between group animate-fade-slide-up hover:scale-[1.02]"
-            style={{ animationDelay: '100ms' }}
+            style={{ animationDelay: "100ms" }}
           >
             <div className="flex items-center gap-3">
               <div className="w-12 h-12 rounded-full overflow-hidden ring-2 ring-primary animate-bounce-gentle">
-                <img 
-                  src={CAT_AVATARS[(lastSpace.avatarIndex || 1) - 1]} 
+                <img
+                  src={CAT_AVATARS[(lastSpace.avatarIndex || 1) - 1]}
                   alt={lastSpace.name}
                   className="w-full h-full object-cover"
                 />
@@ -297,9 +298,7 @@ export default function Index() {
               <div className="text-left">
                 <p className="text-xs text-muted-foreground">Continuar como</p>
                 <p className="font-semibold">{lastSpace.name}</p>
-                {lastSpace.username && (
-                  <p className="text-xs text-muted-foreground">@{lastSpace.username}</p>
-                )}
+                {lastSpace.username && <p className="text-xs text-muted-foreground">@{lastSpace.username}</p>}
               </div>
             </div>
             <ArrowRight className="w-5 h-5 text-primary group-hover:translate-x-1 transition-transform" />
@@ -308,9 +307,7 @@ export default function Index() {
 
         {/* Username Login */}
         {showUsernameLogin ? (
-          <div 
-            className="bg-card rounded-3xl p-6 shadow-lg border border-border/50 mb-4 animate-fade-slide-up"
-          >
+          <div className="bg-card rounded-3xl p-6 shadow-lg border border-border/50 mb-4 animate-fade-slide-up">
             <div className="flex items-center gap-3 mb-4">
               <div className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center">
                 <AtSign className="w-5 h-5 text-primary" />
@@ -325,8 +322,8 @@ export default function Index() {
               <Input
                 value={username}
                 onChange={(e) => {
-                  setUsername(e.target.value.replace(/\s/g, '').toLowerCase());
-                  setUsernameError('');
+                  setUsername(e.target.value.replace(/\s/g, "").toLowerCase());
+                  setUsernameError("");
                 }}
                 placeholder="@seu_username"
                 className="text-center"
@@ -338,10 +335,10 @@ export default function Index() {
                   <Lock className="w-4 h-4" />
                   <span>Código pessoal</span>
                 </div>
-                
-                <InputOTP 
-                  maxLength={4} 
-                  value={usernamePin} 
+
+                <InputOTP
+                  maxLength={4}
+                  value={usernamePin}
                   onChange={handleUsernamePinChange}
                   disabled={usernameLoading || !!lockedUntil || !username.trim()}
                 >
@@ -361,14 +358,13 @@ export default function Index() {
                 )}
 
                 {usernameError && (
-                  <p className="text-sm text-destructive animate-fade-in text-center">
-                    {usernameError}
-                  </p>
+                  <p className="text-sm text-destructive animate-fade-in text-center">{usernameError}</p>
                 )}
 
                 {attemptsRemaining !== null && attemptsRemaining > 0 && attemptsRemaining <= 3 && (
                   <p className="text-xs text-amber-600 dark:text-amber-400 animate-fade-in">
-                    {attemptsRemaining} tentativa{attemptsRemaining > 1 ? 's' : ''} restante{attemptsRemaining > 1 ? 's' : ''}
+                    {attemptsRemaining} tentativa{attemptsRemaining > 1 ? "s" : ""} restante
+                    {attemptsRemaining > 1 ? "s" : ""}
                   </p>
                 )}
 
@@ -394,9 +390,9 @@ export default function Index() {
                 variant="ghost"
                 onClick={() => {
                   setShowUsernameLogin(false);
-                  setUsername('');
-                  setUsernamePin('');
-                  setUsernameError('');
+                  setUsername("");
+                  setUsernamePin("");
+                  setUsernameError("");
                   setAttemptsRemaining(null);
                   setLockedUntil(null);
                 }}
@@ -409,9 +405,9 @@ export default function Index() {
         ) : (
           <>
             {/* Create New Space */}
-            <div 
+            <div
               className="bg-card rounded-3xl p-6 shadow-lg border border-border/50 mb-4 animate-fade-slide-up hover:shadow-xl transition-all duration-300"
-              style={{ animationDelay: '200ms' }}
+              style={{ animationDelay: "200ms" }}
             >
               <div className="flex items-center gap-3 mb-4">
                 <div className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center">
@@ -442,9 +438,9 @@ export default function Index() {
             </div>
 
             {/* Join Existing Space */}
-            <div 
+            <div
               className="bg-card rounded-3xl p-6 shadow-lg border border-border/50 mb-4 animate-fade-slide-up hover:shadow-xl transition-all duration-300"
-              style={{ animationDelay: '300ms' }}
+              style={{ animationDelay: "300ms" }}
             >
               <div className="flex items-center gap-3 mb-4">
                 <div className="w-10 h-10 rounded-xl bg-secondary/30 flex items-center justify-center">
@@ -461,7 +457,7 @@ export default function Index() {
                   onChange={(e) => setExistingCode(e.target.value.toLowerCase())}
                   placeholder="Cole o código aqui"
                   className="flex-1 rounded-xl h-12 bg-muted border-0 transition-all duration-300 focus:ring-2 focus:ring-primary/50"
-                  onKeyDown={(e) => e.key === 'Enter' && handleJoinSpace()}
+                  onKeyDown={(e) => e.key === "Enter" && handleJoinSpace()}
                 />
                 <Button
                   onClick={handleJoinSpace}
@@ -475,10 +471,7 @@ export default function Index() {
             </div>
 
             {/* Login with Username */}
-            <div 
-              className="animate-fade-slide-up"
-              style={{ animationDelay: '400ms' }}
-            >
+            <div className="animate-fade-slide-up" style={{ animationDelay: "400ms" }}>
               <Button
                 variant="ghost"
                 onClick={() => setShowUsernameLogin(true)}
@@ -492,21 +485,14 @@ export default function Index() {
         )}
 
         {/* Footer */}
-        <div className="text-center mt-8 animate-fade-in" style={{ animationDelay: '500ms' }}>
-          <p className="text-xs text-muted-foreground">
-            Feito com 💕 para casais
-          </p>
-          <p className="text-[10px] text-muted-foreground/60 mt-1">
-            Feito por Samuel para o Juan
-          </p>
+        <div className="text-center mt-8 animate-fade-in" style={{ animationDelay: "500ms" }}>
+          <p className="text-xs text-muted-foreground">Feito com 💕 para casais</p>
+          <p className="text-[10px] text-muted-foreground/60 mt-1">Feito por Samuel para o Juan</p>
         </div>
       </div>
 
       {/* Recovery Modal for username login */}
-      <RecoveryModal
-        open={showRecovery}
-        onClose={() => setShowRecovery(false)}
-      />
+      <RecoveryModal open={showRecovery} onClose={() => setShowRecovery(false)} />
     </div>
   );
 }
