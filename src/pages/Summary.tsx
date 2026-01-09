@@ -15,8 +15,11 @@ export default function Summary() {
   const balance = calculateBalance();
 
   const recentExpenses = couple.expenses.slice(0, 5);
-  const person1 = couple.profiles.find(p => p.position === 1);
-  const person2 = couple.profiles.find(p => p.position === 2);
+  
+  // Only show profiles that have been configured (name !== "Pessoa 1" and "Pessoa 2")
+  const configuredProfiles = couple.profiles.filter(p => 
+    p.name !== 'Pessoa 1' && p.name !== 'Pessoa 2' && p.name !== 'Pessoa'
+  );
 
   const handleShare = async () => {
     const url = window.location.origin + `/c/${shareCode}`;
@@ -45,12 +48,14 @@ export default function Summary() {
       {/* Header */}
       <div className="flex items-center justify-between mb-6">
         <div className="flex items-center gap-3">
-          {person1 && (
-            <Avatar avatarIndex={person1.avatar_index} size="md" ringColor={person1.color} />
-          )}
-          {person2 && (
-            <Avatar avatarIndex={person2.avatar_index} size="md" ringColor={person2.color} />
-          )}
+          {configuredProfiles.map(profile => (
+            <Avatar 
+              key={profile.id} 
+              avatarIndex={profile.avatar_index} 
+              size="md" 
+              ringColor={profile.color} 
+            />
+          ))}
         </div>
         <Button
           variant="outline"
