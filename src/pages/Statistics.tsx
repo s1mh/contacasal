@@ -3,6 +3,7 @@ import { useOutletContext } from 'react-router-dom';
 import { Couple } from '@/hooks/useCouple';
 import { Charts, ExpensesByTagChart, ExpensesByPersonChart, MonthlyEvolutionChart } from '@/components/Charts';
 import { ExportButton } from '@/components/ExportButton';
+import { AnimatedPage, AnimatedItem } from '@/components/AnimatedPage';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { BarChart3, PieChart, TrendingUp, Users } from 'lucide-react';
 import { subMonths, startOfMonth, endOfMonth, isWithinInterval, format } from 'date-fns';
@@ -82,91 +83,103 @@ export default function Statistics() {
   }, [period]);
 
   return (
-    <div className="p-6 space-y-6">
+    <AnimatedPage className="p-6 space-y-6">
       {/* Header */}
-      <div className="flex items-center justify-between">
-        <h1 className="text-2xl font-bold flex items-center gap-2">
-          <BarChart3 className="w-6 h-6 text-primary" />
-          Estatísticas
-        </h1>
-        <ExportButton 
-          expenses={filteredExpenses} 
-          profiles={couple.profiles} 
-          tags={couple.tags}
-          period={periodLabel}
-        />
-      </div>
+      <AnimatedItem delay={0}>
+        <div className="flex items-center justify-between">
+          <h1 className="text-2xl font-bold flex items-center gap-2">
+            <BarChart3 className="w-6 h-6 text-primary" />
+            Estatísticas
+          </h1>
+          <ExportButton 
+            expenses={filteredExpenses} 
+            profiles={couple.profiles} 
+            tags={couple.tags}
+            period={periodLabel}
+          />
+        </div>
+      </AnimatedItem>
 
       {/* Filters */}
-      <div className="flex gap-3">
-        <Select value={period} onValueChange={(v) => setPeriod(v as Period)}>
-          <SelectTrigger className="w-40">
-            <SelectValue />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="current">Mês atual</SelectItem>
-            <SelectItem value="last3">3 meses</SelectItem>
-            <SelectItem value="last6">6 meses</SelectItem>
-            <SelectItem value="year">12 meses</SelectItem>
-            <SelectItem value="all">Tudo</SelectItem>
-          </SelectContent>
-        </Select>
+      <AnimatedItem delay={100}>
+        <div className="flex gap-3">
+          <Select value={period} onValueChange={(v) => setPeriod(v as Period)}>
+            <SelectTrigger className="w-40">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="current">Mês atual</SelectItem>
+              <SelectItem value="last3">3 meses</SelectItem>
+              <SelectItem value="last6">6 meses</SelectItem>
+              <SelectItem value="year">12 meses</SelectItem>
+              <SelectItem value="all">Tudo</SelectItem>
+            </SelectContent>
+          </Select>
 
-        <Select value={selectedTag} onValueChange={setSelectedTag}>
-          <SelectTrigger className="flex-1">
-            <SelectValue placeholder="Categoria" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="all">Todas categorias</SelectItem>
-            {couple.tags.map(tag => (
-              <SelectItem key={tag.id} value={tag.id}>{tag.name}</SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-      </div>
+          <Select value={selectedTag} onValueChange={setSelectedTag}>
+            <SelectTrigger className="flex-1">
+              <SelectValue placeholder="Categoria" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">Todas categorias</SelectItem>
+              {couple.tags.map(tag => (
+                <SelectItem key={tag.id} value={tag.id}>{tag.name}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+      </AnimatedItem>
 
       {/* Summary Cards */}
-      <div className="grid grid-cols-2 gap-4">
-        <div className="p-4 rounded-2xl bg-card border border-border">
-          <p className="text-xs text-muted-foreground mb-1">Total gasto</p>
-          <p className="text-xl font-bold text-primary">{formatCurrency(stats.total)}</p>
-          <p className="text-xs text-muted-foreground mt-1">{stats.count} despesa(s)</p>
+      <AnimatedItem delay={200}>
+        <div className="grid grid-cols-2 gap-4">
+          <div className="p-4 rounded-2xl bg-card border border-border">
+            <p className="text-xs text-muted-foreground mb-1">Total gasto</p>
+            <p className="text-xl font-bold text-primary">{formatCurrency(stats.total)}</p>
+            <p className="text-xs text-muted-foreground mt-1">{stats.count} despesa(s)</p>
+          </div>
+          <div className="p-4 rounded-2xl bg-card border border-border">
+            <p className="text-xs text-muted-foreground mb-1">Média por gasto</p>
+            <p className="text-xl font-bold">{formatCurrency(stats.avgPerExpense)}</p>
+          </div>
         </div>
-        <div className="p-4 rounded-2xl bg-card border border-border">
-          <p className="text-xs text-muted-foreground mb-1">Média por gasto</p>
-          <p className="text-xl font-bold">{formatCurrency(stats.avgPerExpense)}</p>
-        </div>
-      </div>
+      </AnimatedItem>
 
       {/* Charts */}
       <div className="space-y-6">
         {/* By Tag */}
-        <div className="p-4 rounded-2xl bg-card border border-border space-y-4">
-          <div className="flex items-center gap-2">
-            <PieChart className="w-4 h-4 text-muted-foreground" />
-            <h3 className="font-medium">Por Categoria</h3>
+        <AnimatedItem delay={300}>
+          <div className="p-4 rounded-2xl bg-card border border-border space-y-4">
+            <div className="flex items-center gap-2">
+              <PieChart className="w-4 h-4 text-muted-foreground" />
+              <h3 className="font-medium">Por Categoria</h3>
+            </div>
+            <ExpensesByTagChart expenses={filteredExpenses} tags={couple.tags} />
           </div>
-          <ExpensesByTagChart expenses={filteredExpenses} tags={couple.tags} />
-        </div>
+        </AnimatedItem>
 
         {/* By Person */}
-        <div className="p-4 rounded-2xl bg-card border border-border space-y-4">
-          <div className="flex items-center gap-2">
-            <Users className="w-4 h-4 text-muted-foreground" />
-            <h3 className="font-medium">Por Pessoa</h3>
+        <AnimatedItem delay={400}>
+          <div className="p-4 rounded-2xl bg-card border border-border space-y-4">
+            <div className="flex items-center gap-2">
+              <Users className="w-4 h-4 text-muted-foreground" />
+              <h3 className="font-medium">Por Pessoa</h3>
+            </div>
+            <ExpensesByPersonChart expenses={filteredExpenses} profiles={couple.profiles} />
           </div>
-          <ExpensesByPersonChart expenses={filteredExpenses} profiles={couple.profiles} />
-        </div>
+        </AnimatedItem>
 
         {/* Monthly Evolution */}
-        <div className="p-4 rounded-2xl bg-card border border-border space-y-4">
-          <div className="flex items-center gap-2">
-            <TrendingUp className="w-4 h-4 text-muted-foreground" />
-            <h3 className="font-medium">Evolução Mensal</h3>
+        <AnimatedItem delay={500}>
+          <div className="p-4 rounded-2xl bg-card border border-border space-y-4">
+            <div className="flex items-center gap-2">
+              <TrendingUp className="w-4 h-4 text-muted-foreground" />
+              <h3 className="font-medium">Evolução Mensal</h3>
+            </div>
+            <MonthlyEvolutionChart expenses={couple.expenses} />
           </div>
-          <MonthlyEvolutionChart expenses={couple.expenses} />
-        </div>
+        </AnimatedItem>
       </div>
-    </div>
+    </AnimatedPage>
   );
 }

@@ -285,32 +285,70 @@
   /* Gentle bounce animation for avatars */
   @keyframes bounce-gentle {
     0%, 100% {
-      transform: translateY(0);
+      transform: translateY(0) scale(1);
+    }
+    25% {
+      transform: translateY(-3px) scale(1.02);
     }
     50% {
-      transform: translateY(-4px);
+      transform: translateY(-6px) scale(1.05);
+    }
+    75% {
+      transform: translateY(-3px) scale(1.02);
     }
   }
 
   .animate-bounce-gentle {
-    animation: bounce-gentle 1s ease-in-out infinite;
+    animation: bounce-gentle 0.8s ease-in-out infinite;
   }
 
-  /* Wiggle animation for hover */
+  /* Happy wiggle animation for hover - makes cat dance */
   @keyframes wiggle {
-    0%, 100% {
-      transform: rotate(0deg);
-    }
-    25% {
-      transform: rotate(-5deg);
-    }
-    75% {
-      transform: rotate(5deg);
-    }
+    0% { transform: rotate(0deg) scale(1); }
+    15% { transform: rotate(-12deg) scale(1.1); }
+    30% { transform: rotate(10deg) scale(1.15); }
+    45% { transform: rotate(-8deg) scale(1.1); }
+    60% { transform: rotate(6deg) scale(1.05); }
+    75% { transform: rotate(-4deg) scale(1.02); }
+    100% { transform: rotate(0deg) scale(1); }
   }
 
   .animate-wiggle {
-    animation: wiggle 0.3s ease-in-out;
+    animation: wiggle 0.6s ease-in-out;
+  }
+
+  /* Cat selected celebration animation */
+  @keyframes cat-celebrate {
+    0% { transform: scale(1) rotate(0deg); }
+    20% { transform: scale(1.2) rotate(-10deg); }
+    40% { transform: scale(1.15) rotate(8deg); }
+    60% { transform: scale(1.1) rotate(-5deg); }
+    80% { transform: scale(1.05) rotate(3deg); }
+    100% { transform: scale(1) rotate(0deg); }
+  }
+
+  .animate-cat-celebrate {
+    animation: cat-celebrate 0.5s ease-out;
+  }
+
+  /* Cat idle animation */
+  @keyframes cat-idle {
+    0%, 100% { 
+      transform: translateY(0) rotate(0deg); 
+    }
+    25% { 
+      transform: translateY(-2px) rotate(-1deg); 
+    }
+    50% { 
+      transform: translateY(-4px) rotate(1deg); 
+    }
+    75% { 
+      transform: translateY(-2px) rotate(-1deg); 
+    }
+  }
+
+  .animate-cat-idle {
+    animation: cat-idle 2s ease-in-out infinite;
   }
 
   /* Slow spin for sparkles */
