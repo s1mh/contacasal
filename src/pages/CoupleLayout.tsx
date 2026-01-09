@@ -2,16 +2,16 @@ import { useState, useEffect } from 'react';
 import { Outlet, useParams, Navigate, useNavigate } from 'react-router-dom';
 import { BottomNav } from '@/components/BottomNav';
 import { OnboardingModal } from '@/components/OnboardingModal';
-import { useCouple } from '@/hooks/useCouple';
+import { CoupleProvider, useCoupleContext } from '@/contexts/CoupleContext';
 import { useAuthContext } from '@/contexts/AuthContext';
 import { Loader2, AlertCircle, RefreshCw } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { CAT_AVATARS } from '@/lib/constants';
 
-export default function CoupleLayout() {
+function CoupleLayoutContent() {
   const { shareCode } = useParams();
   const navigate = useNavigate();
-  const { couple, loading, error, updateProfile, refetch } = useCouple();
+  const { couple, loading, error, updateProfile, refetch } = useCoupleContext();
   const { loading: authLoading, isValidated, coupleId, validateShareCode } = useAuthContext();
   const [showOnboarding, setShowOnboarding] = useState(false);
   const [myPosition, setMyPosition] = useState<number | null>(null);
@@ -176,5 +176,19 @@ export default function CoupleLayout() {
         shareCode={shareCode}
       />
     </div>
+  );
+}
+
+export default function CoupleLayout() {
+  const { shareCode } = useParams();
+
+  if (!shareCode) {
+    return <Navigate to="/" replace />;
+  }
+
+  return (
+    <CoupleProvider shareCode={shareCode}>
+      <CoupleLayoutContent />
+    </CoupleProvider>
   );
 }
