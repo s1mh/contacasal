@@ -2,19 +2,24 @@ import { useState, useEffect } from 'react';
 import { Outlet, useParams, Navigate, useNavigate } from 'react-router-dom';
 import { BottomNav } from '@/components/BottomNav';
 import { OnboardingModal } from '@/components/OnboardingModal';
+import { ReconnectModal } from '@/components/ReconnectModal';
 import { SyncIndicator } from '@/components/SyncIndicator';
-import { CoupleProvider, useCoupleContext } from '@/contexts/CoupleContext';
+import { CoupleProvider, useCoupleContext, Profile } from '@/contexts/CoupleContext';
 import { useAuthContext } from '@/contexts/AuthContext';
 import { Loader2, AlertCircle, RefreshCw } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { CAT_AVATARS } from '@/lib/constants';
+import { supabase } from '@/integrations/supabase/client';
+import { useToast } from '@/hooks/use-toast';
 
 function CoupleLayoutContent() {
   const { shareCode } = useParams();
   const navigate = useNavigate();
+  const { toast } = useToast();
   const { couple, loading, error, isSyncing, updateProfile, refetch } = useCoupleContext();
   const { loading: authLoading, isValidated, coupleId, validateShareCode } = useAuthContext();
   const [showOnboarding, setShowOnboarding] = useState(false);
+  const [showReconnect, setShowReconnect] = useState(false);
   const [myPosition, setMyPosition] = useState<number | null>(null);
   const [validating, setValidating] = useState(false);
   const [validationError, setValidationError] = useState<string | null>(null);
@@ -44,7 +49,7 @@ function CoupleLayoutContent() {
     doValidation();
   }, [shareCode, authLoading, isValidated, coupleId, validateShareCode]);
 
-  // Check for existing device recognition or show onboarding
+  // Check for existing device recognition or show appropriate modal
   useEffect(() => {
     if (couple && shareCode && isValidated && coupleId === couple.id) {
       const stored = localStorage.getItem(`couple_${shareCode}`);
@@ -53,25 +58,106 @@ function CoupleLayoutContent() {
           const data = JSON.parse(stored);
           setMyPosition(data.position);
           setShowOnboarding(false);
+          setShowReconnect(false);
         } catch {
-          // Invalid stored data, show onboarding
-          setShowOnboarding(true);
+          // Invalid stored data, check for configured profiles
+          checkProfilesAndShowModal();
         }
       } else {
-        // First time visiting - always show onboarding for new users
-        setShowOnboarding(true);
+        // No local storage - check if there are configured profiles
+        checkProfilesAndShowModal();
       }
     }
   }, [couple, shareCode, isValidated, coupleId]);
 
-  const handleOnboardingComplete = async (position: number, name: string, avatarIndex: number, color: string) => {
+  const checkProfilesAndShowModal = () => {
+    if (!couple) return;
+    
+    const configuredProfiles = couple.profiles.filter(p => 
+      p.name !== 'Pessoa 1' && p.name !== 'Pessoa 2' && p.name !== 'Pessoa'
+    );
+    
+    if (configuredProfiles.length > 0) {
+      // Has configured profiles - show reconnect modal
+      setShowReconnect(true);
+      setShowOnboarding(false);
+    } else {
+      // No configured profiles - show onboarding
+      setShowOnboarding(true);
+      setShowReconnect(false);
+    }
+  };
+
+  const handleOnboardingComplete = async (position: number, name: string, avatarIndex: number, color: string, pinCode: string) => {
     const profile = couple?.profiles.find(p => p.position === position);
     if (profile) {
-      await updateProfile(profile.id, { name, avatar_index: avatarIndex, color });
+      // Update profile with PIN
+      const { error } = await supabase
+        .from('profiles')
+        .update({ 
+          name, 
+          avatar_index: avatarIndex, 
+          color,
+          pin_code: pinCode 
+        })
+        .eq('id', profile.id);
+      
+      if (error) {
+        console.error('Error updating profile:', error);
+        toast({ 
+          title: 'Ops! Algo deu errado 😕',
+          description: 'Não foi possível criar o perfil',
+          variant: 'destructive'
+        });
+        return;
+      }
+      
       await refetch();
     }
     setMyPosition(position);
     setShowOnboarding(false);
+  };
+
+  const handleReconnect = async (profile: Profile, pin: string): Promise<boolean> => {
+    // Verify PIN against database
+    const { data, error } = await supabase
+      .from('profiles')
+      .select('pin_code')
+      .eq('id', profile.id)
+      .single();
+    
+    if (error || !data) {
+      console.error('Error verifying PIN:', error);
+      return false;
+    }
+    
+    if (data.pin_code !== pin) {
+      return false;
+    }
+    
+    // PIN correct - save to localStorage and proceed
+    localStorage.setItem(`couple_${shareCode}`, JSON.stringify({
+      position: profile.position,
+      name: profile.name,
+      avatarIndex: profile.avatar_index,
+      color: profile.color,
+      timestamp: Date.now()
+    }));
+    
+    setMyPosition(profile.position);
+    setShowReconnect(false);
+    
+    toast({ 
+      title: `Bem-vindo de volta, ${profile.name}! 🎉`,
+      description: 'Bom te ver novamente'
+    });
+    
+    return true;
+  };
+
+  const handleCreateNewFromReconnect = () => {
+    setShowReconnect(false);
+    setShowOnboarding(true);
   };
 
   if (!shareCode) {
@@ -170,11 +256,20 @@ function CoupleLayoutContent() {
       <Outlet context={{ couple, myPosition }} />
       <BottomNav />
       
-      {/* Onboarding Modal - Forces profile creation before accessing the space */}
+      {/* Onboarding Modal - For first time profile creation */}
       <OnboardingModal
         open={showOnboarding}
         onComplete={handleOnboardingComplete}
         profiles={couple.profiles}
+        shareCode={shareCode}
+      />
+
+      {/* Reconnect Modal - For returning users on new devices */}
+      <ReconnectModal
+        open={showReconnect}
+        profiles={couple.profiles}
+        onReconnect={handleReconnect}
+        onCreateNew={handleCreateNewFromReconnect}
         shareCode={shareCode}
       />
     </div>
