@@ -83,7 +83,10 @@ export default function Settings() {
 
   const handleCopyCode = () => {
     navigator.clipboard.writeText(shareCode || '');
-    toast({ title: 'Código copiado!' });
+    toast({ 
+      title: 'Copiado! 📋',
+      description: 'Compartilhe com seu amor'
+    });
   };
 
   const handleDeleteProfile = async () => {
