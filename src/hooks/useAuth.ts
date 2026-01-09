@@ -124,6 +124,57 @@ export function useAuth() {
     }
   }, []);
 
+  // Join a space using share code - creates profile and associates couple_id
+  const joinSpace = useCallback(async (shareCode: string): Promise<{ success: boolean; error?: string; coupleId?: string; profileId?: string }> => {
+    try {
+      devLog('Joining space with share code:', shareCode);
+      
+      const { data, error } = await supabase.functions.invoke('join-space', {
+        body: { share_code: shareCode },
+      });
+
+      if (error) {
+        devLog('Join space failed:', error.message);
+        return { success: false, error: error.message };
+      }
+
+      if (!data.success) {
+        devLog('Join space returned error:', data.error);
+        return { success: false, error: data.error || 'Failed to join space' };
+      }
+
+      devLog('Joined space successfully, refreshing session...');
+
+      // Refresh the session to get the updated JWT with couple_id
+      const { data: refreshData, error: refreshError } = await supabase.auth.refreshSession();
+      if (refreshError) {
+        devLog('Session refresh failed:', refreshError.message);
+        return { success: false, error: 'Failed to refresh session' };
+      }
+
+      // Update local state with the new session data
+      if (refreshData.session) {
+        const newCoupleId = refreshData.session.user?.app_metadata?.couple_id || null;
+        devLog('Session refreshed, new couple_id:', newCoupleId);
+        
+        setAuthState({
+          user: refreshData.session.user,
+          session: refreshData.session,
+          coupleId: newCoupleId,
+          loading: false,
+          isValidated: !!newCoupleId,
+        });
+      }
+
+      devLog('Join space completed successfully');
+      return { success: true, coupleId: data.couple_id, profileId: data.profile_id };
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : 'Unknown error';
+      devLog('Join space error:', message);
+      return { success: false, error: message };
+    }
+  }, []);
+
   // Check if the current session has access to a specific couple_id
   const hasAccessToCouple = useCallback((coupleId: string): boolean => {
     return authState.coupleId === coupleId;
@@ -151,6 +202,7 @@ export function useAuth() {
   return {
     ...authState,
     validateShareCode,
+    joinSpace,
     hasAccessToCouple,
     clearValidation,
   };

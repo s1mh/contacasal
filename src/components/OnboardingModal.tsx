@@ -11,6 +11,7 @@ import { supabase } from '@/integrations/supabase/client';
 
 interface OnboardingModalProps {
   open: boolean;
+  onClose?: () => void;
   onComplete: (position: number, name: string, avatarIndex: number, color: string, pinCode: string, email?: string, username?: string) => void;
   profiles: Profile[];
   shareCode: string;
@@ -51,7 +52,7 @@ const isValidEmail = (email: string): boolean => {
   return emailRegex.test(email.trim());
 };
 
-export function OnboardingModal({ open, onComplete, profiles, shareCode }: OnboardingModalProps) {
+export function OnboardingModal({ open, onClose, onComplete, profiles, shareCode }: OnboardingModalProps) {
   const [step, setStep] = useState<'profile' | 'pin' | 'email'>('profile');
   const [name, setName] = useState('');
   const [avatarIndex, setAvatarIndex] = useState(1);
@@ -68,6 +69,18 @@ export function OnboardingModal({ open, onComplete, profiles, shareCode }: Onboa
   const [showCompliment, setShowCompliment] = useState(false);
   const [hoveredAvatar, setHoveredAvatar] = useState<number | null>(null);
   const [complimentTimeout, setComplimentTimeout] = useState<NodeJS.Timeout | null>(null);
+  const [isTransitioning, setIsTransitioning] = useState(false);
+
+  // Check if modal can be closed (only if there are configured profiles)
+  const canClose = profiles.some(p => 
+    p.name !== 'Pessoa 1' && p.name !== 'Pessoa 2' && p.name !== 'Pessoa'
+  );
+
+  const handleOpenChange = (isOpen: boolean) => {
+    if (!isOpen && canClose && onClose) {
+      onClose();
+    }
+  };
 
   // Find an available profile (one that hasn't been customized yet)
   const getAvailablePosition = (): number => {
@@ -129,10 +142,14 @@ export function OnboardingModal({ open, onComplete, profiles, shareCode }: Onboa
     }
   };
 
-  const handleNextStep = async () => {
-    if (name.trim() && isValidName(name)) {
-      await generateUsername();
-      setStep('pin');
+  const handleNextStep = () => {
+    if (name.trim() && isValidName(name) && !isTransitioning) {
+      setIsTransitioning(true);
+      setStep('pin'); // Immediate transition
+      // Generate username in background
+      generateUsername().finally(() => {
+        setIsTransitioning(false);
+      });
     }
   };
 
@@ -265,10 +282,10 @@ export function OnboardingModal({ open, onComplete, profiles, shareCode }: Onboa
   };
 
   return (
-    <Dialog open={open}>
+    <Dialog open={open} onOpenChange={handleOpenChange}>
       <DialogContent 
         className="sm:max-w-md overflow-hidden" 
-        onPointerDownOutside={(e) => e.preventDefault()}
+        onPointerDownOutside={(e) => !canClose && e.preventDefault()}
       >
         <DialogHeader>
           <DialogTitle className="text-center flex items-center justify-center gap-2 animate-fade-in">
@@ -407,14 +424,24 @@ export function OnboardingModal({ open, onComplete, profiles, shareCode }: Onboa
 
               <Button 
                 onClick={handleNextStep} 
-                disabled={!name.trim() || !isValidName(name)} 
+                disabled={!name.trim() || !isValidName(name) || isTransitioning} 
                 className={cn(
                   "w-full transition-all duration-300",
-                  isValidName(name) && looksLikeName(name) && "animate-pulse-subtle"
+                  isValidName(name) && looksLikeName(name) && !isTransitioning && "animate-pulse-subtle",
+                  isTransitioning && "opacity-70 cursor-not-allowed"
                 )}
               >
-                Continuar
-                <ArrowRight className="w-4 h-4 ml-2" />
+                {isTransitioning ? (
+                  <>
+                    <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                    Carregando...
+                  </>
+                ) : (
+                  <>
+                    Continuar
+                    <ArrowRight className="w-4 h-4 ml-2" />
+                  </>
+                )}
               </Button>
             </>
           ) : step === 'pin' ? (
