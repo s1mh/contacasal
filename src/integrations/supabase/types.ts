@@ -387,7 +387,7 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
-      [_ in never]: never
+      get_couple_id_by_share_code: { Args: { code: string }; Returns: string }
     }
     Enums: {
       [_ in never]: never
