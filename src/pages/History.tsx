@@ -4,16 +4,15 @@ import { Calendar, Filter } from 'lucide-react';
 import { ExpenseCard } from '@/components/ExpenseCard';
 import { TagPill } from '@/components/TagPill';
 import { AnimatedPage, AnimatedItem } from '@/components/AnimatedPage';
-import { Couple, useCouple } from '@/hooks/useCouple';
+import { Couple, useCoupleContext } from '@/contexts/CoupleContext';
 import { formatCurrency } from '@/lib/constants';
 import { format, startOfMonth, endOfMonth, isWithinInterval, parseISO } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
-import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 
 export default function History() {
   const { couple } = useOutletContext<{ couple: Couple }>();
-  const { deleteExpense } = useCouple();
+  const { deleteExpense } = useCoupleContext();
   const [selectedTagId, setSelectedTagId] = useState<string | null>(null);
   const [selectedMonth, setSelectedMonth] = useState<Date>(new Date());
 
