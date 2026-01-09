@@ -3,6 +3,9 @@ project_id = "opvdclvrsrptgmllxjxh"
 [functions.validate-share-code]
 verify_jwt = false
 
+[functions.validate-share-code-public]
+verify_jwt = false
+
 [functions.create-couple]
 verify_jwt = false
 
@@ -28,6 +31,9 @@ verify_jwt = false
 verify_jwt = false
 
 [functions.join-space]
+verify_jwt = false
+
+[functions.join-and-activate]
 verify_jwt = false
 
 [functions.manage-member]
