@@ -272,10 +272,10 @@ export default function Index() {
             />
           </div>
           <h1 className="text-3xl font-bold text-foreground mb-2">
-            Conta de Casal
+            Conta Compartilhada
           </h1>
           <p className="text-muted-foreground">
-            Dividam gastos com carinho e clareza
+            Dividam gastos com clareza (até 5 pessoas)
           </p>
         </div>
 
@@ -419,7 +419,7 @@ export default function Index() {
                 </div>
                 <div>
                   <h2 className="font-semibold text-foreground">Novo espaço</h2>
-                  <p className="text-xs text-muted-foreground">Crie um espaço compartilhado</p>
+                  <p className="text-xs text-muted-foreground">Crie um espaço para até 5 pessoas</p>
                 </div>
               </div>
               <Button
@@ -434,7 +434,7 @@ export default function Index() {
                   </>
                 ) : (
                   <>
-                    Criar espaço do casal
+                    Criar espaço
                     <ArrowRight className="w-4 h-4 ml-2" />
                   </>
                 )}

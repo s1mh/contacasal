@@ -26,3 +26,9 @@ verify_jwt = false
 
 [functions.login-with-username]
 verify_jwt = false
+
+[functions.join-space]
+verify_jwt = false
+
+[functions.manage-member]
+verify_jwt = false

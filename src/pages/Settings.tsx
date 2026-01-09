@@ -1,17 +1,19 @@
 import { useState } from 'react';
 import { useOutletContext, useParams, useNavigate } from 'react-router-dom';
-import { User, Palette, Tag, Plus, Trash2, Check, Copy, LogOut, UserX, AtSign } from 'lucide-react';
+import { User, Palette, Tag, Plus, Trash2, Check, Copy, LogOut, UserX, AtSign, RefreshCw, Users } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Avatar } from '@/components/Avatar';
 import { TagPill } from '@/components/TagPill';
 import { CardManager } from '@/components/CardManager';
 import { AgreementManager } from '@/components/AgreementManager';
+import { MemberManagement } from '@/components/MemberManagement';
 import { AnimatedPage, AnimatedItem } from '@/components/AnimatedPage';
 import { Couple, useCoupleContext } from '@/contexts/CoupleContext';
 import { CAT_AVATARS, PERSON_COLORS, TAG_ICONS } from '@/lib/constants';
 import { cn } from '@/lib/utils';
 import { useToast } from '@/hooks/use-toast';
+import { supabase } from '@/integrations/supabase/client';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
 
 export default function Settings() {
@@ -26,10 +28,13 @@ export default function Settings() {
     deleteCard,
     addAgreement,
     updateAgreement,
-    deleteAgreement
+    deleteAgreement,
+    isAdmin,
+    refetch,
   } = useCoupleContext();
   const { shareCode } = useParams();
   const { toast } = useToast();
+  const [regeneratingCode, setRegeneratingCode] = useState(false);
 
   const [editingName, setEditingName] = useState(false);
   const [nameValue, setNameValue] = useState('');
@@ -82,11 +87,45 @@ export default function Settings() {
   };
 
   const handleCopyCode = () => {
-    navigator.clipboard.writeText(shareCode || '');
+    navigator.clipboard.writeText(couple.share_code || shareCode || '');
     toast({ 
       title: 'Copiado! 📋',
-      description: 'Compartilhe com seu amor'
+      description: 'Compartilhe com quem você quiser'
     });
+  };
+
+  const handleRegenerateCode = async () => {
+    if (!myProfile || !isAdmin(myProfile.id)) {
+      toast({ 
+        title: 'Sem permissão',
+        description: 'Apenas administradores podem regenerar o código',
+        variant: 'destructive'
+      });
+      return;
+    }
+
+    setRegeneratingCode(true);
+    try {
+      const { data, error } = await supabase.functions.invoke('regenerate-share-code');
+      if (error) throw error;
+      
+      if (data?.success) {
+        toast({ 
+          title: 'Código regenerado! 🔄',
+          description: 'Novo código de compartilhamento gerado'
+        });
+        await refetch();
+      }
+    } catch (err) {
+      console.error('Error regenerating code:', err);
+      toast({ 
+        title: 'Ops! Algo deu errado 😕',
+        description: 'Não foi possível regenerar o código',
+        variant: 'destructive'
+      });
+    } finally {
+      setRegeneratingCode(false);
+    }
   };
 
   const handleLogout = () => {
@@ -341,22 +380,51 @@ export default function Settings() {
         </div>
       </AnimatedItem>
 
+      {/* Member Management - only for admins */}
+      {myProfile && isAdmin(myProfile.id) && (
+        <AnimatedItem delay={350}>
+          <div className="bg-card rounded-3xl p-4 shadow-lg border border-border/50">
+            <MemberManagement
+              profiles={couple.profiles}
+              roles={couple.roles}
+              myProfileId={myProfile.id}
+              onRefresh={refetch}
+            />
+          </div>
+        </AnimatedItem>
+      )}
+
       {/* Share Code */}
       <AnimatedItem delay={400}>
-        <div className="bg-muted/50 rounded-2xl p-4 flex items-center justify-between border-2 border-border/30">
-          <div>
-            <p className="text-xs text-muted-foreground mb-1">Código do espaço</p>
-            <p className="font-mono text-lg font-semibold">{shareCode}</p>
-            <p className="text-xs text-muted-foreground mt-1">
-              Compartilhe com seu parceiro(a)
-            </p>
+        <div className="bg-muted/50 rounded-2xl p-4 border-2 border-border/30">
+          <div className="flex items-center justify-between mb-2">
+            <div>
+              <p className="text-xs text-muted-foreground mb-1">Código do espaço</p>
+              <p className="font-mono text-lg font-semibold">{couple.share_code}</p>
+              <p className="text-xs text-muted-foreground mt-1">
+                Compartilhe para convidar pessoas (máx. 5)
+              </p>
+            </div>
+            <div className="flex gap-1">
+              <button
+                onClick={handleCopyCode}
+                className="p-3 hover:bg-background rounded-xl transition-colors"
+                title="Copiar código"
+              >
+                <Copy className="w-5 h-5 text-muted-foreground" />
+              </button>
+              {myProfile && isAdmin(myProfile.id) && (
+                <button
+                  onClick={handleRegenerateCode}
+                  disabled={regeneratingCode}
+                  className="p-3 hover:bg-background rounded-xl transition-colors disabled:opacity-50"
+                  title="Regenerar código"
+                >
+                  <RefreshCw className={cn("w-5 h-5 text-muted-foreground", regeneratingCode && "animate-spin")} />
+                </button>
+              )}
+            </div>
           </div>
-          <button
-            onClick={handleCopyCode}
-            className="p-3 hover:bg-background rounded-xl transition-colors"
-          >
-            <Copy className="w-5 h-5 text-muted-foreground" />
-          </button>
         </div>
       </AnimatedItem>
 
