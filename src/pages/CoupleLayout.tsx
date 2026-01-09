@@ -6,8 +6,9 @@ import { ReconnectModal } from '@/components/ReconnectModal';
 import { SyncIndicator } from '@/components/SyncIndicator';
 import { CoupleProvider, useCoupleContext, Profile } from '@/contexts/CoupleContext';
 import { useAuthContext } from '@/contexts/AuthContext';
-import { Loader2, AlertCircle, RefreshCw } from 'lucide-react';
+import { Loader2, AlertCircle, RefreshCw, Trash2, UserX } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
 import { CAT_AVATARS } from '@/lib/constants';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
@@ -25,6 +26,8 @@ function CoupleLayoutContent() {
   const [validationError, setValidationError] = useState<string | null>(null);
   const [newProfileId, setNewProfileId] = useState<string | null>(null);
   const [isNewMember, setIsNewMember] = useState(false);
+  const [profileNotFound, setProfileNotFound] = useState(false);
+  const [storedProfileInfo, setStoredProfileInfo] = useState<{ name: string; position: number } | null>(null);
 
   // Validate share code when accessing a couple space
   useEffect(() => {
@@ -77,6 +80,20 @@ function CoupleLayoutContent() {
       if (stored) {
         try {
           const data = JSON.parse(stored);
+          
+          // Verify the stored profile still exists in the database
+          const profileExists = couple.profiles.find(p => 
+            p.position === data.position && 
+            p.name !== 'Pessoa 1' && p.name !== 'Pessoa 2' && p.name !== 'Pessoa'
+          );
+          
+          if (!profileExists) {
+            // Profile was deleted from the database - show not found dialog
+            setStoredProfileInfo({ name: data.name, position: data.position });
+            setProfileNotFound(true);
+            return;
+          }
+          
           setMyPosition(data.position);
           setShowOnboarding(false);
           setShowReconnect(false);
@@ -98,6 +115,7 @@ function CoupleLayoutContent() {
     if (newProfileId) {
       const myProfile = couple.profiles.find(p => p.id === newProfileId);
       if (myProfile && (myProfile.name === 'Pessoa 1' || myProfile.name === 'Pessoa 2' || myProfile.name === 'Pessoa')) {
+        setIsNewMember(true);
         setShowOnboarding(true);
         setShowReconnect(false);
         return;
@@ -112,6 +130,14 @@ function CoupleLayoutContent() {
       p.name === 'Pessoa 1' || p.name === 'Pessoa 2' || p.name === 'Pessoa'
     );
     
+    // No localStorage for this space = show welcome screen for new devices
+    const stored = localStorage.getItem(`couple_${shareCode}`);
+    if (!stored && configuredProfiles.length > 0) {
+      // Device doesn't have this space saved but there are configured profiles
+      // Show welcome screen first, then reconnect
+      setIsNewMember(true);
+    }
+    
     if (configuredProfiles.length > 0 && unconfiguredProfiles.length === 0) {
       // All profiles configured - show reconnect modal
       setShowReconnect(true);
@@ -125,6 +151,22 @@ function CoupleLayoutContent() {
       setShowReconnect(true);
       setShowOnboarding(false);
     }
+  };
+
+  const handleRemoveAccess = () => {
+    if (shareCode) {
+      localStorage.removeItem(`couple_${shareCode}`);
+    }
+    setProfileNotFound(false);
+    navigate('/');
+  };
+
+  const handleReconnectFromNotFound = () => {
+    if (shareCode) {
+      localStorage.removeItem(`couple_${shareCode}`);
+    }
+    setProfileNotFound(false);
+    setShowReconnect(true);
   };
 
   const handleOnboardingComplete = async (position: number, name: string, avatarIndex: number, color: string, pinCode: string, email?: string, username?: string) => {
@@ -293,15 +335,8 @@ function CoupleLayoutContent() {
   }
 
   const handleCloseOnboarding = () => {
-    // Only allow closing if there are configured profiles (user can reconnect instead)
-    const configuredProfiles = couple.profiles.filter(p => 
-      p.name !== 'Pessoa 1' && p.name !== 'Pessoa 2' && p.name !== 'Pessoa'
-    );
-    
-    if (configuredProfiles.length > 0) {
-      setShowOnboarding(false);
-      setShowReconnect(true);
-    }
+    // Always navigate back to home when X is clicked
+    navigate('/');
   };
 
   return (
@@ -309,6 +344,38 @@ function CoupleLayoutContent() {
       <SyncIndicator isSyncing={isSyncing} />
       <Outlet context={{ couple, myPosition }} />
       <BottomNav />
+      
+      {/* Profile Not Found Modal - When stored profile was deleted */}
+      <Dialog open={profileNotFound} onOpenChange={() => {}}>
+        <DialogContent className="sm:max-w-md" onPointerDownOutside={(e) => e.preventDefault()}>
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <UserX className="w-5 h-5 text-destructive" />
+              Perfil não encontrado
+            </DialogTitle>
+            <DialogDescription>
+              O perfil <span className="font-semibold">"{storedProfileInfo?.name}"</span> foi removido deste espaço.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="flex flex-col gap-3 pt-4">
+            <Button 
+              variant="destructive"
+              onClick={handleRemoveAccess}
+              className="w-full"
+            >
+              <Trash2 className="w-4 h-4 mr-2" />
+              Remover acesso e voltar
+            </Button>
+            <Button 
+              variant="outline" 
+              onClick={handleReconnectFromNotFound}
+              className="w-full"
+            >
+              Reconectar como outro perfil
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
       
       {/* Onboarding Modal - For first time profile creation */}
       <OnboardingModal
