@@ -50,26 +50,29 @@ export default function Index() {
   const handleCreateSpace = async () => {
     setLoading(true);
     try {
-      const { data, error } = await supabase
-        .from('couples')
-        .insert({})
-        .select('share_code')
-        .single();
+      const { data, error } = await supabase.functions.invoke('create-couple', {
+        body: {},
+      });
 
-      if (error) throw error;
-
-      // Validate the new share code to set it in JWT
-      const result = await validateShareCode(data.share_code);
-      if (!result.success) {
-        devLog('Failed to validate new share code:', result.error);
+      if (error) {
+        devLog('Error creating couple (function):', error.message);
+        throw error;
       }
+
+      if (!data?.success || !data?.share_code) {
+        throw new Error(data?.error || 'Falha ao criar espaço');
+      }
+
+      // Refresh the session to pick up the new couple_id claim
+      await supabase.auth.refreshSession();
 
       navigate(`/c/${data.share_code}`);
     } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : 'Tente novamente.';
       devLog('Error creating space:', err);
       toast({
         title: 'Erro ao criar espaço',
-        description: 'Tente novamente.',
+        description: message,
         variant: 'destructive',
       });
     } finally {
