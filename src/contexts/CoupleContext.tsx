@@ -717,8 +717,8 @@ export function CoupleProvider({ children, shareCode }: CoupleProviderProps) {
     let person1Total = 0;
     let person2Total = 0;
 
-    couple.expenses.forEach((expense) => {
-      const { total_amount, paid_by, split_type, split_value } = expense;
+    // Helper function to calculate shares
+    const calculateShares = (total_amount: number, split_type: string, split_value: { person1: number; person2: number } | Record<string, number>) => {
       let person1Share = 0;
       let person2Share = 0;
 
@@ -728,21 +728,29 @@ export function CoupleProvider({ children, shareCode }: CoupleProviderProps) {
           person2Share = total_amount / 2;
           break;
         case 'percentage':
-          person1Share = (total_amount * split_value.person1) / 100;
-          person2Share = (total_amount * split_value.person2) / 100;
+          person1Share = (total_amount * (split_value as { person1: number; person2: number }).person1) / 100;
+          person2Share = (total_amount * (split_value as { person1: number; person2: number }).person2) / 100;
           break;
         case 'fixed':
-          person1Share = split_value.person1;
-          person2Share = split_value.person2;
+          person1Share = (split_value as { person1: number; person2: number }).person1;
+          person2Share = (split_value as { person1: number; person2: number }).person2;
           break;
         case 'full':
-          if (split_value.person1 === 100) {
+          if ((split_value as { person1: number; person2: number }).person1 === 100) {
             person1Share = total_amount;
           } else {
             person2Share = total_amount;
           }
           break;
       }
+
+      return { person1Share, person2Share };
+    };
+
+    // Process expenses
+    couple.expenses.forEach((expense) => {
+      const { total_amount, paid_by, split_type, split_value } = expense;
+      const { person1Share, person2Share } = calculateShares(total_amount, split_type, split_value);
 
       if (paid_by === 1) {
         person2Total += person2Share;
@@ -751,6 +759,19 @@ export function CoupleProvider({ children, shareCode }: CoupleProviderProps) {
       }
     });
 
+    // Process active agreements - include them in balance calculation
+    couple.agreements.filter(a => a.is_active).forEach((agreement) => {
+      const { amount, paid_by, split_type, split_value } = agreement;
+      const { person1Share, person2Share } = calculateShares(amount, split_type, split_value);
+
+      if (paid_by === 1) {
+        person2Total += person2Share;
+      } else {
+        person1Total += person1Share;
+      }
+    });
+
+    // Process settlements
     couple.settlements.forEach((s) => {
       if (s.paid_by === 1) {
         person1Total -= s.amount;

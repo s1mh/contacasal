@@ -5,6 +5,7 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { AuthProvider } from "@/contexts/AuthContext";
 import Index from "./pages/Index";
+import CreateSpace from "./pages/CreateSpace";
 import CoupleLayout from "./pages/CoupleLayout";
 import Summary from "./pages/Summary";
 import NewExpense from "./pages/NewExpense";
@@ -25,6 +26,7 @@ const App = () => (
         <BrowserRouter>
           <Routes>
             <Route path="/" element={<Index />} />
+            <Route path="/create" element={<CreateSpace />} />
             <Route path="/c/:shareCode" element={<CoupleLayout />}>
               <Route index element={<Summary />} />
               <Route path="novo" element={<NewExpense />} />
