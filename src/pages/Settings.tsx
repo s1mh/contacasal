@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useOutletContext, useParams, useNavigate } from 'react-router-dom';
-import { User, Palette, Tag, Plus, Trash2, Check, Copy, LogOut, UserX } from 'lucide-react';
+import { User, Palette, Tag, Plus, Trash2, Check, Copy, LogOut, UserX, AtSign } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Avatar } from '@/components/Avatar';
@@ -188,6 +188,18 @@ export default function Settings() {
               </button>
             )}
           </div>
+
+          {/* Username */}
+          {myProfile.username && (
+            <div className="mb-4">
+              <label className="text-sm text-muted-foreground mb-2 block flex items-center gap-2">
+                <AtSign className="w-4 h-4" /> Username
+              </label>
+              <div className="p-3 bg-muted/50 rounded-2xl">
+                <span className="font-mono text-foreground">@{myProfile.username}</span>
+              </div>
+            </div>
+          )}
 
           {/* Color */}
           <div>
