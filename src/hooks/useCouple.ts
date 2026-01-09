@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { useNavigate, useParams } from 'react-router-dom';
+import { useParams } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 
@@ -20,6 +20,18 @@ export interface Tag {
   color: string;
 }
 
+export interface Card {
+  id: string;
+  profile_id: string;
+  couple_id: string;
+  name: string;
+  type: 'credit' | 'debit';
+  closing_day: number | null;
+  due_day: number | null;
+  color: string;
+  created_at?: string;
+}
+
 export interface Expense {
   id: string;
   couple_id: string;
@@ -31,6 +43,34 @@ export interface Expense {
   tag_id: string | null;
   expense_date: string;
   created_at: string;
+  payment_type: 'debit' | 'credit';
+  card_id: string | null;
+  billing_month: string | null;
+  installments: number;
+  installment_number: number;
+}
+
+export interface Agreement {
+  id: string;
+  couple_id: string;
+  name: string;
+  amount: number;
+  split_type: string;
+  split_value: { person1: number; person2: number };
+  paid_by: number;
+  tag_id: string | null;
+  day_of_month: number;
+  is_active: boolean;
+  created_at?: string;
+}
+
+export interface Settlement {
+  id: string;
+  couple_id: string;
+  amount: number;
+  paid_by: number;
+  settled_at: string;
+  note: string | null;
 }
 
 export interface Couple {
@@ -39,11 +79,13 @@ export interface Couple {
   profiles: Profile[];
   tags: Tag[];
   expenses: Expense[];
+  cards: Card[];
+  agreements: Agreement[];
+  settlements: Settlement[];
 }
 
 export function useCouple() {
   const { shareCode } = useParams<{ shareCode: string }>();
-  const navigate = useNavigate();
   const { toast } = useToast();
   const [couple, setCouple] = useState<Couple | null>(null);
   const [loading, setLoading] = useState(true);
@@ -54,7 +96,6 @@ export function useCouple() {
       setLoading(true);
       setError(null);
 
-      // Fetch couple
       const { data: coupleData, error: coupleError } = await supabase
         .from('couples')
         .select('*')
@@ -70,50 +111,37 @@ export function useCouple() {
         return;
       }
 
-      // Fetch profiles
-      const { data: profiles, error: profilesError } = await supabase
-        .from('profiles')
-        .select('*')
-        .eq('couple_id', coupleData.id)
-        .order('position');
-
-      if (profilesError) throw profilesError;
-
-      // Fetch tags
-      const { data: tags, error: tagsError } = await supabase
-        .from('tags')
-        .select('*')
-        .eq('couple_id', coupleData.id);
-
-      if (tagsError) throw tagsError;
-
-      // Fetch expenses
-      const { data: expenses, error: expensesError } = await supabase
-        .from('expenses')
-        .select('*')
-        .eq('couple_id', coupleData.id)
-        .order('expense_date', { ascending: false });
-
-      if (expensesError) throw expensesError;
+      const [profilesRes, tagsRes, expensesRes, cardsRes, agreementsRes, settlementsRes] = await Promise.all([
+        supabase.from('profiles').select('*').eq('couple_id', coupleData.id).order('position'),
+        supabase.from('tags').select('*').eq('couple_id', coupleData.id),
+        supabase.from('expenses').select('*').eq('couple_id', coupleData.id).order('expense_date', { ascending: false }),
+        supabase.from('cards').select('*').eq('couple_id', coupleData.id),
+        supabase.from('agreements').select('*').eq('couple_id', coupleData.id),
+        supabase.from('settlements').select('*').eq('couple_id', coupleData.id).order('settled_at', { ascending: false }),
+      ]);
 
       setCouple({
         id: coupleData.id,
         share_code: coupleData.share_code,
-        profiles: profiles || [],
-        tags: tags || [],
-        expenses: (expenses || []).map(e => ({
+        profiles: profilesRes.data || [],
+        tags: tagsRes.data || [],
+        expenses: (expensesRes.data || []).map(e => ({
           ...e,
-          split_value: e.split_value as { person1: number; person2: number }
+          split_value: e.split_value as { person1: number; person2: number },
+          payment_type: e.payment_type || 'debit',
+          installments: e.installments || 1,
+          installment_number: e.installment_number || 1,
         })) as Expense[],
+        cards: (cardsRes.data || []) as Card[],
+        agreements: (agreementsRes.data || []).map(a => ({
+          ...a,
+          split_value: a.split_value as { person1: number; person2: number },
+        })) as Agreement[],
+        settlements: (settlementsRes.data || []) as Settlement[],
       });
     } catch (err: any) {
       console.error('Error fetching couple:', err);
       setError(err.message);
-      toast({
-        title: 'Erro ao carregar dados',
-        description: 'Tente novamente mais tarde.',
-        variant: 'destructive',
-      });
     } finally {
       setLoading(false);
     }
@@ -121,146 +149,151 @@ export function useCouple() {
 
   const createCouple = async (): Promise<string | null> => {
     try {
-      const { data, error } = await supabase
-        .from('couples')
-        .insert({})
-        .select('share_code')
-        .single();
-
+      const { data, error } = await supabase.from('couples').insert({}).select('share_code').single();
       if (error) throw error;
-
       return data.share_code;
     } catch (err: any) {
       console.error('Error creating couple:', err);
-      toast({
-        title: 'Erro ao criar espaço',
-        description: 'Tente novamente.',
-        variant: 'destructive',
-      });
+      toast({ title: 'Erro ao criar espaço', variant: 'destructive' });
       return null;
     }
   };
 
   const updateProfile = async (profileId: string, updates: Partial<Profile>) => {
     try {
-      const { error } = await supabase
-        .from('profiles')
-        .update(updates)
-        .eq('id', profileId);
-
+      const { error } = await supabase.from('profiles').update(updates).eq('id', profileId);
       if (error) throw error;
-
       if (shareCode) await fetchCouple(shareCode);
     } catch (err: any) {
       console.error('Error updating profile:', err);
-      toast({
-        title: 'Erro ao atualizar perfil',
-        variant: 'destructive',
-      });
+      toast({ title: 'Erro ao atualizar perfil', variant: 'destructive' });
     }
   };
 
   const addExpense = async (expense: Omit<Expense, 'id' | 'couple_id' | 'created_at'>) => {
     if (!couple) return;
-
     try {
       const { error } = await supabase.from('expenses').insert({
         couple_id: couple.id,
-        description: expense.description,
-        total_amount: expense.total_amount,
-        paid_by: expense.paid_by,
-        split_type: expense.split_type,
-        split_value: expense.split_value,
-        tag_id: expense.tag_id,
-        expense_date: expense.expense_date,
+        ...expense,
       });
-
       if (error) throw error;
-
       if (shareCode) await fetchCouple(shareCode);
-      
-      toast({
-        title: 'Gasto registrado!',
-        description: 'O saldo foi atualizado.',
-      });
+      toast({ title: 'Gasto registrado!' });
     } catch (err: any) {
       console.error('Error adding expense:', err);
-      toast({
-        title: 'Erro ao adicionar gasto',
-        variant: 'destructive',
-      });
+      toast({ title: 'Erro ao adicionar gasto', variant: 'destructive' });
     }
   };
 
   const deleteExpense = async (expenseId: string) => {
     try {
-      const { error } = await supabase
-        .from('expenses')
-        .delete()
-        .eq('id', expenseId);
-
+      const { error } = await supabase.from('expenses').delete().eq('id', expenseId);
       if (error) throw error;
-
       if (shareCode) await fetchCouple(shareCode);
-      
-      toast({
-        title: 'Gasto removido',
-      });
+      toast({ title: 'Gasto removido' });
     } catch (err: any) {
       console.error('Error deleting expense:', err);
-      toast({
-        title: 'Erro ao remover gasto',
-        variant: 'destructive',
-      });
+      toast({ title: 'Erro ao remover gasto', variant: 'destructive' });
     }
   };
 
   const addTag = async (tag: Omit<Tag, 'id' | 'couple_id'>) => {
     if (!couple) return;
-
     try {
-      const { error } = await supabase.from('tags').insert({
-        couple_id: couple.id,
-        name: tag.name,
-        icon: tag.icon,
-        color: tag.color,
-      });
-
+      const { error } = await supabase.from('tags').insert({ couple_id: couple.id, ...tag });
       if (error) throw error;
-
       if (shareCode) await fetchCouple(shareCode);
     } catch (err: any) {
       console.error('Error adding tag:', err);
-      toast({
-        title: 'Erro ao adicionar tag',
-        variant: 'destructive',
-      });
+      toast({ title: 'Erro ao adicionar tag', variant: 'destructive' });
     }
   };
 
   const deleteTag = async (tagId: string) => {
     try {
-      const { error } = await supabase
-        .from('tags')
-        .delete()
-        .eq('id', tagId);
-
+      const { error } = await supabase.from('tags').delete().eq('id', tagId);
       if (error) throw error;
-
       if (shareCode) await fetchCouple(shareCode);
     } catch (err: any) {
       console.error('Error deleting tag:', err);
-      toast({
-        title: 'Erro ao remover tag',
-        variant: 'destructive',
-      });
+      toast({ title: 'Erro ao remover tag', variant: 'destructive' });
+    }
+  };
+
+  const addCard = async (card: Omit<Card, 'id' | 'created_at'>) => {
+    try {
+      const { error } = await supabase.from('cards').insert(card);
+      if (error) throw error;
+      if (shareCode) await fetchCouple(shareCode);
+      toast({ title: 'Cartão adicionado!' });
+    } catch (err: any) {
+      console.error('Error adding card:', err);
+      toast({ title: 'Erro ao adicionar cartão', variant: 'destructive' });
+    }
+  };
+
+  const deleteCard = async (cardId: string) => {
+    try {
+      const { error } = await supabase.from('cards').delete().eq('id', cardId);
+      if (error) throw error;
+      if (shareCode) await fetchCouple(shareCode);
+      toast({ title: 'Cartão removido' });
+    } catch (err: any) {
+      console.error('Error deleting card:', err);
+      toast({ title: 'Erro ao remover cartão', variant: 'destructive' });
+    }
+  };
+
+  const addAgreement = async (agreement: Omit<Agreement, 'id' | 'created_at'>) => {
+    try {
+      const { error } = await supabase.from('agreements').insert(agreement);
+      if (error) throw error;
+      if (shareCode) await fetchCouple(shareCode);
+      toast({ title: 'Acordo criado!' });
+    } catch (err: any) {
+      console.error('Error adding agreement:', err);
+      toast({ title: 'Erro ao criar acordo', variant: 'destructive' });
+    }
+  };
+
+  const updateAgreement = async (id: string, updates: Partial<Agreement>) => {
+    try {
+      const { error } = await supabase.from('agreements').update(updates).eq('id', id);
+      if (error) throw error;
+      if (shareCode) await fetchCouple(shareCode);
+    } catch (err: any) {
+      console.error('Error updating agreement:', err);
+      toast({ title: 'Erro ao atualizar acordo', variant: 'destructive' });
+    }
+  };
+
+  const deleteAgreement = async (id: string) => {
+    try {
+      const { error } = await supabase.from('agreements').delete().eq('id', id);
+      if (error) throw error;
+      if (shareCode) await fetchCouple(shareCode);
+      toast({ title: 'Acordo removido' });
+    } catch (err: any) {
+      console.error('Error deleting agreement:', err);
+      toast({ title: 'Erro ao remover acordo', variant: 'destructive' });
+    }
+  };
+
+  const addSettlement = async (settlement: Omit<Settlement, 'id' | 'settled_at'>) => {
+    try {
+      const { error } = await supabase.from('settlements').insert(settlement);
+      if (error) throw error;
+      if (shareCode) await fetchCouple(shareCode);
+      toast({ title: 'Acerto registrado!' });
+    } catch (err: any) {
+      console.error('Error adding settlement:', err);
+      toast({ title: 'Erro ao registrar acerto', variant: 'destructive' });
     }
   };
 
   const calculateBalance = () => {
-    if (!couple || !couple.expenses.length) {
-      return { person1Owes: 0, person2Owes: 0, balance: 0 };
-    }
+    if (!couple) return { person1Owes: 0, person2Owes: 0, balance: 0 };
 
     let person1Total = 0;
     let person2Total = 0;
@@ -286,59 +319,44 @@ export function useCouple() {
         case 'full':
           if (split_value.person1 === 100) {
             person1Share = total_amount;
-            person2Share = 0;
           } else {
-            person1Share = 0;
             person2Share = total_amount;
           }
           break;
       }
 
-      // If person 1 paid, person 2 owes their share
       if (paid_by === 1) {
         person2Total += person2Share;
       } else {
-        // If person 2 paid, person 1 owes their share
         person1Total += person1Share;
       }
     });
 
-    const balance = person2Total - person1Total;
+    // Subtract settlements
+    couple.settlements.forEach((s) => {
+      if (s.paid_by === 1) {
+        person1Total -= s.amount;
+      } else {
+        person2Total -= s.amount;
+      }
+    });
 
-    return {
-      person1Owes: person1Total,
-      person2Owes: person2Total,
-      balance, // Positive = person1 gets money, Negative = person2 gets money
-    };
+    return { person1Owes: Math.max(0, person1Total), person2Owes: Math.max(0, person2Total), balance: person2Total - person1Total };
   };
 
   useEffect(() => {
     if (shareCode) {
       fetchCouple(shareCode);
-
-      // Set up real-time subscription
       const channel = supabase
         .channel('couple-changes')
-        .on(
-          'postgres_changes',
-          { event: '*', schema: 'public', table: 'expenses' },
-          () => fetchCouple(shareCode)
-        )
-        .on(
-          'postgres_changes',
-          { event: '*', schema: 'public', table: 'profiles' },
-          () => fetchCouple(shareCode)
-        )
-        .on(
-          'postgres_changes',
-          { event: '*', schema: 'public', table: 'tags' },
-          () => fetchCouple(shareCode)
-        )
+        .on('postgres_changes', { event: '*', schema: 'public', table: 'expenses' }, () => fetchCouple(shareCode))
+        .on('postgres_changes', { event: '*', schema: 'public', table: 'profiles' }, () => fetchCouple(shareCode))
+        .on('postgres_changes', { event: '*', schema: 'public', table: 'tags' }, () => fetchCouple(shareCode))
+        .on('postgres_changes', { event: '*', schema: 'public', table: 'cards' }, () => fetchCouple(shareCode))
+        .on('postgres_changes', { event: '*', schema: 'public', table: 'agreements' }, () => fetchCouple(shareCode))
+        .on('postgres_changes', { event: '*', schema: 'public', table: 'settlements' }, () => fetchCouple(shareCode))
         .subscribe();
-
-      return () => {
-        supabase.removeChannel(channel);
-      };
+      return () => { supabase.removeChannel(channel); };
     }
   }, [shareCode]);
 
@@ -352,6 +370,12 @@ export function useCouple() {
     deleteExpense,
     addTag,
     deleteTag,
+    addCard,
+    deleteCard,
+    addAgreement,
+    updateAgreement,
+    deleteAgreement,
+    addSettlement,
     calculateBalance,
     refetch: () => shareCode && fetchCouple(shareCode),
   };
