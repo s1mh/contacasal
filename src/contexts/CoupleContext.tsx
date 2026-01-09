@@ -22,6 +22,13 @@ export interface Profile {
   email?: string;
 }
 
+export interface SpaceRole {
+  id: string;
+  space_id: string;
+  profile_id: string;
+  role: 'admin' | 'member';
+}
+
 export interface Tag {
   id: string;
   couple_id: string;
@@ -48,8 +55,9 @@ export interface Expense {
   description: string | null;
   total_amount: number;
   paid_by: number;
+  paid_by_profile_id?: string | null;
   split_type: 'equal' | 'percentage' | 'fixed' | 'full';
-  split_value: { person1: number; person2: number };
+  split_value: { person1: number; person2: number } | Record<string, number>;
   tag_id: string | null;
   expense_date: string;
   created_at: string;
@@ -66,8 +74,9 @@ export interface Agreement {
   name: string;
   amount: number;
   split_type: string;
-  split_value: { person1: number; person2: number };
+  split_value: { person1: number; person2: number } | Record<string, number>;
   paid_by: number;
+  paid_by_profile_id?: string | null;
   tag_id: string | null;
   day_of_month: number;
   is_active: boolean;
@@ -79,6 +88,8 @@ export interface Settlement {
   couple_id: string;
   amount: number;
   paid_by: number;
+  paid_by_profile_id?: string | null;
+  received_by_profile_id?: string | null;
   settled_at: string;
   note: string | null;
 }
@@ -86,7 +97,9 @@ export interface Settlement {
 export interface Couple {
   id: string;
   share_code: string;
+  max_members: number;
   profiles: Profile[];
+  roles: SpaceRole[];
   tags: Tag[];
   expenses: Expense[];
   cards: Card[];
@@ -115,6 +128,8 @@ interface CoupleContextType {
   deleteAgreement: (id: string) => Promise<void>;
   addSettlement: (settlement: Omit<Settlement, 'id' | 'settled_at'>) => Promise<void>;
   calculateBalance: () => { person1Owes: number; person2Owes: number; balance: number };
+  isAdmin: (profileId: string) => boolean;
+  getConfiguredProfiles: () => Profile[];
 }
 
 const CoupleContext = createContext<CoupleContextType | null>(null);
@@ -162,19 +177,22 @@ export function CoupleProvider({ children, shareCode }: CoupleProviderProps) {
         return;
       }
 
-      const [profilesRes, tagsRes, expensesRes, cardsRes, agreementsRes, settlementsRes] = await Promise.all([
+      const [profilesRes, tagsRes, expensesRes, cardsRes, agreementsRes, settlementsRes, rolesRes] = await Promise.all([
         supabase.from('profiles').select('id, couple_id, name, color, avatar_index, position, username, email').eq('couple_id', coupleData.id).order('position'),
         supabase.from('tags').select('*').eq('couple_id', coupleData.id),
         supabase.from('expenses').select('*').eq('couple_id', coupleData.id).order('expense_date', { ascending: false }),
         supabase.from('cards').select('*').eq('couple_id', coupleData.id),
         supabase.from('agreements').select('*').eq('couple_id', coupleData.id),
         supabase.from('settlements').select('*').eq('couple_id', coupleData.id).order('settled_at', { ascending: false }),
+        supabase.from('space_roles').select('*').eq('space_id', coupleData.id),
       ]);
 
       setCouple({
         id: coupleData.id,
         share_code: coupleData.share_code,
+        max_members: coupleData.max_members || 5,
         profiles: profilesRes.data || [],
+        roles: (rolesRes.data || []) as SpaceRole[],
         tags: tagsRes.data || [],
         expenses: (expensesRes.data || []).map(e => ({
           ...e,
@@ -220,19 +238,22 @@ export function CoupleProvider({ children, shareCode }: CoupleProviderProps) {
 
       if (!coupleData) return;
 
-      const [profilesRes, tagsRes, expensesRes, cardsRes, agreementsRes, settlementsRes] = await Promise.all([
+      const [profilesRes, tagsRes, expensesRes, cardsRes, agreementsRes, settlementsRes, rolesRes] = await Promise.all([
         supabase.from('profiles').select('id, couple_id, name, color, avatar_index, position, username, email').eq('couple_id', coupleData.id).order('position'),
         supabase.from('tags').select('*').eq('couple_id', coupleData.id),
         supabase.from('expenses').select('*').eq('couple_id', coupleData.id).order('expense_date', { ascending: false }),
         supabase.from('cards').select('*').eq('couple_id', coupleData.id),
         supabase.from('agreements').select('*').eq('couple_id', coupleData.id),
         supabase.from('settlements').select('*').eq('couple_id', coupleData.id).order('settled_at', { ascending: false }),
+        supabase.from('space_roles').select('*').eq('space_id', coupleData.id),
       ]);
 
       setCouple({
         id: coupleData.id,
         share_code: coupleData.share_code,
+        max_members: coupleData.max_members || 5,
         profiles: profilesRes.data || [],
+        roles: (rolesRes.data || []) as SpaceRole[],
         tags: tagsRes.data || [],
         expenses: (expensesRes.data || []).map(e => ({
           ...e,
@@ -745,6 +766,19 @@ export function CoupleProvider({ children, shareCode }: CoupleProviderProps) {
     };
   }, [couple]);
 
+  const isAdmin = useCallback((profileId: string): boolean => {
+    if (!couple) return false;
+    const role = couple.roles.find(r => r.profile_id === profileId);
+    return role?.role === 'admin';
+  }, [couple]);
+
+  const getConfiguredProfiles = useCallback((): Profile[] => {
+    if (!couple) return [];
+    return couple.profiles.filter(p => 
+      p.name !== 'Pessoa 1' && p.name !== 'Pessoa 2' && p.name !== 'Pessoa'
+    );
+  }, [couple]);
+
   // ============ Initial fetch ============
   useEffect(() => {
     if (shareCode) {
@@ -855,6 +889,8 @@ export function CoupleProvider({ children, shareCode }: CoupleProviderProps) {
     deleteAgreement,
     addSettlement,
     calculateBalance,
+    isAdmin,
+    getConfiguredProfiles,
   };
 
   return (
