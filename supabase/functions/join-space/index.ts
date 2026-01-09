@@ -101,11 +101,12 @@ Deno.serve(async (req) => {
     // Default colors for new members
     const defaultColors = ['#F5A9B8', '#A8D5BA', '#B5A8D5', '#D5A8C8', '#A8C5D5']
 
-    // Create new profile for this member
+    // Create new profile for this member with user_id
     const { data: newProfile, error: profileError } = await supabaseAdmin
       .from('profiles')
       .insert({
         couple_id: space.id,
+        user_id: userId,
         name: `Pessoa ${nextPosition}`,
         color: defaultColors[nextPosition - 1] || '#94A3B8',
         avatar_index: nextPosition,

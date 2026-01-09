@@ -63,7 +63,7 @@ Deno.serve(async (req) => {
 
     console.log('Space created:', couple.id, 'share_code:', couple.share_code)
 
-    // Get the first profile (created by trigger) and assign admin role
+    // Get the first profile (created by trigger) and assign admin role + user_id
     const { data: firstProfile } = await supabaseAdmin
       .from('profiles')
       .select('id')
@@ -73,6 +73,18 @@ Deno.serve(async (req) => {
       .single()
 
     if (firstProfile) {
+      // Update profile with user_id
+      const { error: updateProfileError } = await supabaseAdmin
+        .from('profiles')
+        .update({ user_id: userId })
+        .eq('id', firstProfile.id)
+
+      if (updateProfileError) {
+        console.error('Failed to set user_id on profile:', updateProfileError.message)
+      } else {
+        console.log('Set user_id on profile:', firstProfile.id)
+      }
+
       // Assign admin role to the first profile
       const { error: roleError } = await supabaseAdmin
         .from('space_roles')
