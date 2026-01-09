@@ -29,7 +29,7 @@ Deno.serve(async (req) => {
     const { data: space, error: spaceError } = await supabaseAdmin
       .from('couples')
       .select('id, share_code, max_members')
-      .eq('share_code', share_code.trim().toUpperCase())
+      .eq('share_code', share_code.trim().toLowerCase())
       .single();
 
     if (spaceError || !space) {
