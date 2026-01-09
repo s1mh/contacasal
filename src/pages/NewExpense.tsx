@@ -1,6 +1,6 @@
 import { useState, useMemo } from 'react';
 import { useOutletContext, useNavigate, useParams } from 'react-router-dom';
-import { ArrowLeft, Check, Calculator } from 'lucide-react';
+import { ArrowLeft, Check, Calculator, CreditCard, Calendar, Info } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Avatar } from '@/components/Avatar';
@@ -9,8 +9,13 @@ import { Couple, useCouple } from '@/hooks/useCouple';
 import { formatCurrency, SPLIT_TYPES } from '@/lib/constants';
 import { cn } from '@/lib/utils';
 import { Slider } from '@/components/ui/slider';
+import { DatePickerField } from '@/components/DatePickerField';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { format, addMonths, startOfMonth } from 'date-fns';
+import { ptBR } from 'date-fns/locale';
 
 type SplitType = 'equal' | 'percentage' | 'fixed' | 'full';
+type PaymentType = 'debit' | 'credit';
 
 export default function NewExpense() {
   const { couple } = useOutletContext<{ couple: Couple }>();
@@ -25,11 +30,36 @@ export default function NewExpense() {
   const [splitValue, setSplitValue] = useState({ person1: 50, person2: 50 });
   const [selectedTagId, setSelectedTagId] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
+  
+  // New fields
+  const [expenseDate, setExpenseDate] = useState(new Date());
+  const [paymentType, setPaymentType] = useState<PaymentType>('debit');
+  const [selectedCardId, setSelectedCardId] = useState<string | null>(null);
+  const [installments, setInstallments] = useState(1);
 
   const person1 = couple.profiles.find(p => p.position === 1);
   const person2 = couple.profiles.find(p => p.position === 2);
+  const payerProfile = couple.profiles.find(p => p.position === paidBy);
+
+  // Get cards for the person who paid
+  const payerCards = couple.cards.filter(c => c.profile_id === payerProfile?.id);
+  const creditCards = payerCards.filter(c => c.type === 'credit');
+  const selectedCard = couple.cards.find(c => c.id === selectedCardId);
 
   const numericAmount = parseFloat(amount.replace(',', '.')) || 0;
+
+  // Calculate billing month based on card closing day
+  const billingMonth = useMemo(() => {
+    if (paymentType !== 'credit' || !selectedCard?.closing_day) return null;
+    
+    const day = expenseDate.getDate();
+    const closingDay = selectedCard.closing_day;
+    
+    if (day > closingDay) {
+      return addMonths(startOfMonth(expenseDate), 1);
+    }
+    return startOfMonth(expenseDate);
+  }, [expenseDate, paymentType, selectedCard]);
 
   const splitPreview = useMemo(() => {
     if (!numericAmount) return { person1: 0, person2: 0 };
@@ -61,22 +91,36 @@ export default function NewExpense() {
 
     setLoading(true);
     try {
-      await addExpense({
-        description: description || null,
-        total_amount: numericAmount,
-        paid_by: paidBy,
-        split_type: splitType,
-        split_value: splitType === 'fixed' 
-          ? { person1: splitPreview.person1, person2: splitPreview.person2 }
-          : splitValue,
-        tag_id: selectedTagId,
-        expense_date: new Date().toISOString().split('T')[0],
-        payment_type: 'debit',
-        card_id: null,
-        billing_month: null,
-        installments: 1,
-        installment_number: 1,
-      });
+      const installmentAmount = numericAmount / installments;
+      
+      // Create expenses for each installment
+      for (let i = 0; i < installments; i++) {
+        let expenseBillingMonth = billingMonth;
+        if (billingMonth && i > 0) {
+          expenseBillingMonth = addMonths(billingMonth, i);
+        }
+
+        await addExpense({
+          description: installments > 1 
+            ? `${description || 'Compra'} (${i + 1}/${installments})`
+            : description || null,
+          total_amount: installmentAmount,
+          paid_by: paidBy,
+          split_type: splitType,
+          split_value: splitType === 'fixed' 
+            ? { person1: splitPreview.person1 / installments, person2: splitPreview.person2 / installments }
+            : splitValue,
+          tag_id: selectedTagId,
+          expense_date: i === 0 
+            ? expenseDate.toISOString().split('T')[0]
+            : (expenseBillingMonth || expenseDate).toISOString().split('T')[0],
+          payment_type: paymentType,
+          card_id: paymentType === 'credit' ? selectedCardId : null,
+          billing_month: expenseBillingMonth?.toISOString().split('T')[0] || null,
+          installments: installments,
+          installment_number: i + 1,
+        });
+      }
       navigate(`/c/${shareCode}`);
     } finally {
       setLoading(false);
@@ -90,6 +134,12 @@ export default function NewExpense() {
   const handleFixedChange = (value: string) => {
     const fixedAmount = parseFloat(value.replace(',', '.')) || 0;
     setSplitValue({ person1: Math.min(fixedAmount, numericAmount), person2: numericAmount - fixedAmount });
+  };
+
+  // Reset card when changing payer
+  const handlePayerChange = (position: number) => {
+    setPaidBy(position);
+    setSelectedCardId(null);
   };
 
   return (
@@ -106,7 +156,7 @@ export default function NewExpense() {
       </div>
 
       {/* Amount Input */}
-      <div className="bg-card rounded-3xl p-6 shadow-glass mb-4">
+      <div className="bg-card rounded-3xl p-6 shadow-lg border border-border/50 mb-4">
         <label className="text-sm text-muted-foreground mb-2 block">Valor total</label>
         <div className="flex items-center gap-2">
           <span className="text-2xl text-muted-foreground">R$</span>
@@ -127,14 +177,131 @@ export default function NewExpense() {
         />
       </div>
 
+      {/* Date Picker */}
+      <div className="bg-card rounded-3xl p-4 shadow-lg border border-border/50 mb-4">
+        <DatePickerField
+          value={expenseDate}
+          onChange={setExpenseDate}
+          label="Data da compra"
+        />
+      </div>
+
+      {/* Payment Type */}
+      <div className="bg-card rounded-3xl p-4 shadow-lg border border-border/50 mb-4">
+        <label className="text-sm text-muted-foreground mb-3 block">Forma de pagamento</label>
+        <div className="flex gap-2 mb-4">
+          <button
+            onClick={() => {
+              setPaymentType('debit');
+              setSelectedCardId(null);
+              setInstallments(1);
+            }}
+            className={cn(
+              'flex-1 flex items-center justify-center gap-2 p-3 rounded-xl border-2 transition-all',
+              paymentType === 'debit'
+                ? 'border-primary bg-primary/5'
+                : 'border-border hover:border-primary/30'
+            )}
+          >
+            <CreditCard className="w-4 h-4" />
+            <span className="font-medium">Débito</span>
+          </button>
+          <button
+            onClick={() => setPaymentType('credit')}
+            className={cn(
+              'flex-1 flex items-center justify-center gap-2 p-3 rounded-xl border-2 transition-all',
+              paymentType === 'credit'
+                ? 'border-primary bg-primary/5'
+                : 'border-border hover:border-primary/30'
+            )}
+          >
+            <CreditCard className="w-4 h-4" />
+            <span className="font-medium">Crédito</span>
+          </button>
+        </div>
+
+        {paymentType === 'credit' && (
+          <div className="space-y-4 animate-fade-in">
+            {creditCards.length === 0 ? (
+              <p className="text-sm text-muted-foreground text-center py-2">
+                Nenhum cartão de crédito cadastrado para {payerProfile?.name}.
+                <br />
+                <span className="text-xs">Cadastre em Ajustes → Cartões</span>
+              </p>
+            ) : (
+              <>
+                <Select value={selectedCardId || ''} onValueChange={setSelectedCardId}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Selecione o cartão" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {creditCards.map(card => (
+                      <SelectItem key={card.id} value={card.id}>
+                        <div className="flex items-center gap-2">
+                          <div 
+                            className="w-4 h-3 rounded"
+                            style={{ backgroundColor: card.color }}
+                          />
+                          {card.name}
+                        </div>
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+
+                {/* Installments */}
+                <div className="space-y-2">
+                  <label className="text-sm text-muted-foreground">Parcelas</label>
+                  <Select 
+                    value={installments.toString()} 
+                    onValueChange={(v) => setInstallments(parseInt(v))}
+                  >
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12].map(n => (
+                        <SelectItem key={n} value={n.toString()}>
+                          {n}x {numericAmount > 0 ? `de ${formatCurrency(numericAmount / n)}` : ''}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                {/* Billing month preview */}
+                {selectedCard && billingMonth && (
+                  <div className="flex items-start gap-2 p-3 rounded-xl bg-muted/50 text-sm">
+                    <Info className="w-4 h-4 text-primary mt-0.5" />
+                    <div>
+                      <p className="font-medium">
+                        Entrará na fatura de {format(billingMonth, 'MMMM', { locale: ptBR })}
+                      </p>
+                      <p className="text-xs text-muted-foreground">
+                        Fechamento dia {selectedCard.closing_day} • Vencimento dia {selectedCard.due_day}
+                      </p>
+                      {installments > 1 && (
+                        <p className="text-xs text-muted-foreground mt-1">
+                          Última parcela: {format(addMonths(billingMonth, installments - 1), 'MMMM yyyy', { locale: ptBR })}
+                        </p>
+                      )}
+                    </div>
+                  </div>
+                )}
+              </>
+            )}
+          </div>
+        )}
+      </div>
+
       {/* Who Paid */}
-      <div className="bg-card rounded-3xl p-4 shadow-glass mb-4">
+      <div className="bg-card rounded-3xl p-4 shadow-lg border border-border/50 mb-4">
         <label className="text-sm text-muted-foreground mb-3 block">Quem pagou?</label>
         <div className="flex gap-3">
           {[person1, person2].map((person) => person && (
             <button
               key={person.position}
-              onClick={() => setPaidBy(person.position)}
+              onClick={() => handlePayerChange(person.position)}
               className={cn(
                 'flex-1 flex items-center gap-3 p-3 rounded-2xl border-2 transition-all',
                 paidBy === person.position
@@ -150,7 +317,7 @@ export default function NewExpense() {
       </div>
 
       {/* Split Type */}
-      <div className="bg-card rounded-3xl p-4 shadow-glass mb-4">
+      <div className="bg-card rounded-3xl p-4 shadow-lg border border-border/50 mb-4">
         <label className="text-sm text-muted-foreground mb-3 block">Divisão</label>
         <div className="grid grid-cols-2 gap-2 mb-4">
           {(Object.entries(SPLIT_TYPES) as [SplitType, typeof SPLIT_TYPES.equal][]).map(([type, info]) => (
@@ -236,7 +403,7 @@ export default function NewExpense() {
       </div>
 
       {/* Tags */}
-      <div className="bg-card rounded-3xl p-4 shadow-glass mb-4">
+      <div className="bg-card rounded-3xl p-4 shadow-lg border border-border/50 mb-4">
         <label className="text-sm text-muted-foreground mb-3 block">Categoria</label>
         <div className="flex flex-wrap gap-2">
           {couple.tags.map((tag) => (
@@ -257,15 +424,19 @@ export default function NewExpense() {
         <div className="bg-muted rounded-2xl p-4 mb-4 animate-fade-in">
           <div className="flex items-center gap-2 text-sm text-muted-foreground mb-2">
             <Calculator className="w-4 h-4" />
-            Prévia da divisão
+            Prévia da divisão {installments > 1 && `(por parcela)`}
           </div>
           <div className="flex justify-between">
             <div className="flex items-center gap-2">
               {person1 && <Avatar avatarIndex={person1.avatar_index} size="sm" />}
-              <span className="font-medium">{formatCurrency(splitPreview.person1)}</span>
+              <span className="font-medium">
+                {formatCurrency(installments > 1 ? splitPreview.person1 / installments : splitPreview.person1)}
+              </span>
             </div>
             <div className="flex items-center gap-2">
-              <span className="font-medium">{formatCurrency(splitPreview.person2)}</span>
+              <span className="font-medium">
+                {formatCurrency(installments > 1 ? splitPreview.person2 / installments : splitPreview.person2)}
+              </span>
               {person2 && <Avatar avatarIndex={person2.avatar_index} size="sm" />}
             </div>
           </div>
@@ -278,7 +449,7 @@ export default function NewExpense() {
         disabled={!numericAmount || loading}
         className="w-full h-14 rounded-2xl text-lg bg-primary hover:bg-primary/90"
       >
-        {loading ? 'Salvando...' : 'Registrar gasto'}
+        {loading ? 'Salvando...' : `Registrar gasto${installments > 1 ? ` (${installments}x)` : ''}`}
         <Check className="w-5 h-5 ml-2" />
       </Button>
     </div>
