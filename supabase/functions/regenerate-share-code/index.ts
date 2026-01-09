@@ -5,6 +5,13 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 }
 
+// Generate a new 16-character hex code
+function generateShareCode(): string {
+  const bytes = new Uint8Array(8)
+  crypto.getRandomValues(bytes)
+  return Array.from(bytes).map(b => b.toString(16).padStart(2, '0')).join('')
+}
+
 Deno.serve(async (req) => {
   // Handle CORS preflight requests
   if (req.method === 'OPTIONS') {
@@ -14,7 +21,6 @@ Deno.serve(async (req) => {
   try {
     const authHeader = req.headers.get('Authorization')
     if (!authHeader?.startsWith('Bearer ')) {
-      console.log('Missing authorization header')
       return new Response(JSON.stringify({ error: 'Unauthorized' }), {
         status: 401,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
@@ -34,52 +40,47 @@ Deno.serve(async (req) => {
     const { data: claims, error: claimsError } = await supabaseUser.auth.getClaims(token)
 
     if (claimsError || !claims?.claims) {
-      console.log('Invalid JWT:', claimsError?.message)
       return new Response(JSON.stringify({ error: 'Unauthorized' }), {
         status: 401,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       })
     }
 
-    const userId = claims.claims.sub
-    console.log('Creating couple for user:', userId)
-
-    // Create couple using service role
-    const supabaseAdmin = createClient(supabaseUrl, supabaseServiceKey)
-
-    const { data: couple, error: coupleError } = await supabaseAdmin
-      .from('couples')
-      .insert({})
-      .select('id, share_code')
-      .single()
-
-    if (coupleError || !couple) {
-      console.error('Failed to create couple:', coupleError?.message)
-      return new Response(JSON.stringify({ error: 'Failed to create couple' }), {
-        status: 500,
+    const coupleId = claims.claims.app_metadata?.couple_id
+    if (!coupleId) {
+      return new Response(JSON.stringify({ error: 'No couple associated with this user' }), {
+        status: 400,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       })
     }
 
-    console.log('Couple created:', couple.id, 'share_code:', couple.share_code)
+    console.log('Regenerating share code for couple:', coupleId)
 
-    // Bind current user to couple in JWT claims via app_metadata
-    const { error: updateError } = await supabaseAdmin.auth.admin.updateUserById(userId, {
-      app_metadata: { couple_id: couple.id },
-    })
+    // Generate new share code and reset expiration
+    const supabaseAdmin = createClient(supabaseUrl, supabaseServiceKey)
+    const newShareCode = generateShareCode()
+
+    const { error: updateError } = await supabaseAdmin
+      .from('couples')
+      .update({ 
+        share_code: newShareCode,
+        share_code_used_at: null,
+        share_code_expires_at: null
+      })
+      .eq('id', coupleId)
 
     if (updateError) {
-      console.error('Failed to update user metadata:', updateError.message)
-      return new Response(JSON.stringify({ error: 'Failed to finalize couple creation' }), {
+      console.error('Failed to regenerate share code:', updateError.message)
+      return new Response(JSON.stringify({ error: 'Failed to regenerate share code' }), {
         status: 500,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       })
     }
 
-    console.log('User metadata updated with couple_id')
+    console.log('New share code generated:', newShareCode)
 
     return new Response(
-      JSON.stringify({ success: true, couple_id: couple.id, share_code: couple.share_code }),
+      JSON.stringify({ success: true, share_code: newShareCode }),
       { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } },
     )
   } catch (error) {
