@@ -25,7 +25,6 @@ export default function NewExpense() {
 
   const [amount, setAmount] = useState('');
   const [description, setDescription] = useState('');
-  const [paidBy, setPaidBy] = useState(1);
   const [splitType, setSplitType] = useState<SplitType>('equal');
   const [splitValue, setSplitValue] = useState({ person1: 50, person2: 50 });
   const [selectedTagId, setSelectedTagId] = useState<string | null>(null);
@@ -37,8 +36,22 @@ export default function NewExpense() {
   const [selectedCardId, setSelectedCardId] = useState<string | null>(null);
   const [installments, setInstallments] = useState(1);
 
+  // Check if profiles are configured (not default names)
+  const isConfigured = (p: { name: string }) => 
+    p.name !== 'Pessoa 1' && p.name !== 'Pessoa 2' && p.name !== 'Pessoa';
+  
   const person1 = couple.profiles.find(p => p.position === 1);
   const person2 = couple.profiles.find(p => p.position === 2);
+  
+  // Filter to only show configured profiles
+  const configuredProfiles = couple.profiles.filter(p => isConfigured(p));
+  
+  // Set paidBy to first configured profile
+  const [paidBy, setPaidBy] = useState(() => {
+    const configured = couple.profiles.filter(p => isConfigured(p));
+    return configured.length > 0 ? configured[0].position : 1;
+  });
+  
   const payerProfile = couple.profiles.find(p => p.position === paidBy);
 
   // Get cards for the person who paid
@@ -301,23 +314,36 @@ export default function NewExpense() {
       {/* Who Paid */}
       <div className="bg-card rounded-3xl p-4 shadow-lg border border-border/50 mb-4">
         <label className="text-sm text-muted-foreground mb-3 block">Quem pagou?</label>
-        <div className="flex gap-3">
-          {[person1, person2].map((person) => person && (
-            <button
-              key={person.position}
-              onClick={() => handlePayerChange(person.position)}
-              className={cn(
-                'flex-1 flex items-center gap-3 p-3 rounded-2xl border-2 transition-all',
-                paidBy === person.position
-                  ? 'border-primary bg-primary/5'
-                  : 'border-border hover:border-primary/30'
-              )}
-            >
-              <Avatar avatarIndex={person.avatar_index} size="md" ringColor={person.color} />
-              <span className="font-medium">{person.name}</span>
-            </button>
-          ))}
-        </div>
+        {configuredProfiles.length === 0 ? (
+          <p className="text-sm text-muted-foreground text-center py-2">
+            Configure seu perfil em Ajustes primeiro
+          </p>
+        ) : configuredProfiles.length === 1 ? (
+          <div className="flex gap-3">
+            <div className="flex-1 flex items-center gap-3 p-3 rounded-2xl border-2 border-primary bg-primary/5">
+              <Avatar avatarIndex={configuredProfiles[0].avatar_index} size="md" ringColor={configuredProfiles[0].color} />
+              <span className="font-medium">{configuredProfiles[0].name}</span>
+            </div>
+          </div>
+        ) : (
+          <div className="flex gap-3">
+            {configuredProfiles.map((person) => (
+              <button
+                key={person.position}
+                onClick={() => handlePayerChange(person.position)}
+                className={cn(
+                  'flex-1 flex items-center gap-3 p-3 rounded-2xl border-2 transition-all',
+                  paidBy === person.position
+                    ? 'border-primary bg-primary/5'
+                    : 'border-border hover:border-primary/30'
+                )}
+              >
+                <Avatar avatarIndex={person.avatar_index} size="md" ringColor={person.color} />
+                <span className="font-medium">{person.name}</span>
+              </button>
+            ))}
+          </div>
+        )}
       </div>
 
       {/* Split Type */}

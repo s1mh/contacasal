@@ -5,7 +5,7 @@ import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Switch } from '@/components/ui/switch';
-import { FileText, Plus, Trash2, Pause, Play } from 'lucide-react';
+import { RefreshCw, Plus, Trash2, Pause, Play } from 'lucide-react';
 import { Agreement, Profile, Tag } from '@/hooks/useCouple';
 import { formatCurrency } from '@/lib/constants';
 
@@ -75,8 +75,8 @@ export function AgreementManager({
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between">
-        <h3 className="text-lg font-semibold flex items-center gap-2">
-          <FileText className="w-5 h-5 text-primary" />
+        <h3 className="text-sm font-medium text-muted-foreground flex items-center gap-2">
+          <RefreshCw className="w-4 h-4" />
           Acordos Recorrentes
         </h3>
         <Dialog open={isOpen} onOpenChange={setIsOpen}>
