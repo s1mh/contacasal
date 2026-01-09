@@ -276,9 +276,14 @@ export default function Index() {
         </div>
 
         {/* Footer */}
-        <p className="text-center text-xs text-muted-foreground mt-8 animate-fade-in" style={{ animationDelay: '500ms' }}>
-          Feito com 💕 para casais
-        </p>
+        <div className="text-center mt-8 animate-fade-in" style={{ animationDelay: '500ms' }}>
+          <p className="text-xs text-muted-foreground">
+            Feito com 💕 para casais
+          </p>
+          <p className="text-[10px] text-muted-foreground/60 mt-1">
+            Feito por Samuel para o Juan
+          </p>
+        </div>
       </div>
     </div>
   );
