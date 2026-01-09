@@ -283,10 +283,15 @@ export type Database = {
           color: string
           couple_id: string
           created_at: string
+          email: string | null
           id: string
           name: string
+          pin_attempts: number | null
           pin_code: string | null
+          pin_locked_until: string | null
           position: number
+          recovery_token: string | null
+          recovery_token_expires_at: string | null
           updated_at: string
         }
         Insert: {
@@ -294,10 +299,15 @@ export type Database = {
           color?: string
           couple_id: string
           created_at?: string
+          email?: string | null
           id?: string
           name?: string
+          pin_attempts?: number | null
           pin_code?: string | null
+          pin_locked_until?: string | null
           position: number
+          recovery_token?: string | null
+          recovery_token_expires_at?: string | null
           updated_at?: string
         }
         Update: {
@@ -305,10 +315,15 @@ export type Database = {
           color?: string
           couple_id?: string
           created_at?: string
+          email?: string | null
           id?: string
           name?: string
+          pin_attempts?: number | null
           pin_code?: string | null
+          pin_locked_until?: string | null
           position?: number
+          recovery_token?: string | null
+          recovery_token_expires_at?: string | null
           updated_at?: string
         }
         Relationships: [
