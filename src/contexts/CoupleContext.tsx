@@ -146,15 +146,16 @@ export function CoupleProvider({ children, shareCode }: CoupleProviderProps) {
       setLoading(true);
       setError(null);
 
+      // RLS filtra automaticamente para o couple_id do JWT
+      // Não precisamos filtrar por share_code
       const { data: coupleData, error: coupleError } = await supabase
         .from('couples')
         .select('*')
-        .eq('share_code', code)
         .single();
 
       if (coupleError) {
         if (coupleError.code === 'PGRST116') {
-          setError('Espaço não encontrado');
+          setError('Espaço não encontrado. Faça login novamente.');
         } else {
           throw coupleError;
         }
@@ -211,10 +212,10 @@ export function CoupleProvider({ children, shareCode }: CoupleProviderProps) {
     syncTimeoutRef.current = setTimeout(() => setIsSyncing(true), 100);
     
     try {
+      // RLS filtra automaticamente para o couple_id do JWT
       const { data: coupleData } = await supabase
         .from('couples')
         .select('*')
-        .eq('share_code', shareCode)
         .single();
 
       if (!coupleData) return;
