@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useOutletContext, useParams, useNavigate } from 'react-router-dom';
-import { User, Palette, Tag, Plus, Trash2, Check, Copy, LogOut } from 'lucide-react';
+import { User, Palette, Tag, Plus, Trash2, Check, Copy, LogOut, UserX } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Avatar } from '@/components/Avatar';
@@ -87,6 +87,17 @@ export default function Settings() {
       title: 'Copiado! 📋',
       description: 'Compartilhe com seu amor'
     });
+  };
+
+  const handleLogout = () => {
+    if (shareCode) {
+      localStorage.removeItem(`couple_${shareCode}`);
+      toast({ 
+        title: 'Até logo! 👋',
+        description: 'Volte quando quiser com seu código'
+      });
+      navigate('/');
+    }
   };
 
   const handleDeleteProfile = async () => {
@@ -337,30 +348,42 @@ export default function Settings() {
         </div>
       </AnimatedItem>
 
-      {/* Delete Profile */}
+      {/* Logout - Just exit device */}
       <AnimatedItem delay={500}>
+        <Button 
+          variant="ghost" 
+          onClick={handleLogout}
+          className="w-full text-muted-foreground hover:text-foreground"
+        >
+          <LogOut className="w-4 h-4 mr-2" />
+          Sair deste dispositivo
+        </Button>
+      </AnimatedItem>
+
+      {/* Delete Profile - Dangerous action */}
+      <AnimatedItem delay={600}>
         <AlertDialog>
           <AlertDialogTrigger asChild>
             <Button 
               variant="ghost" 
               className="w-full text-destructive hover:text-destructive hover:bg-destructive/10"
             >
-              <LogOut className="w-4 h-4 mr-2" />
-              Sair deste espaço
+              <UserX className="w-4 h-4 mr-2" />
+              Excluir meu perfil
             </Button>
           </AlertDialogTrigger>
           <AlertDialogContent>
             <AlertDialogHeader>
-              <AlertDialogTitle>Tem certeza?</AlertDialogTitle>
+              <AlertDialogTitle>⚠️ Excluir perfil permanentemente?</AlertDialogTitle>
               <AlertDialogDescription>
-                Seu perfil será resetado e você será redirecionado para a página inicial. 
-                Você poderá entrar novamente com o código do espaço.
+                Seu perfil será resetado para os valores padrão e você perderá suas configurações pessoais. 
+                Seus gastos serão mantidos no histórico do casal.
               </AlertDialogDescription>
             </AlertDialogHeader>
             <AlertDialogFooter>
               <AlertDialogCancel>Cancelar</AlertDialogCancel>
               <AlertDialogAction onClick={handleDeleteProfile} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
-                Sair
+                Excluir perfil
               </AlertDialogAction>
             </AlertDialogFooter>
           </AlertDialogContent>
