@@ -7,6 +7,7 @@ import { AnimatedPage, AnimatedItem } from '@/components/AnimatedPage';
 import { Couple, useCoupleContext } from '@/contexts/CoupleContext';
 import { useToast } from '@/hooks/use-toast';
 import { Button } from '@/components/ui/button';
+import { AIInsightsCard } from '@/components/AIInsightsCard';
 
 export default function Summary() {
   const { couple } = useOutletContext<{ couple: Couple }>();
@@ -76,6 +77,13 @@ export default function Summary() {
         <BalanceCard profiles={couple.profiles} balance={balance} />
       </AnimatedItem>
 
+      {/* AI Insights */}
+      <AnimatedItem delay={150}>
+        <div className="mt-4">
+          <AIInsightsCard coupleId={couple.id} />
+        </div>
+      </AnimatedItem>
+
       {/* Recent Expenses */}
       <div className="mt-6">
         <AnimatedItem delay={200}>
@@ -98,7 +106,7 @@ export default function Summary() {
         ) : (
           <div className="space-y-3">
             {recentExpenses.map((expense, index) => (
-            <AnimatedItem key={expense.id} delay={250 + index * 50}>
+              <AnimatedItem key={expense.id} delay={250 + index * 50}>
                 <ExpenseCard
                   expense={expense}
                   profiles={couple.profiles}
