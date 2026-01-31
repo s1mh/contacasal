@@ -119,6 +119,7 @@ interface CoupleContextType {
   deleteProfile: (profileId: string, shareCode: string) => Promise<boolean>;
   addExpense: (expense: Omit<Expense, 'id' | 'couple_id' | 'created_at'>) => Promise<void>;
   addExpenses: (expenses: Omit<Expense, 'id' | 'couple_id' | 'created_at'>[]) => Promise<void>;
+  updateExpense: (expenseId: string, updates: Partial<Expense>) => Promise<void>;
   deleteExpense: (expenseId: string) => Promise<void>;
   deleteExpenses: (expenseIds: string[]) => Promise<void>;
   addTag: (tag: Omit<Tag, 'id' | 'couple_id'>) => Promise<void>;
@@ -472,6 +473,47 @@ export function CoupleProvider({ children, shareCode }: CoupleProviderProps) {
           ...prev,
           expenses: prev.expenses.filter(e => !e.id.startsWith('temp-')),
         };
+      });
+    }
+  };
+
+  // Update single expense
+  const updateExpense = async (expenseId: string, updates: Partial<Expense>) => {
+    const previousExpenses = couple?.expenses || [];
+
+    // Optimistic update
+    setCouple(prev => {
+      if (!prev) return prev;
+      return {
+        ...prev,
+        expenses: prev.expenses.map(e => 
+          e.id === expenseId ? { ...e, ...updates } : e
+        ),
+      };
+    });
+
+    try {
+      const { error } = await supabase
+        .from('expenses')
+        .update(updates)
+        .eq('id', expenseId);
+      if (error) throw error;
+      
+      toast({ 
+        title: 'Gasto atualizado! ✏️',
+        description: 'Alterações salvas'
+      });
+    } catch (err: unknown) {
+      console.error('Error updating expense:', err);
+      toast({ 
+        title: 'Ops! Algo deu errado 😕',
+        description: 'Não foi possível atualizar',
+        variant: 'destructive' 
+      });
+      // Revert
+      setCouple(prev => {
+        if (!prev) return prev;
+        return { ...prev, expenses: previousExpenses };
       });
     }
   };
@@ -1007,6 +1049,7 @@ export function CoupleProvider({ children, shareCode }: CoupleProviderProps) {
     deleteProfile,
     addExpense,
     addExpenses,
+    updateExpense,
     deleteExpense,
     deleteExpenses,
     addTag,

@@ -11,14 +11,17 @@ import { ptBR } from 'date-fns/locale';
 import { cn } from '@/lib/utils';
 import { Avatar } from '@/components/Avatar';
 import { DeleteExpenseDialog } from '@/components/DeleteExpenseDialog';
+import { EditExpenseDialog } from '@/components/EditExpenseDialog';
 
 export default function History() {
   const { couple } = useOutletContext<{ couple: Couple }>();
-  const { deleteExpense, deleteExpenses } = useCoupleContext();
+  const { deleteExpense, deleteExpenses, updateExpense } = useCoupleContext();
   const [selectedTagId, setSelectedTagId] = useState<string | null>(null);
   const [selectedMonth, setSelectedMonth] = useState<Date>(new Date());
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [expenseToDelete, setExpenseToDelete] = useState<Expense | null>(null);
+  const [editDialogOpen, setEditDialogOpen] = useState(false);
+  const [expenseToEdit, setExpenseToEdit] = useState<Expense | null>(null);
 
   const monthStart = startOfMonth(selectedMonth);
   const monthEnd = endOfMonth(selectedMonth);
@@ -205,6 +208,11 @@ export default function History() {
                 expense={expense}
                 profiles={couple.profiles}
                 tags={couple.tags}
+                cards={couple.cards}
+                onEdit={() => {
+                  setExpenseToEdit(expense);
+                  setEditDialogOpen(true);
+                }}
                 onDelete={() => {
                   setExpenseToDelete(expense);
                   setDeleteDialogOpen(true);
@@ -227,6 +235,22 @@ export default function History() {
           }}
           onDeleteSingle={() => deleteExpense(expenseToDelete.id)}
           onDeleteMultiple={(ids) => deleteExpenses(ids)}
+        />
+      )}
+
+      {/* Edit Dialog */}
+      {expenseToEdit && (
+        <EditExpenseDialog
+          expense={expenseToEdit}
+          profiles={couple.profiles}
+          tags={couple.tags}
+          cards={couple.cards}
+          open={editDialogOpen}
+          onOpenChange={(open) => {
+            setEditDialogOpen(open);
+            if (!open) setExpenseToEdit(null);
+          }}
+          onSave={(updates) => updateExpense(expenseToEdit.id, updates)}
         />
       )}
     </AnimatedPage>
