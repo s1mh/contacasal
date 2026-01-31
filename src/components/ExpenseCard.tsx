@@ -15,6 +15,7 @@ import {
   Plane, 
   Music,
   Trash2,
+  Pencil,
   CreditCard,
   Calendar,
   LucideIcon
@@ -26,6 +27,7 @@ interface ExpenseCardProps {
   tags: Tag[];
   cards?: Card[];
   onDelete?: () => void;
+  onEdit?: () => void;
   isNew?: boolean;
 }
 
@@ -44,7 +46,7 @@ const iconMap: Record<string, LucideIcon> = {
   music: Music,
 };
 
-export function ExpenseCard({ expense, profiles, tags, cards = [], onDelete, isNew }: ExpenseCardProps) {
+export function ExpenseCard({ expense, profiles, tags, cards = [], onDelete, onEdit, isNew }: ExpenseCardProps) {
   const paidByProfile = profiles.find(p => p.position === expense.paid_by);
   const tag = tags.find(t => t.id === expense.tag_id);
   const card = cards.find(c => c.id === expense.card_id);
@@ -142,6 +144,18 @@ export function ExpenseCard({ expense, profiles, tags, cards = [], onDelete, isN
                     </span>
                   )}
                 </div>
+              )}
+
+              {onEdit && (
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    onEdit();
+                  }}
+                  className="opacity-0 group-hover:opacity-100 p-1.5 text-muted-foreground hover:text-primary transition-all rounded-lg hover:bg-primary/10"
+                >
+                  <Pencil className="w-4 h-4" />
+                </button>
               )}
 
               {onDelete && (
