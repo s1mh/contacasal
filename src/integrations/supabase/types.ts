@@ -81,6 +81,47 @@ export type Database = {
           },
         ]
       }
+      ai_insights: {
+        Row: {
+          couple_id: string
+          created_at: string | null
+          id: string
+          insight_type: string
+          is_read: boolean | null
+          message: string
+          priority: number | null
+          valid_until: string | null
+        }
+        Insert: {
+          couple_id: string
+          created_at?: string | null
+          id?: string
+          insight_type: string
+          is_read?: boolean | null
+          message: string
+          priority?: number | null
+          valid_until?: string | null
+        }
+        Update: {
+          couple_id?: string
+          created_at?: string | null
+          id?: string
+          insight_type?: string
+          is_read?: boolean | null
+          message?: string
+          priority?: number | null
+          valid_until?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "ai_insights_couple_id_fkey"
+            columns: ["couple_id"]
+            isOneToOne: false
+            referencedRelation: "couples"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       cards: {
         Row: {
           closing_day: number | null
@@ -459,6 +500,44 @@ export type Database = {
           {
             foreignKeyName: "space_roles_space_id_fkey"
             columns: ["space_id"]
+            isOneToOne: false
+            referencedRelation: "couples"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      spending_patterns: {
+        Row: {
+          confidence: number | null
+          couple_id: string
+          created_at: string | null
+          id: string
+          pattern_data: Json
+          pattern_type: string
+          updated_at: string | null
+        }
+        Insert: {
+          confidence?: number | null
+          couple_id: string
+          created_at?: string | null
+          id?: string
+          pattern_data: Json
+          pattern_type: string
+          updated_at?: string | null
+        }
+        Update: {
+          confidence?: number | null
+          couple_id?: string
+          created_at?: string | null
+          id?: string
+          pattern_data?: Json
+          pattern_type?: string
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "spending_patterns_couple_id_fkey"
+            columns: ["couple_id"]
             isOneToOne: false
             referencedRelation: "couples"
             referencedColumns: ["id"]
