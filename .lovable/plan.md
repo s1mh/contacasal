@@ -1,364 +1,52 @@
 
-# Plano de Correção: Gastos Parcelados
+# Plano: Edição de Gastos, Acordos e Insights de IA
 
-## Problemas Identificados
+## Resumo das Alterações
 
-### Problema 1: Parcelas pulando meses
-**Causa**: No `NewExpense.tsx`, quando cria parcelas, a `expense_date` das parcelas 2+ é definida como o `billing_month` (mês da fatura), não a data original da compra. Então:
-- Parcela 01/12: `expense_date` = 31/01 (data da compra) 
-- Parcela 02/12: `expense_date` = Março (billing_month)
-- Fevereiro fica vazio porque nenhuma parcela tem `expense_date` em fevereiro
-
-O correto é usar `billing_month` para filtrar gastos de crédito, não `expense_date`.
-
-### Problema 2: Notificações duplicadas
-**Causa**: No `NewExpense.tsx`, há um loop que chama `addExpense` para cada parcela (12 vezes para 12x). Cada `addExpense` mostra um toast e chama `refetch()`. Resultado: 12 toasts + 12 recarregamentos da página.
-
-### Problema 3: Exclusão sem opções
-**Causa**: O botão de excluir deleta apenas a parcela clicada, sem perguntar se quer apagar todas ou selecionar quais.
+1. **Remover delete do Summary** - Simples: remover `onDelete` prop
+2. **Editar gastos** - Criar modal de edição + função `updateExpense`
+3. **Editar acordos** - Expandir diálogo do AgreementManager
+4. **Insights de IA** - Sistema de aprendizado + geração de insights
 
 ---
 
-## Solução 1: Corrigir Filtro de Parcelas
+## PARTE 1: Remover Delete do Summary
 
-### Alterações em `src/pages/History.tsx`:
+### Arquivo: `src/pages/Summary.tsx`
 
-Modificar o filtro para usar `billing_month` quando disponível (gastos de crédito):
+Remover a prop `onDelete` do ExpenseCard (linha 106):
 
-```typescript
-const filteredExpenses = useMemo(() => {
-  return couple.expenses.filter((expense) => {
-    // Para gastos de crédito com billing_month, usar billing_month para filtrar
-    // Para outros gastos, usar expense_date
-    const dateToCheck = expense.billing_month 
-      ? parseISO(expense.billing_month) 
-      : parseISO(expense.expense_date);
-    
-    const inMonth = isWithinInterval(dateToCheck, { start: monthStart, end: monthEnd });
-    const matchesTag = !selectedTagId || expense.tag_id === selectedTagId;
-    return inMonth && matchesTag;
-  });
-}, [couple.expenses, monthStart, monthEnd, selectedTagId]);
-```
+```tsx
+// ANTES
+<ExpenseCard
+  expense={expense}
+  profiles={couple.profiles}
+  tags={couple.tags}
+  onDelete={() => deleteExpense(expense.id)}
+/>
 
-### Alterações em `src/pages/NewExpense.tsx`:
-
-Manter `expense_date` sempre como a data original da compra. O `billing_month` já está correto para cada parcela:
-
-```typescript
-// Linha 132-134 - Manter expense_date como a data original para TODAS as parcelas
-expense_date: expenseDate.toISOString().split('T')[0], // Sempre a data original
-billing_month: expenseBillingMonth?.toISOString().split('T')[0] || null, // Este já varia por parcela
+// DEPOIS
+<ExpenseCard
+  expense={expense}
+  profiles={couple.profiles}
+  tags={couple.tags}
+/>
 ```
 
 ---
 
-## Solução 2: Evitar Notificações Duplicadas
+## PARTE 2: Edição de Gastos
 
-### Alterações em `src/contexts/CoupleContext.tsx`:
+### 2.1 Adicionar `updateExpense` ao CoupleContext
 
-Criar nova função `addExpenses` (plural) que insere múltiplas despesas de uma vez:
-
-```typescript
-const addExpenses = async (expenses: Omit<Expense, 'id' | 'couple_id' | 'created_at'>[]) => {
-  if (!couple || expenses.length === 0) return;
-  
-  // Validar todas
-  for (const expense of expenses) {
-    const validationError = validateExpense(expense);
-    if (validationError) {
-      toast({ title: validationError, variant: 'destructive' });
-      return;
-    }
-  }
-
-  // Optimistic update - adicionar todas de uma vez
-  const tempExpenses: Expense[] = expenses.map((expense, index) => ({
-    ...expense,
-    id: `temp-${Date.now()}-${index}`,
-    couple_id: couple.id,
-    created_at: new Date().toISOString(),
-  }));
-
-  setCouple(prev => {
-    if (!prev) return prev;
-    return {
-      ...prev,
-      expenses: [...tempExpenses, ...prev.expenses],
-    };
-  });
-
-  try {
-    // Inserir todas de uma vez no banco
-    const { error } = await supabase.from('expenses').insert(
-      expenses.map(e => ({ couple_id: couple.id, ...e }))
-    );
-    if (error) throw error;
-    
-    // Uma única notificação
-    const isInstallment = expenses.length > 1;
-    toast({ 
-      title: isInstallment ? `Parcelamento registrado! 💳` : 'Gasto registrado! 💸',
-      description: isInstallment 
-        ? `${expenses.length}x adicionados` 
-        : 'Já está na conta do casal'
-    });
-    
-    // Um único refetch
-    await refetch();
-  } catch (err) {
-    console.error('Error adding expenses:', err);
-    toast({ 
-      title: 'Ops! Algo deu errado',
-      description: 'Não foi possível registrar',
-      variant: 'destructive' 
-    });
-    // Reverter
-    setCouple(prev => {
-      if (!prev) return prev;
-      return {
-        ...prev,
-        expenses: prev.expenses.filter(e => !e.id.startsWith('temp-')),
-      };
-    });
-  }
-};
-```
-
-### Alterações em `src/pages/NewExpense.tsx`:
-
-Usar `addExpenses` em vez de loop com `addExpense`:
+**Arquivo**: `src/contexts/CoupleContext.tsx`
 
 ```typescript
-const handleSubmit = async () => {
-  if (!numericAmount) return;
+// Adicionar ao CoupleContextType (interface)
+updateExpense: (expenseId: string, updates: Partial<Expense>) => Promise<void>;
 
-  setLoading(true);
-  try {
-    const installmentAmount = numericAmount / installments;
-    
-    // Criar array de todas as parcelas
-    const expensesToAdd = [];
-    for (let i = 0; i < installments; i++) {
-      let expenseBillingMonth = billingMonth;
-      if (billingMonth && i > 0) {
-        expenseBillingMonth = addMonths(billingMonth, i);
-      }
-
-      expensesToAdd.push({
-        description: installments > 1 
-          ? `${description || 'Compra'} (${i + 1}/${installments})`
-          : description || null,
-        total_amount: installmentAmount,
-        paid_by: paidBy,
-        split_type: splitType,
-        split_value: splitType === 'fixed' 
-          ? { person1: splitPreview.person1 / installments, person2: splitPreview.person2 / installments }
-          : splitValue,
-        tag_id: selectedTagId,
-        expense_date: expenseDate.toISOString().split('T')[0], // Data original para todas
-        payment_type: paymentType,
-        card_id: paymentType === 'credit' ? selectedCardId : null,
-        billing_month: expenseBillingMonth?.toISOString().split('T')[0] || null,
-        installments: installments,
-        installment_number: i + 1,
-      });
-    }
-    
-    // Adicionar todas de uma vez
-    await addExpenses(expensesToAdd);
-    navigate(`/c/${shareCode}`);
-  } finally {
-    setLoading(false);
-  }
-};
-```
-
----
-
-## Solução 3: Pop-up para Exclusão de Parcelas
-
-### Criar componente `src/components/DeleteExpenseDialog.tsx`:
-
-```typescript
-import { useState } from 'react';
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from '@/components/ui/alert-dialog';
-import { Checkbox } from '@/components/ui/checkbox';
-import { Expense } from '@/contexts/CoupleContext';
-import { formatCurrency } from '@/lib/constants';
-import { format, parseISO } from 'date-fns';
-import { ptBR } from 'date-fns/locale';
-
-interface DeleteExpenseDialogProps {
-  expense: Expense;
-  relatedExpenses: Expense[]; // Todas as parcelas do mesmo parcelamento
-  open: boolean;
-  onOpenChange: (open: boolean) => void;
-  onDeleteSingle: () => void;
-  onDeleteMultiple: (expenseIds: string[]) => void;
-}
-
-export function DeleteExpenseDialog({
-  expense,
-  relatedExpenses,
-  open,
-  onOpenChange,
-  onDeleteSingle,
-  onDeleteMultiple,
-}: DeleteExpenseDialogProps) {
-  const [selectedIds, setSelectedIds] = useState<string[]>([expense.id]);
-  const [mode, setMode] = useState<'confirm' | 'select'>('confirm');
-  
-  const isInstallment = expense.installments > 1;
-  const hasMultipleInstallments = relatedExpenses.length > 1;
-
-  const handleDeleteAll = () => {
-    onDeleteMultiple(relatedExpenses.map(e => e.id));
-    onOpenChange(false);
-  };
-
-  const handleDeleteSelected = () => {
-    onDeleteMultiple(selectedIds);
-    onOpenChange(false);
-  };
-
-  const toggleSelection = (id: string) => {
-    setSelectedIds(prev => 
-      prev.includes(id) 
-        ? prev.filter(i => i !== id)
-        : [...prev, id]
-    );
-  };
-
-  // Gasto simples - confirmação direta
-  if (!isInstallment || !hasMultipleInstallments) {
-    return (
-      <AlertDialog open={open} onOpenChange={onOpenChange}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Apagar gasto?</AlertDialogTitle>
-            <AlertDialogDescription>
-              {expense.description || 'Este gasto'} de {formatCurrency(expense.total_amount)} será removido.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>Cancelar</AlertDialogCancel>
-            <AlertDialogAction onClick={onDeleteSingle} className="bg-destructive text-destructive-foreground">
-              Apagar
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
-    );
-  }
-
-  // Gasto parcelado - opções
-  if (mode === 'confirm') {
-    return (
-      <AlertDialog open={open} onOpenChange={onOpenChange}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Apagar parcelamento?</AlertDialogTitle>
-            <AlertDialogDescription>
-              Este gasto tem {expense.installments} parcelas. O que deseja fazer?
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <div className="flex flex-col gap-2 py-4">
-            <button
-              onClick={handleDeleteAll}
-              className="p-3 rounded-xl border-2 border-destructive/50 hover:bg-destructive/10 text-left transition-colors"
-            >
-              <p className="font-medium text-destructive">Apagar todas as parcelas</p>
-              <p className="text-xs text-muted-foreground">
-                Remove todas as {relatedExpenses.length} parcelas encontradas
-              </p>
-            </button>
-            <button
-              onClick={() => setMode('select')}
-              className="p-3 rounded-xl border-2 border-border hover:border-primary/50 text-left transition-colors"
-            >
-              <p className="font-medium">Selecionar parcelas</p>
-              <p className="text-xs text-muted-foreground">
-                Escolher quais meses apagar
-              </p>
-            </button>
-          </div>
-          <AlertDialogFooter>
-            <AlertDialogCancel>Cancelar</AlertDialogCancel>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
-    );
-  }
-
-  // Modo seleção de parcelas
-  return (
-    <AlertDialog open={open} onOpenChange={onOpenChange}>
-      <AlertDialogContent className="max-h-[80vh] overflow-y-auto">
-        <AlertDialogHeader>
-          <AlertDialogTitle>Selecionar parcelas</AlertDialogTitle>
-          <AlertDialogDescription>
-            Marque as parcelas que deseja apagar
-          </AlertDialogDescription>
-        </AlertDialogHeader>
-        <div className="space-y-2 py-4">
-          {relatedExpenses
-            .sort((a, b) => a.installment_number - b.installment_number)
-            .map((exp) => (
-              <label
-                key={exp.id}
-                className="flex items-center gap-3 p-3 rounded-xl border border-border hover:bg-muted/50 cursor-pointer"
-              >
-                <Checkbox
-                  checked={selectedIds.includes(exp.id)}
-                  onCheckedChange={() => toggleSelection(exp.id)}
-                />
-                <div className="flex-1">
-                  <p className="font-medium text-sm">
-                    Parcela {exp.installment_number}/{exp.installments}
-                  </p>
-                  <p className="text-xs text-muted-foreground">
-                    {exp.billing_month 
-                      ? format(parseISO(exp.billing_month), 'MMMM yyyy', { locale: ptBR })
-                      : format(parseISO(exp.expense_date), 'MMMM yyyy', { locale: ptBR })
-                    }
-                  </p>
-                </div>
-                <span className="font-medium">{formatCurrency(exp.total_amount)}</span>
-              </label>
-            ))}
-        </div>
-        <AlertDialogFooter>
-          <AlertDialogCancel onClick={() => setMode('confirm')}>Voltar</AlertDialogCancel>
-          <AlertDialogAction 
-            onClick={handleDeleteSelected}
-            disabled={selectedIds.length === 0}
-            className="bg-destructive text-destructive-foreground"
-          >
-            Apagar {selectedIds.length} parcela{selectedIds.length > 1 ? 's' : ''}
-          </AlertDialogAction>
-        </AlertDialogFooter>
-      </AlertDialogContent>
-    </AlertDialog>
-  );
-}
-```
-
-### Alterações em `src/contexts/CoupleContext.tsx`:
-
-Adicionar função para deletar múltiplas despesas:
-
-```typescript
-const deleteExpenses = async (expenseIds: string[]) => {
+// Implementação
+const updateExpense = async (expenseId: string, updates: Partial<Expense>) => {
   const previousExpenses = couple?.expenses || [];
 
   // Optimistic update
@@ -366,29 +54,30 @@ const deleteExpenses = async (expenseIds: string[]) => {
     if (!prev) return prev;
     return {
       ...prev,
-      expenses: prev.expenses.filter(e => !expenseIds.includes(e.id)),
+      expenses: prev.expenses.map(e => 
+        e.id === expenseId ? { ...e, ...updates } : e
+      ),
     };
   });
 
   try {
     const { error } = await supabase
       .from('expenses')
-      .delete()
-      .in('id', expenseIds);
+      .update(updates)
+      .eq('id', expenseId);
     if (error) throw error;
     
     toast({ 
-      title: expenseIds.length > 1 ? 'Parcelas removidas! 🗑️' : 'Gasto removido! 🗑️',
-      description: expenseIds.length > 1 ? `${expenseIds.length} parcelas removidas` : 'Retirado da conta'
+      title: 'Gasto atualizado! ✏️',
+      description: 'Alterações salvas'
     });
   } catch (err) {
-    console.error('Error deleting expenses:', err);
+    console.error('Error updating expense:', err);
     toast({ 
       title: 'Ops! Algo deu errado',
-      description: 'Não foi possível remover',
+      description: 'Não foi possível atualizar',
       variant: 'destructive' 
     });
-    // Revert
     setCouple(prev => {
       if (!prev) return prev;
       return { ...prev, expenses: previousExpenses };
@@ -397,76 +86,310 @@ const deleteExpenses = async (expenseIds: string[]) => {
 };
 ```
 
-### Alterações em `src/pages/History.tsx`:
+### 2.2 Criar `EditExpenseDialog.tsx`
 
-Integrar o diálogo de exclusão:
+**Arquivo**: `src/components/EditExpenseDialog.tsx`
+
+Modal que permite editar:
+- Valor (`total_amount`)
+- Descrição (`description`)
+- Data (`expense_date`)
+- Quem pagou (`paid_by`)
+- Tipo de divisão (`split_type`, `split_value`)
+- Categoria (`tag_id`)
+
+Layout similar ao NewExpense, mas em formato de diálogo compacto.
+
+### 2.3 Adicionar `onEdit` ao ExpenseCard
+
+**Arquivo**: `src/components/ExpenseCard.tsx`
 
 ```typescript
-// Adicionar estados
-const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
-const [expenseToDelete, setExpenseToDelete] = useState<Expense | null>(null);
+interface ExpenseCardProps {
+  // ... existente
+  onEdit?: () => void;  // NOVO
+}
 
-// Função para encontrar parcelas relacionadas
-const getRelatedExpenses = (expense: Expense) => {
-  if (expense.installments <= 1) return [expense];
-  
-  // Encontrar todas as parcelas do mesmo parcelamento
-  // Baseado em: mesma descrição base, mesmo card_id, mesmo tag_id, mesmo installments
-  const baseDescription = expense.description?.replace(/\s*\(\d+\/\d+\)$/, '') || '';
-  
-  return couple.expenses.filter(e => {
-    if (e.installments !== expense.installments) return false;
-    if (e.card_id !== expense.card_id) return false;
-    if (e.tag_id !== expense.tag_id) return false;
-    const eBaseDesc = e.description?.replace(/\s*\(\d+\/\d+\)$/, '') || '';
-    return eBaseDesc === baseDescription;
-  });
-};
+// Adicionar botão de editar ao lado do delete
+{onEdit && (
+  <button
+    onClick={(e) => {
+      e.stopPropagation();
+      onEdit();
+    }}
+    className="opacity-0 group-hover:opacity-100 p-1.5 text-muted-foreground hover:text-primary transition-all rounded-lg hover:bg-primary/10"
+  >
+    <Pencil className="w-4 h-4" />
+  </button>
+)}
+```
 
-// Modificar o ExpenseCard para usar o diálogo
+### 2.4 Integrar no History.tsx
+
+**Arquivo**: `src/pages/History.tsx`
+
+```typescript
+const [editDialogOpen, setEditDialogOpen] = useState(false);
+const [expenseToEdit, setExpenseToEdit] = useState<Expense | null>(null);
+
+// No ExpenseCard
 <ExpenseCard
   expense={expense}
-  profiles={couple.profiles}
-  tags={couple.tags}
-  cards={couple.cards}
-  onDelete={() => {
-    setExpenseToDelete(expense);
-    setDeleteDialogOpen(true);
+  onEdit={() => {
+    setExpenseToEdit(expense);
+    setEditDialogOpen(true);
   }}
+  onDelete={...}
 />
 
-// Adicionar o diálogo no final do componente
-{expenseToDelete && (
-  <DeleteExpenseDialog
-    expense={expenseToDelete}
-    relatedExpenses={getRelatedExpenses(expenseToDelete)}
-    open={deleteDialogOpen}
-    onOpenChange={(open) => {
-      setDeleteDialogOpen(open);
-      if (!open) setExpenseToDelete(null);
-    }}
-    onDeleteSingle={() => deleteExpense(expenseToDelete.id)}
-    onDeleteMultiple={(ids) => deleteExpenses(ids)}
+// Adicionar diálogo
+{expenseToEdit && (
+  <EditExpenseDialog
+    expense={expenseToEdit}
+    profiles={couple.profiles}
+    tags={couple.tags}
+    cards={couple.cards}
+    open={editDialogOpen}
+    onOpenChange={setEditDialogOpen}
+    onSave={(updates) => updateExpense(expenseToEdit.id, updates)}
   />
 )}
 ```
 
 ---
 
-## Resumo de Arquivos a Modificar
+## PARTE 3: Edição de Acordos Recorrentes
 
-| Arquivo | Alteração |
-|---------|-----------|
-| `src/pages/NewExpense.tsx` | Manter `expense_date` original para todas parcelas + usar `addExpenses` |
-| `src/pages/History.tsx` | Filtrar por `billing_month` quando disponível + integrar diálogo de exclusão |
-| `src/contexts/CoupleContext.tsx` | Adicionar `addExpenses` e `deleteExpenses` (plural) |
-| `src/components/DeleteExpenseDialog.tsx` | **CRIAR** - Pop-up com opções para parcelamentos |
+### Arquivo: `src/components/AgreementManager.tsx`
+
+Expandir para incluir botão de editar e diálogo de edição completo:
+
+```typescript
+// Adicionar estado
+const [editingAgreement, setEditingAgreement] = useState<Agreement | null>(null);
+
+// Adicionar botão de editar na lista
+<Button
+  variant="ghost"
+  size="icon"
+  className="h-5 w-5 sm:h-6 sm:w-6"
+  onClick={() => setEditingAgreement(agreement)}
+>
+  <Pencil className="w-2.5 h-2.5 sm:w-3 sm:h-3" />
+</Button>
+
+// Dialog de edição (reutilizando formulário do Dialog existente)
+<Dialog open={!!editingAgreement} onOpenChange={() => setEditingAgreement(null)}>
+  <DialogContent>
+    <DialogHeader>
+      <DialogTitle>Editar Acordo</DialogTitle>
+    </DialogHeader>
+    {/* Formulário preenchido com dados do acordo */}
+  </DialogContent>
+</Dialog>
+```
 
 ---
 
-## Resultado Esperado
+## PARTE 4: Insights de IA (Aprendizado Comportamental)
 
-1. **Parcelas em sequência**: Todas as 12 parcelas aparecerão em meses consecutivos (Mar, Abr, Mai...)
-2. **Uma única notificação**: Ao adicionar parcelamento, apenas 1 toast "Parcelamento registrado! 12x"
-3. **Exclusão inteligente**: Pop-up perguntando se quer apagar todas ou selecionar quais parcelas
+### 4.1 Criar Tabela para Armazenar Padrões
 
+**Migração SQL**:
+
+```sql
+CREATE TABLE IF NOT EXISTS spending_patterns (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  couple_id UUID NOT NULL REFERENCES couples(id) ON DELETE CASCADE,
+  pattern_type TEXT NOT NULL, -- 'category_trend', 'spending_peak', 'balance_drift', etc.
+  pattern_data JSONB NOT NULL,
+  confidence DECIMAL(3,2) DEFAULT 0.5,
+  created_at TIMESTAMPTZ DEFAULT NOW(),
+  updated_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+CREATE TABLE IF NOT EXISTS ai_insights (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  couple_id UUID NOT NULL REFERENCES couples(id) ON DELETE CASCADE,
+  insight_type TEXT NOT NULL, -- 'tip', 'alert', 'celebration'
+  message TEXT NOT NULL,
+  priority INTEGER DEFAULT 5,
+  is_read BOOLEAN DEFAULT FALSE,
+  valid_until TIMESTAMPTZ,
+  created_at TIMESTAMPTZ DEFAULT NOW()
+);
+```
+
+### 4.2 Edge Function para Análise de Padrões
+
+**Arquivo**: `supabase/functions/analyze-spending/index.ts`
+
+```typescript
+// Função que:
+// 1. Busca gastos do último mês/trimestre
+// 2. Identifica padrões (categorias mais usadas, picos de gasto, desvios)
+// 3. Salva padrões na tabela spending_patterns
+// 4. Gera insights baseados nos padrões
+
+// Análises possíveis:
+// - Categoria com maior crescimento
+// - Dia da semana com mais gastos
+// - Quem está pagando mais
+// - Gastos acima da média
+// - Categorias esquecidas (sem gasto há tempo)
+```
+
+### 4.3 Edge Function para Gerar Insights
+
+**Arquivo**: `supabase/functions/generate-insights/index.ts`
+
+```typescript
+// Usa Lovable AI (google/gemini-2.5-flash) para:
+// 1. Analisar padrões salvos
+// 2. Comparar com mês anterior
+// 3. Gerar insights personalizados em português
+// 4. Salvar na tabela ai_insights
+```
+
+### 4.4 Componente de Insights no Summary
+
+**Arquivo**: `src/components/AIInsightsCard.tsx`
+
+```typescript
+interface AIInsight {
+  id: string;
+  type: 'tip' | 'alert' | 'celebration';
+  message: string;
+  priority: number;
+}
+
+export function AIInsightsCard({ coupleId }: { coupleId: string }) {
+  const [insights, setInsights] = useState<AIInsight[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [minDataDays, setMinDataDays] = useState(0);
+
+  // Verificar se tem dados suficientes (ex: 7 dias mínimo)
+  // Se não tiver, mostrar "Ainda estou aprendendo..."
+  
+  // Buscar insights do banco
+  // Mostrar top 3 insights por prioridade
+}
+```
+
+### 4.5 Lógica de "Aprendizado Mínimo"
+
+Para a IA começar a dar insights, precisamos de:
+- **Mínimo de 7 dias** com pelo menos 1 gasto
+- **Mínimo de 5 gastos** registrados
+- **Pelo menos 2 categorias** diferentes usadas
+
+Enquanto não atingir:
+```
+🧠 Ainda estou aprendendo...
+Preciso de mais alguns dias para entender 
+seus padrões de gastos e dar dicas úteis.
+
+📊 Progresso: 3/7 dias • 4/5 gastos
+```
+
+---
+
+## Resumo de Arquivos
+
+| Arquivo | Ação |
+|---------|------|
+| `src/pages/Summary.tsx` | Remover `onDelete` do ExpenseCard |
+| `src/contexts/CoupleContext.tsx` | Adicionar `updateExpense` |
+| `src/components/ExpenseCard.tsx` | Adicionar botão de editar |
+| `src/components/EditExpenseDialog.tsx` | **CRIAR** - Modal de edição |
+| `src/pages/History.tsx` | Integrar diálogo de edição |
+| `src/components/AgreementManager.tsx` | Adicionar edição completa |
+| `supabase/functions/analyze-spending/index.ts` | **CRIAR** - Análise de padrões |
+| `supabase/functions/generate-insights/index.ts` | **CRIAR** - Geração de insights |
+| `src/components/AIInsightsCard.tsx` | **CRIAR** - Card de insights |
+| **Migração SQL** | Tabelas `spending_patterns` e `ai_insights` |
+
+---
+
+## Fluxo dos Insights de IA
+
+```text
+1. Usuário adiciona gastos → Dados acumulam no banco
+
+2. Após 7+ dias / 5+ gastos:
+   - Sistema detecta dados suficientes
+   - Chama analyze-spending (pode ser via cron ou on-demand)
+
+3. analyze-spending:
+   - Agrupa gastos por categoria, dia, pagador
+   - Calcula médias, tendências, desvios
+   - Salva em spending_patterns
+
+4. generate-insights:
+   - Lê padrões recentes
+   - Envia para Lovable AI com prompt contextualizado
+   - Recebe insights em português natural
+   - Salva em ai_insights
+
+5. Summary mostra:
+   - "Você gastou 30% menos em Alimentação esse mês! 🎉"
+   - "Atenção: Lazer passou da média. Quer revisar?"
+   - "Dica: João tem pagado 60% dos gastos. Hora de equilibrar?"
+```
+
+---
+
+## Seção Técnica
+
+### Tipos para Insights
+
+```typescript
+interface SpendingPattern {
+  id: string;
+  couple_id: string;
+  pattern_type: 'category_growth' | 'spending_peak' | 'payer_balance' | 'frequency';
+  pattern_data: {
+    category_id?: string;
+    growth_percent?: number;
+    peak_day?: number;
+    payer_ratio?: { person1: number; person2: number };
+    avg_per_day?: number;
+  };
+  confidence: number;
+}
+
+interface AIInsight {
+  id: string;
+  couple_id: string;
+  insight_type: 'tip' | 'alert' | 'celebration';
+  message: string;
+  priority: number;
+  is_read: boolean;
+  valid_until: string | null;
+}
+```
+
+### Prompt para Lovable AI
+
+```typescript
+const prompt = `
+Você é um assistente financeiro simpático para casais brasileiros.
+
+Dados do casal:
+- Total gasto esse mês: ${totalMonth}
+- Categorias mais usadas: ${topCategories}
+- Pessoa 1 pagou: ${person1Percent}%
+- Pessoa 2 pagou: ${person2Percent}%
+- Tendência vs mês anterior: ${trend}
+
+Gere 3 insights curtos (máx 100 caracteres) em português brasileiro.
+Seja amigável, use emojis, evite ser crítico demais.
+
+Formato JSON:
+[
+  { "type": "celebration", "message": "...", "priority": 8 },
+  { "type": "tip", "message": "...", "priority": 5 },
+  { "type": "alert", "message": "...", "priority": 3 }
+]
+`;
+```
