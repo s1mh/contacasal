@@ -10,7 +10,7 @@ import { Button } from '@/components/ui/button';
 
 export default function Summary() {
   const { couple } = useOutletContext<{ couple: Couple }>();
-  const { calculateBalance, deleteExpense } = useCoupleContext();
+  const { calculateBalance } = useCoupleContext();
   const { shareCode } = useParams();
   const { toast } = useToast();
   const balance = calculateBalance();
@@ -98,12 +98,11 @@ export default function Summary() {
         ) : (
           <div className="space-y-3">
             {recentExpenses.map((expense, index) => (
-              <AnimatedItem key={expense.id} delay={250 + index * 50}>
+            <AnimatedItem key={expense.id} delay={250 + index * 50}>
                 <ExpenseCard
                   expense={expense}
                   profiles={couple.profiles}
                   tags={couple.tags}
-                  onDelete={() => deleteExpense(expense.id)}
                 />
               </AnimatedItem>
             ))}
