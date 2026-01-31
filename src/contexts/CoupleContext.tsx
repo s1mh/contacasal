@@ -118,7 +118,9 @@ interface CoupleContextType {
   updateProfile: (profileId: string, updates: Partial<Profile>) => Promise<void>;
   deleteProfile: (profileId: string, shareCode: string) => Promise<boolean>;
   addExpense: (expense: Omit<Expense, 'id' | 'couple_id' | 'created_at'>) => Promise<void>;
+  addExpenses: (expenses: Omit<Expense, 'id' | 'couple_id' | 'created_at'>[]) => Promise<void>;
   deleteExpense: (expenseId: string) => Promise<void>;
+  deleteExpenses: (expenseIds: string[]) => Promise<void>;
   addTag: (tag: Omit<Tag, 'id' | 'couple_id'>) => Promise<void>;
   deleteTag: (tagId: string) => Promise<void>;
   addCard: (card: Omit<Card, 'id' | 'created_at'>) => Promise<void>;
@@ -409,6 +411,71 @@ export function CoupleProvider({ children, shareCode }: CoupleProviderProps) {
     }
   };
 
+  // Bulk add expenses (for installments)
+  const addExpenses = async (expenses: Omit<Expense, 'id' | 'couple_id' | 'created_at'>[]) => {
+    if (!couple || expenses.length === 0) return;
+    
+    // Validate all expenses
+    for (const expense of expenses) {
+      const validationError = validateExpense(expense);
+      if (validationError) {
+        toast({ title: validationError, variant: 'destructive' });
+        return;
+      }
+    }
+
+    // Optimistic update - add all at once
+    const tempExpenses: Expense[] = expenses.map((expense, index) => ({
+      ...expense,
+      id: `temp-${Date.now()}-${index}`,
+      couple_id: couple.id,
+      created_at: new Date().toISOString(),
+    }));
+
+    setCouple(prev => {
+      if (!prev) return prev;
+      return {
+        ...prev,
+        expenses: [...tempExpenses, ...prev.expenses],
+      };
+    });
+
+    try {
+      // Insert all at once
+      const { error } = await supabase.from('expenses').insert(
+        expenses.map(e => ({ couple_id: couple.id, ...e }))
+      );
+      if (error) throw error;
+      
+      // Single notification
+      const isInstallment = expenses.length > 1;
+      toast({ 
+        title: isInstallment ? 'Parcelamento registrado! 💳' : 'Gasto registrado! 💸',
+        description: isInstallment 
+          ? `${expenses.length}x adicionados` 
+          : 'Já está na conta do casal'
+      });
+      
+      // Single refetch
+      await refetch();
+    } catch (err: unknown) {
+      console.error('Error adding expenses:', err);
+      toast({ 
+        title: 'Ops! Algo deu errado 😕',
+        description: 'Não foi possível registrar',
+        variant: 'destructive' 
+      });
+      // Revert
+      setCouple(prev => {
+        if (!prev) return prev;
+        return {
+          ...prev,
+          expenses: prev.expenses.filter(e => !e.id.startsWith('temp-')),
+        };
+      });
+    }
+  };
+
   const deleteExpense = async (expenseId: string) => {
     // Save for rollback
     const previousExpenses = couple?.expenses || [];
@@ -437,6 +504,45 @@ export function CoupleProvider({ children, shareCode }: CoupleProviderProps) {
         variant: 'destructive' 
       });
       // Revert on error
+      setCouple(prev => {
+        if (!prev) return prev;
+        return { ...prev, expenses: previousExpenses };
+      });
+    }
+  };
+
+  // Bulk delete expenses (for installments)
+  const deleteExpenses = async (expenseIds: string[]) => {
+    const previousExpenses = couple?.expenses || [];
+
+    // Optimistic update
+    setCouple(prev => {
+      if (!prev) return prev;
+      return {
+        ...prev,
+        expenses: prev.expenses.filter(e => !expenseIds.includes(e.id)),
+      };
+    });
+
+    try {
+      const { error } = await supabase
+        .from('expenses')
+        .delete()
+        .in('id', expenseIds);
+      if (error) throw error;
+      
+      toast({ 
+        title: expenseIds.length > 1 ? 'Parcelas removidas! 🗑️' : 'Gasto removido! 🗑️',
+        description: expenseIds.length > 1 ? `${expenseIds.length} parcelas removidas` : 'Retirado da conta'
+      });
+    } catch (err: unknown) {
+      console.error('Error deleting expenses:', err);
+      toast({ 
+        title: 'Ops! Algo deu errado 😕',
+        description: 'Não foi possível remover',
+        variant: 'destructive' 
+      });
+      // Revert
       setCouple(prev => {
         if (!prev) return prev;
         return { ...prev, expenses: previousExpenses };
@@ -900,7 +1006,9 @@ export function CoupleProvider({ children, shareCode }: CoupleProviderProps) {
     updateProfile,
     deleteProfile,
     addExpense,
+    addExpenses,
     deleteExpense,
+    deleteExpenses,
     addTag,
     deleteTag,
     addCard,
