@@ -4,6 +4,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
+import { CurrencyInput } from '@/components/ui/currency-input';
 import { RefreshCw, Plus, Trash2, Pause, Play, Pencil } from 'lucide-react';
 import { Agreement, Profile, Tag } from '@/hooks/useCouple';
 import { formatCurrency } from '@/lib/constants';
@@ -30,7 +31,7 @@ export function AgreementManager({
   const [isOpen, setIsOpen] = useState(false);
   const [editingAgreement, setEditingAgreement] = useState<Agreement | null>(null);
   const [name, setName] = useState('');
-  const [amount, setAmount] = useState('');
+  const [amount, setAmount] = useState(0);
   const [paidBy, setPaidBy] = useState<number>(1);
   const [tagId, setTagId] = useState<string>('');
   const [dayOfMonth, setDayOfMonth] = useState('1');
@@ -41,7 +42,7 @@ export function AgreementManager({
   useEffect(() => {
     if (editingAgreement) {
       setName(editingAgreement.name);
-      setAmount(editingAgreement.amount.toString());
+      setAmount(editingAgreement.amount);
       setPaidBy(editingAgreement.paid_by);
       setTagId(editingAgreement.tag_id || '');
       setDayOfMonth(editingAgreement.day_of_month?.toString() || '1');
@@ -54,14 +55,14 @@ export function AgreementManager({
   }, [editingAgreement]);
 
   const handleAdd = async () => {
-    if (!name.trim() || !amount) return;
+    if (!name.trim() || amount <= 0) return;
     
     setIsLoading(true);
     try {
       await onAddAgreement({
         couple_id: coupleId,
         name: name.trim(),
-        amount: parseFloat(amount),
+        amount: amount,
         split_type: 'percentage',
         split_value: { person1: splitPerson1, person2: 100 - splitPerson1 },
         paid_by: paidBy,
@@ -77,13 +78,13 @@ export function AgreementManager({
   };
 
   const handleUpdate = async () => {
-    if (!editingAgreement || !name.trim() || !amount) return;
+    if (!editingAgreement || !name.trim() || amount <= 0) return;
     
     setIsLoading(true);
     try {
       await onUpdateAgreement(editingAgreement.id, {
         name: name.trim(),
-        amount: parseFloat(amount),
+        amount: amount,
         split_type: 'percentage',
         split_value: { person1: splitPerson1, person2: 100 - splitPerson1 },
         paid_by: paidBy,
@@ -99,7 +100,7 @@ export function AgreementManager({
 
   const resetForm = () => {
     setName('');
-    setAmount('');
+    setAmount(0);
     setPaidBy(1);
     setTagId('');
     setDayOfMonth('1');
@@ -123,11 +124,9 @@ export function AgreementManager({
       <div className="grid grid-cols-2 gap-4">
         <div className="space-y-2">
           <Label>Valor</Label>
-          <Input
-            type="number"
-            step="0.01"
+          <CurrencyInput
             value={amount}
-            onChange={(e) => setAmount(e.target.value)}
+            onChange={setAmount}
             placeholder="0,00"
           />
         </div>
@@ -198,7 +197,7 @@ export function AgreementManager({
 
       <Button 
         onClick={isEditing ? handleUpdate : handleAdd} 
-        disabled={!name.trim() || !amount || isLoading} 
+        disabled={!name.trim() || amount <= 0 || isLoading} 
         className="w-full"
       >
         {isLoading ? (isEditing ? 'Salvando...' : 'Criando...') : (isEditing ? 'Salvar Alterações' : 'Criar Acordo')}
