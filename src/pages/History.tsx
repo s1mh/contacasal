@@ -4,26 +4,33 @@ import { Calendar, Filter, FileText } from 'lucide-react';
 import { ExpenseCard } from '@/components/ExpenseCard';
 import { TagPill } from '@/components/TagPill';
 import { AnimatedPage, AnimatedItem } from '@/components/AnimatedPage';
-import { Couple, useCoupleContext } from '@/contexts/CoupleContext';
+import { Couple, Expense, useCoupleContext } from '@/contexts/CoupleContext';
 import { formatCurrency } from '@/lib/constants';
 import { format, startOfMonth, endOfMonth, isWithinInterval, parseISO } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { cn } from '@/lib/utils';
 import { Avatar } from '@/components/Avatar';
+import { DeleteExpenseDialog } from '@/components/DeleteExpenseDialog';
 
 export default function History() {
   const { couple } = useOutletContext<{ couple: Couple }>();
-  const { deleteExpense } = useCoupleContext();
+  const { deleteExpense, deleteExpenses } = useCoupleContext();
   const [selectedTagId, setSelectedTagId] = useState<string | null>(null);
   const [selectedMonth, setSelectedMonth] = useState<Date>(new Date());
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [expenseToDelete, setExpenseToDelete] = useState<Expense | null>(null);
 
   const monthStart = startOfMonth(selectedMonth);
   const monthEnd = endOfMonth(selectedMonth);
 
+  // Para gastos de crédito com billing_month, usar billing_month para filtrar
+  // Para outros gastos, usar expense_date
   const filteredExpenses = useMemo(() => {
     return couple.expenses.filter((expense) => {
-      const expenseDate = parseISO(expense.expense_date);
-      const inMonth = isWithinInterval(expenseDate, { start: monthStart, end: monthEnd });
+      const dateToCheck = expense.billing_month 
+        ? parseISO(expense.billing_month) 
+        : parseISO(expense.expense_date);
+      const inMonth = isWithinInterval(dateToCheck, { start: monthStart, end: monthEnd });
       const matchesTag = !selectedTagId || expense.tag_id === selectedTagId;
       return inMonth && matchesTag;
     });
@@ -32,6 +39,21 @@ export default function History() {
   const totalAmount = useMemo(() => {
     return filteredExpenses.reduce((sum, e) => sum + e.total_amount, 0);
   }, [filteredExpenses]);
+
+  // Encontrar parcelas relacionadas do mesmo parcelamento
+  const getRelatedExpenses = (expense: Expense): Expense[] => {
+    if (!expense.installments || expense.installments <= 1) return [expense];
+    
+    const baseDescription = expense.description?.replace(/\s*\(\d+\/\d+\)$/, '') || '';
+    
+    return couple.expenses.filter(e => {
+      if (e.installments !== expense.installments) return false;
+      if (e.card_id !== expense.card_id) return false;
+      if (e.tag_id !== expense.tag_id) return false;
+      const eBaseDesc = e.description?.replace(/\s*\(\d+\/\d+\)$/, '') || '';
+      return eBaseDesc === baseDescription;
+    });
+  };
 
   const navigateMonth = (direction: number) => {
     setSelectedMonth(prev => {
@@ -183,11 +205,29 @@ export default function History() {
                 expense={expense}
                 profiles={couple.profiles}
                 tags={couple.tags}
-                onDelete={() => deleteExpense(expense.id)}
+                onDelete={() => {
+                  setExpenseToDelete(expense);
+                  setDeleteDialogOpen(true);
+                }}
               />
             </AnimatedItem>
           ))}
         </div>
+      )}
+
+      {/* Delete Dialog */}
+      {expenseToDelete && (
+        <DeleteExpenseDialog
+          expense={expenseToDelete}
+          relatedExpenses={getRelatedExpenses(expenseToDelete)}
+          open={deleteDialogOpen}
+          onOpenChange={(open) => {
+            setDeleteDialogOpen(open);
+            if (!open) setExpenseToDelete(null);
+          }}
+          onDeleteSingle={() => deleteExpense(expenseToDelete.id)}
+          onDeleteMultiple={(ids) => deleteExpenses(ids)}
+        />
       )}
     </AnimatedPage>
   );
