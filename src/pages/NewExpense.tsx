@@ -20,7 +20,7 @@ type PaymentType = 'debit' | 'credit';
 
 export default function NewExpense() {
   const { couple } = useOutletContext<{ couple: Couple }>();
-  const { addExpense } = useCoupleContext();
+  const { addExpenses } = useCoupleContext();
   const { shareCode } = useParams();
   const navigate = useNavigate();
 
@@ -111,14 +111,15 @@ export default function NewExpense() {
     try {
       const installmentAmount = numericAmount / installments;
       
-      // Create expenses for each installment
+      // Build array of all installments
+      const expensesToAdd = [];
       for (let i = 0; i < installments; i++) {
         let expenseBillingMonth = billingMonth;
         if (billingMonth && i > 0) {
           expenseBillingMonth = addMonths(billingMonth, i);
         }
 
-        await addExpense({
+        expensesToAdd.push({
           description: installments > 1 
             ? `${description || 'Compra'} (${i + 1}/${installments})`
             : description || null,
@@ -129,9 +130,7 @@ export default function NewExpense() {
             ? { person1: splitPreview.person1 / installments, person2: splitPreview.person2 / installments }
             : splitValue,
           tag_id: selectedTagId,
-          expense_date: i === 0 
-            ? expenseDate.toISOString().split('T')[0]
-            : (expenseBillingMonth || expenseDate).toISOString().split('T')[0],
+          expense_date: expenseDate.toISOString().split('T')[0], // Always original date
           payment_type: paymentType,
           card_id: paymentType === 'credit' ? selectedCardId : null,
           billing_month: expenseBillingMonth?.toISOString().split('T')[0] || null,
@@ -139,6 +138,9 @@ export default function NewExpense() {
           installment_number: i + 1,
         });
       }
+      
+      // Add all at once - single notification
+      await addExpenses(expensesToAdd);
       navigate(`/c/${shareCode}`);
     } finally {
       setLoading(false);
