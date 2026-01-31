@@ -1,11 +1,10 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
-import { Switch } from '@/components/ui/switch';
-import { RefreshCw, Plus, Trash2, Pause, Play } from 'lucide-react';
+import { RefreshCw, Plus, Trash2, Pause, Play, Pencil } from 'lucide-react';
 import { Agreement, Profile, Tag } from '@/hooks/useCouple';
 import { formatCurrency } from '@/lib/constants';
 
@@ -29,6 +28,7 @@ export function AgreementManager({
   coupleId 
 }: AgreementManagerProps) {
   const [isOpen, setIsOpen] = useState(false);
+  const [editingAgreement, setEditingAgreement] = useState<Agreement | null>(null);
   const [name, setName] = useState('');
   const [amount, setAmount] = useState('');
   const [paidBy, setPaidBy] = useState<number>(1);
@@ -36,6 +36,22 @@ export function AgreementManager({
   const [dayOfMonth, setDayOfMonth] = useState('1');
   const [splitPerson1, setSplitPerson1] = useState(50);
   const [isLoading, setIsLoading] = useState(false);
+
+  // When editing, populate form with agreement data
+  useEffect(() => {
+    if (editingAgreement) {
+      setName(editingAgreement.name);
+      setAmount(editingAgreement.amount.toString());
+      setPaidBy(editingAgreement.paid_by);
+      setTagId(editingAgreement.tag_id || '');
+      setDayOfMonth(editingAgreement.day_of_month?.toString() || '1');
+      setSplitPerson1(
+        typeof editingAgreement.split_value === 'object' && 'person1' in editingAgreement.split_value
+          ? editingAgreement.split_value.person1
+          : 50
+      );
+    }
+  }, [editingAgreement]);
 
   const handleAdd = async () => {
     if (!name.trim() || !amount) return;
@@ -60,6 +76,27 @@ export function AgreementManager({
     }
   };
 
+  const handleUpdate = async () => {
+    if (!editingAgreement || !name.trim() || !amount) return;
+    
+    setIsLoading(true);
+    try {
+      await onUpdateAgreement(editingAgreement.id, {
+        name: name.trim(),
+        amount: parseFloat(amount),
+        split_type: 'percentage',
+        split_value: { person1: splitPerson1, person2: 100 - splitPerson1 },
+        paid_by: paidBy,
+        tag_id: tagId || null,
+        day_of_month: parseInt(dayOfMonth) || 1,
+      });
+      setEditingAgreement(null);
+      resetForm();
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
   const resetForm = () => {
     setName('');
     setAmount('');
@@ -71,6 +108,103 @@ export function AgreementManager({
 
   const person1 = profiles.find(p => p.position === 1);
   const person2 = profiles.find(p => p.position === 2);
+
+  const AgreementForm = ({ isEditing = false }: { isEditing?: boolean }) => (
+    <div className="space-y-4 py-4">
+      <div className="space-y-2">
+        <Label>Nome do acordo</Label>
+        <Input
+          value={name}
+          onChange={(e) => setName(e.target.value)}
+          placeholder="Ex: Aluguel, Internet..."
+        />
+      </div>
+
+      <div className="grid grid-cols-2 gap-4">
+        <div className="space-y-2">
+          <Label>Valor</Label>
+          <Input
+            type="number"
+            step="0.01"
+            value={amount}
+            onChange={(e) => setAmount(e.target.value)}
+            placeholder="0,00"
+          />
+        </div>
+        <div className="space-y-2">
+          <Label>Dia do mês</Label>
+          <Input
+            type="number"
+            min="1"
+            max="31"
+            value={dayOfMonth}
+            onChange={(e) => setDayOfMonth(e.target.value)}
+          />
+        </div>
+      </div>
+
+      <div className="space-y-2">
+        <Label>Quem paga</Label>
+        <Select value={paidBy.toString()} onValueChange={(v) => setPaidBy(parseInt(v))}>
+          <SelectTrigger>
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            {profiles.map((p) => (
+              <SelectItem key={p.id} value={p.position.toString()}>
+                {p.name}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+      </div>
+
+      <div className="space-y-2">
+        <Label>Categoria</Label>
+        <Select value={tagId} onValueChange={setTagId}>
+          <SelectTrigger>
+            <SelectValue placeholder="Selecione..." />
+          </SelectTrigger>
+          <SelectContent>
+            {tags.map((tag) => (
+              <SelectItem key={tag.id} value={tag.id}>
+                {tag.name}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+      </div>
+
+      <div className="space-y-3">
+        <Label>Divisão</Label>
+        <div className="flex items-center justify-between px-2">
+          <span className="text-sm" style={{ color: person1?.color }}>
+            {person1?.name}: {splitPerson1}%
+          </span>
+          <span className="text-sm" style={{ color: person2?.color }}>
+            {person2?.name}: {100 - splitPerson1}%
+          </span>
+        </div>
+        <input
+          type="range"
+          min="0"
+          max="100"
+          step="5"
+          value={splitPerson1}
+          onChange={(e) => setSplitPerson1(parseInt(e.target.value))}
+          className="w-full"
+        />
+      </div>
+
+      <Button 
+        onClick={isEditing ? handleUpdate : handleAdd} 
+        disabled={!name.trim() || !amount || isLoading} 
+        className="w-full"
+      >
+        {isLoading ? (isEditing ? 'Salvando...' : 'Criando...') : (isEditing ? 'Salvar Alterações' : 'Criar Acordo')}
+      </Button>
+    </div>
+  );
 
   return (
     <div className="space-y-2 sm:space-y-3">
@@ -90,96 +224,7 @@ export function AgreementManager({
             <DialogHeader>
               <DialogTitle>Novo Acordo Recorrente</DialogTitle>
             </DialogHeader>
-            <div className="space-y-4 py-4">
-              <div className="space-y-2">
-                <Label>Nome do acordo</Label>
-                <Input
-                  value={name}
-                  onChange={(e) => setName(e.target.value)}
-                  placeholder="Ex: Aluguel, Internet..."
-                />
-              </div>
-
-              <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label>Valor</Label>
-                  <Input
-                    type="number"
-                    step="0.01"
-                    value={amount}
-                    onChange={(e) => setAmount(e.target.value)}
-                    placeholder="0,00"
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label>Dia do mês</Label>
-                  <Input
-                    type="number"
-                    min="1"
-                    max="31"
-                    value={dayOfMonth}
-                    onChange={(e) => setDayOfMonth(e.target.value)}
-                  />
-                </div>
-              </div>
-
-              <div className="space-y-2">
-                <Label>Quem paga</Label>
-                <Select value={paidBy.toString()} onValueChange={(v) => setPaidBy(parseInt(v))}>
-                  <SelectTrigger>
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {profiles.map((p) => (
-                      <SelectItem key={p.id} value={p.position.toString()}>
-                        {p.name}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-
-              <div className="space-y-2">
-                <Label>Categoria</Label>
-                <Select value={tagId} onValueChange={setTagId}>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Selecione..." />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {tags.map((tag) => (
-                      <SelectItem key={tag.id} value={tag.id}>
-                        {tag.name}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-
-              <div className="space-y-3">
-                <Label>Divisão</Label>
-                <div className="flex items-center justify-between px-2">
-                  <span className="text-sm" style={{ color: person1?.color }}>
-                    {person1?.name}: {splitPerson1}%
-                  </span>
-                  <span className="text-sm" style={{ color: person2?.color }}>
-                    {person2?.name}: {100 - splitPerson1}%
-                  </span>
-                </div>
-                <input
-                  type="range"
-                  min="0"
-                  max="100"
-                  step="5"
-                  value={splitPerson1}
-                  onChange={(e) => setSplitPerson1(parseInt(e.target.value))}
-                  className="w-full"
-                />
-              </div>
-
-              <Button onClick={handleAdd} disabled={!name.trim() || !amount || isLoading} className="w-full">
-                {isLoading ? 'Criando...' : 'Criar Acordo'}
-              </Button>
-            </div>
+            <AgreementForm />
           </DialogContent>
         </Dialog>
       </div>
@@ -224,6 +269,16 @@ export function AgreementManager({
                       variant="ghost"
                       size="icon"
                       className="h-5 w-5 sm:h-6 sm:w-6"
+                      onClick={() => {
+                        setEditingAgreement(agreement);
+                      }}
+                    >
+                      <Pencil className="w-2.5 h-2.5 sm:w-3 sm:h-3 text-muted-foreground" />
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="h-5 w-5 sm:h-6 sm:w-6"
                       onClick={() => onUpdateAgreement(agreement.id, { is_active: !agreement.is_active })}
                     >
                       {agreement.is_active ? (
@@ -247,6 +302,21 @@ export function AgreementManager({
           })}
         </div>
       )}
+
+      {/* Edit Dialog */}
+      <Dialog open={!!editingAgreement} onOpenChange={(open) => {
+        if (!open) {
+          setEditingAgreement(null);
+          resetForm();
+        }
+      }}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Editar Acordo</DialogTitle>
+          </DialogHeader>
+          <AgreementForm isEditing />
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
