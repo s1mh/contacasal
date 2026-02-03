@@ -12,7 +12,6 @@ import { isConfiguredProfile } from '@/lib/utils';
 import { usePreferences } from '@/contexts/PreferencesContext';
 
 export default function Summary() {
-  const { t } = useI18n();
   const { couple } = useOutletContext<{ couple: Couple }>();
   const { calculateBalance } = useCoupleContext();
   const { shareCode } = useParams();
