@@ -14,6 +14,7 @@ import { Expense } from '@/contexts/CoupleContext';
 import { format, parseISO } from 'date-fns';
 import { getDateFnsLocale } from '@/lib/preferences';
 import { usePreferences } from '@/contexts/PreferencesContext';
+import { useI18n } from '@/contexts/I18nContext';
 
 interface DeleteExpenseDialogProps {
   expense: Expense;
@@ -32,7 +33,7 @@ export function DeleteExpenseDialog({
   onDeleteSingle,
   onDeleteMultiple,
 }: DeleteExpenseDialogProps) {
-  const { t, locale, formatCurrency, interpolate } = useI18n();
+  const { formatCurrency } = useI18n();
   const [selectedIds, setSelectedIds] = useState<string[]>([expense.id]);
   const [mode, setMode] = useState<'confirm' | 'select'>('confirm');
   const { locale: prefLocale, t: prefT } = usePreferences();
