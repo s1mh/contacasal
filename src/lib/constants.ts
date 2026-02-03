@@ -50,10 +50,11 @@ export const SPLIT_TYPES = {
 };
 
 export const formatCurrency = (value: number): string => {
-  return new Intl.NumberFormat('pt-BR', {
-    style: 'currency',
-    currency: 'BRL',
+  const formatted = new Intl.NumberFormat('pt-BR', {
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
   }).format(value);
+  return `$ ${formatted}`;
 };
 
 export const formatDate = (date: string | Date): string => {
