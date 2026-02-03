@@ -4,7 +4,7 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { AuthProvider } from "@/contexts/AuthContext";
-import { PreferencesProvider, usePreferences } from "@/contexts/PreferencesContext";
+import { PreferencesProvider } from "@/contexts/PreferencesContext";
 import Index from "./pages/Index";
 import CreateSpace from "./pages/CreateSpace";
 import CoupleLayout from "./pages/CoupleLayout";
@@ -19,25 +19,22 @@ import NotFound from "./pages/NotFound";
 const queryClient = new QueryClient();
 
 const AppRoutes = () => {
-  const { locale: prefLocale } = usePreferences();
   return (
-    <div key={prefLocale} className="transition-opacity duration-300">
-      <BrowserRouter>
-        <Routes>
-          <Route path="/" element={<Index />} />
-          <Route path="/create" element={<CreateSpace />} />
-          <Route path="/c/:shareCode" element={<CoupleLayout />}>
-            <Route index element={<Summary />} />
-            <Route path="novo" element={<NewExpense />} />
-            <Route path="historico" element={<History />} />
-            <Route path="ajustes" element={<Settings />} />
-            <Route path="estatisticas" element={<Statistics />} />
-          </Route>
-          <Route path="/reset-pin/:token" element={<ResetPin />} />
-          <Route path="*" element={<NotFound />} />
-        </Routes>
-      </BrowserRouter>
-    </div>
+    <BrowserRouter>
+      <Routes>
+        <Route path="/" element={<Index />} />
+        <Route path="/create" element={<CreateSpace />} />
+        <Route path="/c/:shareCode" element={<CoupleLayout />}>
+          <Route index element={<Summary />} />
+          <Route path="novo" element={<NewExpense />} />
+          <Route path="historico" element={<History />} />
+          <Route path="ajustes" element={<Settings />} />
+          <Route path="estatisticas" element={<Statistics />} />
+        </Route>
+        <Route path="/reset-pin/:token" element={<ResetPin />} />
+        <Route path="*" element={<NotFound />} />
+      </Routes>
+    </BrowserRouter>
   );
 };
 
