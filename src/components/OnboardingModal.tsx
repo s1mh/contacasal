@@ -3,7 +3,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } f
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { InputOTP, InputOTPGroup, InputOTPSlot, InputOTPSlotMasked } from '@/components/ui/input-otp';
-import { cn } from '@/lib/utils';
+import { cn, isConfiguredProfile } from '@/lib/utils';
 import { CAT_AVATARS, PERSON_COLORS } from '@/lib/constants';
 import { Profile } from '@/contexts/CoupleContext';
 import { Check, Heart, Sparkles, Lock, ArrowRight, ArrowLeft, Mail, SkipForward, AtSign, Loader2, Eye, EyeOff, PartyPopper } from 'lucide-react';
@@ -108,7 +108,7 @@ export function OnboardingModal({ open, onClose, onComplete, profiles, shareCode
   const [isTransitioning, setIsTransitioning] = useState(false);
 
   // Get the host profile name for welcome message (use prop or find from profiles)
-  const hostProfile = profiles.find(p => p.name !== 'Pessoa 1' && p.name !== 'Pessoa 2' && p.name !== 'Pessoa');
+  const hostProfile = profiles.find(isConfiguredProfile);
   const displayHostName = hostName || hostProfile?.name;
 
   // Update step when isNewMember changes

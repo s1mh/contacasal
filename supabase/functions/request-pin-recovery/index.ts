@@ -144,7 +144,7 @@ const handler = async (req: Request): Promise<Response> => {
     }
 
     // Build recovery URL origin
-    const origin = req.headers.get("origin") || "https://lovable.dev";
+    const origin = req.headers.get("origin") || "https://contadecasal.app";
 
     // Process each profile found
     for (const profile of profiles) {

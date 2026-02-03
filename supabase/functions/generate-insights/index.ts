@@ -71,10 +71,16 @@ serve(async (req) => {
     const profiles = profilesRes.data || [];
     const tags = tagsRes.data || [];
 
-    // Check learning progress
-    const uniqueDays = new Set(expenses.map(e => e.expense_date)).size;
-    const uniqueCategories = new Set(expenses.filter(e => e.tag_id).map(e => e.tag_id)).size;
-    const hasEnoughData = uniqueDays >= 7 && expenses.length >= 5 && uniqueCategories >= 2;
+    // Filter out installments > 1 to count purchases (not each installment)
+    // Only first installment or non-installment expenses count as unique purchases
+    const uniquePurchases = expenses.filter(e =>
+      !e.installment_number || e.installment_number === 1
+    );
+
+    // Check learning progress (using unique purchases, not individual installments)
+    const uniqueDays = new Set(uniquePurchases.map(e => e.expense_date)).size;
+    const uniqueCategories = new Set(uniquePurchases.filter(e => e.tag_id).map(e => e.tag_id)).size;
+    const hasEnoughData = uniqueDays >= 7 && uniquePurchases.length >= 5 && uniqueCategories >= 2;
 
     if (!hasEnoughData) {
       return new Response(JSON.stringify({
@@ -94,9 +100,12 @@ serve(async (req) => {
       });
     }
 
-    // Calculate spending data
+    // Calculate spending data (all expenses for amounts, but unique purchases for counts)
     const thisMonthExpenses = expenses.filter(e => e.expense_date >= startOfMonth);
-    const prevMonthExpenses = expenses.filter(e => 
+    const thisMonthPurchases = thisMonthExpenses.filter(e =>
+      !e.installment_number || e.installment_number === 1
+    );
+    const prevMonthExpenses = expenses.filter(e =>
       e.expense_date >= startOfPrevMonth && e.expense_date <= endOfPrevMonth
     );
 
@@ -148,7 +157,7 @@ Dados do casal:
 - Categorias mais usadas: ${topCategories.map(c => `${c.name} (R$ ${c.amount.toFixed(2)})`).join(', ')}
 - ${person1Name} pagou: R$ ${person1Paid.toFixed(2)} (${totalMonth > 0 ? ((person1Paid / totalMonth) * 100).toFixed(0) : 0}%)
 - ${person2Name} pagou: R$ ${person2Paid.toFixed(2)} (${totalMonth > 0 ? ((person2Paid / totalMonth) * 100).toFixed(0) : 0}%)
-- Total de ${thisMonthExpenses.length} gastos esse mês
+- Total de ${thisMonthPurchases.length} compras esse mês
 
 Gere 3 insights curtos (máx 80 caracteres cada) em português brasileiro.
 Seja amigável, use emojis, evite ser crítico demais. Personalize com os nomes.

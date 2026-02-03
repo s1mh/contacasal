@@ -8,7 +8,7 @@ import { Avatar } from '@/components/Avatar';
 import { TagPill } from '@/components/TagPill';
 import { Couple, useCoupleContext } from '@/contexts/CoupleContext';
 import { formatCurrency, SPLIT_TYPES } from '@/lib/constants';
-import { cn } from '@/lib/utils';
+import { cn, isConfiguredProfile } from '@/lib/utils';
 import { Slider } from '@/components/ui/slider';
 import { DatePickerField } from '@/components/DatePickerField';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
@@ -37,19 +37,13 @@ export default function NewExpense() {
   const [selectedCardId, setSelectedCardId] = useState<string | null>(null);
   const [installments, setInstallments] = useState(1);
 
-  // Check if profiles are configured (not default names)
-  const isConfigured = (p: { name: string }) => 
-    p.name !== 'Pessoa 1' && p.name !== 'Pessoa 2' && p.name !== 'Pessoa';
-  
   const person1 = couple.profiles.find(p => p.position === 1);
   const person2 = couple.profiles.find(p => p.position === 2);
-  
-  // Filter to only show configured profiles
-  const configuredProfiles = couple.profiles.filter(p => isConfigured(p));
-  
-  // Set paidBy to first configured profile
+
+  const configuredProfiles = couple.profiles.filter(isConfiguredProfile);
+
   const [paidBy, setPaidBy] = useState(() => {
-    const configured = couple.profiles.filter(p => isConfigured(p));
+    const configured = couple.profiles.filter(isConfiguredProfile);
     return configured.length > 0 ? configured[0].position : 1;
   });
   

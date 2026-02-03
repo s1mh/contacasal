@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { InputOTP, InputOTPGroup, InputOTPSlotMasked } from '@/components/ui/input-otp';
-import { cn } from '@/lib/utils';
+import { cn, isConfiguredProfile } from '@/lib/utils';
 import { CAT_AVATARS } from '@/lib/constants';
 import { Profile } from '@/contexts/CoupleContext';
 import { Heart, ArrowLeft, UserPlus, Lock, HelpCircle, Loader2 } from 'lucide-react';
@@ -27,10 +27,7 @@ export function ReconnectModal({ open, profiles, onReconnect, onCreateNew, share
   const [lockedUntil, setLockedUntil] = useState<string | null>(null);
   const [showRecovery, setShowRecovery] = useState(false);
 
-  // Filter only configured profiles (not default names)
-  const configuredProfiles = profiles.filter(p => 
-    p.name !== 'Pessoa 1' && p.name !== 'Pessoa 2' && p.name !== 'Pessoa'
-  );
+  const configuredProfiles = profiles.filter(isConfiguredProfile);
 
   const handleProfileSelect = (profile: Profile) => {
     setSelectedProfile(profile);

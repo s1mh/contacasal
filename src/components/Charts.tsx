@@ -2,6 +2,7 @@ import { useMemo } from 'react';
 import { PieChart, Pie, Cell, BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, LineChart, Line, Legend } from 'recharts';
 import { Expense, Profile, Tag } from '@/hooks/useCouple';
 import { formatCurrency } from '@/lib/constants';
+import { isConfiguredProfile } from '@/lib/utils';
 import { format, subMonths, startOfMonth, endOfMonth, isWithinInterval } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 
@@ -86,10 +87,7 @@ export function ExpensesByTagChart({ expenses, tags }: { expenses: Expense[]; ta
 
 export function ExpensesByPersonChart({ expenses, profiles }: { expenses: Expense[]; profiles: Profile[] }) {
   const data = useMemo(() => {
-    // Filter only configured profiles (not "Pessoa 1", "Pessoa 2", or "Pessoa")
-    const configuredProfiles = profiles.filter(p => 
-      p.name !== 'Pessoa 1' && p.name !== 'Pessoa 2' && p.name !== 'Pessoa'
-    );
+    const configuredProfiles = profiles.filter(isConfiguredProfile);
     
     const byPerson = configuredProfiles.map(profile => {
       const personExpenses = expenses.filter(e => e.paid_by === profile.position);

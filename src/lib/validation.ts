@@ -68,46 +68,23 @@ export const settlementSchema = z.object({
   couple_id: z.string().uuid(),
 });
 
-// Helper function for dev-only logging
-export const devLog = (message: string, error?: unknown) => {
+// Dev-only logging helper
+export const devLog = (message: string, data?: unknown) => {
   if (import.meta.env.DEV) {
-    console.error(message, error);
+    console.log(`[Auth] ${message}`, data ?? '');
   }
 };
 
-// Validate and return error message or null
-export const validateExpense = (data: unknown): string | null => {
-  const result = expenseSchema.safeParse(data);
-  if (result.success) return null;
-  return result.error.errors[0]?.message || 'Dados inválidos';
+// Generic validator factory
+const createValidator = <T>(schema: z.ZodType<T>) => (data: unknown): string | null => {
+  const result = schema.safeParse(data);
+  return result.success ? null : (result.error.errors[0]?.message || 'Dados inválidos');
 };
 
-export const validateProfile = (data: unknown): string | null => {
-  const result = profileSchema.safeParse(data);
-  if (result.success) return null;
-  return result.error.errors[0]?.message || 'Dados inválidos';
-};
-
-export const validateTag = (data: unknown): string | null => {
-  const result = tagSchema.safeParse(data);
-  if (result.success) return null;
-  return result.error.errors[0]?.message || 'Dados inválidos';
-};
-
-export const validateCard = (data: unknown): string | null => {
-  const result = cardSchema.safeParse(data);
-  if (result.success) return null;
-  return result.error.errors[0]?.message || 'Dados inválidos';
-};
-
-export const validateAgreement = (data: unknown): string | null => {
-  const result = agreementSchema.safeParse(data);
-  if (result.success) return null;
-  return result.error.errors[0]?.message || 'Dados inválidos';
-};
-
-export const validateSettlement = (data: unknown): string | null => {
-  const result = settlementSchema.safeParse(data);
-  if (result.success) return null;
-  return result.error.errors[0]?.message || 'Dados inválidos';
-};
+// Validators
+export const validateExpense = createValidator(expenseSchema);
+export const validateProfile = createValidator(profileSchema);
+export const validateTag = createValidator(tagSchema);
+export const validateCard = createValidator(cardSchema);
+export const validateAgreement = createValidator(agreementSchema);
+export const validateSettlement = createValidator(settlementSchema);

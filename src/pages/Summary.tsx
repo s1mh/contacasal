@@ -8,6 +8,7 @@ import { Couple, useCoupleContext } from '@/contexts/CoupleContext';
 import { useToast } from '@/hooks/use-toast';
 import { Button } from '@/components/ui/button';
 import { AIInsightsCard } from '@/components/AIInsightsCard';
+import { isConfiguredProfile } from '@/lib/utils';
 
 export default function Summary() {
   const { couple } = useOutletContext<{ couple: Couple }>();
@@ -17,11 +18,8 @@ export default function Summary() {
   const balance = calculateBalance();
 
   const recentExpenses = couple.expenses.slice(0, 5);
-  
-  // Only show profiles that have been configured (name !== "Pessoa 1" and "Pessoa 2")
-  const configuredProfiles = couple.profiles.filter(p => 
-    p.name !== 'Pessoa 1' && p.name !== 'Pessoa 2' && p.name !== 'Pessoa'
-  );
+
+  const configuredProfiles = couple.profiles.filter(isConfiguredProfile);
 
   const handleShare = async () => {
     const url = window.location.origin + `/c/${shareCode}`;
