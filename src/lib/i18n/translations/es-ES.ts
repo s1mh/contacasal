@@ -1,0 +1,213 @@
+export const esES = {
+  // Navigation
+  nav: {
+    summary: 'Resumen',
+    history: 'Historial',
+    stats: 'Stats',
+    settings: 'Ajustes',
+  },
+  
+  // Common
+  common: {
+    continue: 'Continuar',
+    back: 'Volver',
+    save: 'Guardar',
+    cancel: 'Cancelar',
+    delete: 'Eliminar',
+    edit: 'Editar',
+    add: 'Añadir',
+    share: 'Compartir',
+    copy: 'Copiar',
+    loading: 'Cargando...',
+    error: 'Error',
+    success: 'Éxito',
+    you: 'tú',
+    or: 'o',
+    skip: 'Omitir',
+    confirm: 'Confirmar',
+  },
+
+  // Onboarding
+  onboarding: {
+    welcome: '¡Bienvenido!',
+    invitedBy: '{name} te invitó a compartir gastos',
+    createProfile: 'Crear mi perfil',
+    profileTitle: '¡Hola! Crea tu perfil',
+    profileDesc: 'Personaliza cómo aparecerás en la app',
+    preferencesTitle: 'Elige idioma y moneda',
+    preferencesDesc: 'Define cómo se mostrarán valores y fechas',
+    pinTitle: 'Crea tu código',
+    pinDesc: 'Código de 4 dígitos para entrar en otros dispositivos',
+    emailTitle: 'Añade tu email',
+    emailDesc: 'Para recuperar tu código si lo olvidas (opcional)',
+    yourName: 'Tu nombre',
+    namePlaceholder: '¿Cómo quieres que te llamemos?',
+    chooseAvatar: 'Elige tu avatar',
+    chooseColor: 'Tu color',
+    language: 'Idioma',
+    currency: 'Moneda',
+    createPin: 'Crea un código personal',
+    pinWeak: 'Código muy débil',
+    pinCommon: 'Este código es muy común',
+    pinSequence: 'Evita secuencias simples',
+    pinSameDigits: 'No uses 4 dígitos iguales',
+    email: 'Email',
+    emailPlaceholder: 'tu@email.com',
+    emailOptional: 'opcional',
+    emailInvalid: 'Email inválido',
+    emailExists: 'Este email ya está registrado',
+    skipEmail: 'Omitir',
+    finalize: 'Finalizar',
+    shareExpenses: '¡Podrán dividir gastos, seguir los gastos y mantener todo organizado juntos! 💕',
+    generatingUsername: 'Generando tu @...',
+    compliments: [
+      "¡Qué nombre tan bonito! 💕",
+      "¡Adorable! ✨",
+      "¡Me encanta ese nombre! 🌟",
+      "¡Te queda bien! 💫",
+      "¡Muy lindo! 🥰",
+      "¡Perfecto! 💝",
+    ],
+  },
+
+  // Summary page
+  summary: {
+    currentBalance: 'Equilibrio actual',
+    allBalanced: '¡Todo equilibrado!',
+    youAreEven: 'Están al día',
+    keepRegistering: 'Sigue registrando para mantener el equilibrio 💕',
+    owes: '{name} debe',
+    to: 'a',
+    recentExpenses: 'Gastos recientes',
+    noExpenses: 'Sin gastos aún',
+    tapToAdd: 'Toca + para añadir',
+    settle: 'Saldar',
+  },
+
+  // Expenses
+  expenses: {
+    newExpense: 'Nuevo gasto',
+    editExpense: 'Editar gasto',
+    description: 'Descripción',
+    amount: 'Monto',
+    date: 'Fecha',
+    paidBy: 'Pagado por',
+    splitType: 'División',
+    splitEqual: '50/50',
+    splitCustom: 'Personalizado',
+    splitFull: 'Solo uno paga',
+    category: 'Categoría',
+    paymentMethod: 'Forma de pago',
+    installments: 'Cuotas',
+    inCash: 'Al contado',
+    delete: 'Eliminar gasto',
+    deleteConfirm: '¿Estás seguro de que deseas eliminar este gasto?',
+    history: 'Historial',
+    noHistory: 'Sin gastos registrados',
+    filter: 'Filtrar',
+    export: 'Exportar',
+  },
+
+  // Statistics
+  stats: {
+    title: 'Estadísticas',
+    period: 'Período',
+    thisMonth: 'Este mes',
+    lastMonth: 'Mes pasado',
+    last3Months: 'Últimos 3 meses',
+    thisYear: 'Este año',
+    total: 'Total',
+    average: 'Promedio',
+    byCategory: 'Por categoría',
+    byPerson: 'Por persona',
+    trend: 'Tendencia',
+  },
+
+  // Settings
+  settings: {
+    title: 'Mi Perfil',
+    myData: 'Mis datos',
+    chooseAvatar: 'Elige tu gatito',
+    name: 'Nombre',
+    username: 'Tu @',
+    tapToEdit: 'toca para editar',
+    color: 'Color',
+    preferences: 'Preferencias',
+    language: 'Idioma',
+    currency: 'Moneda',
+    categories: 'Categorías',
+    categoryName: 'Nombre de categoría',
+    icon: 'Ícono',
+    addCategory: 'Añadir categoría',
+    members: 'Miembros',
+    shareCode: 'Código de invitación',
+    regenerateCode: 'Regenerar código',
+    logout: 'Salir',
+    logoutConfirm: 'Salir del espacio',
+    logoutDesc: 'Puedes volver en cualquier momento usando tu código y PIN.',
+    deleteProfile: 'Eliminar mi perfil',
+    deleteProfileConfirm: '¿Eliminar perfil permanentemente?',
+    deleteProfileDesc: 'Esta acción no se puede deshacer. Todos tus datos serán eliminados.',
+    admin: 'Admin',
+    member: 'Miembro',
+    manageMember: 'Gestionar miembro',
+    removeFromSpace: 'Eliminar del espacio',
+    makeAdmin: 'Hacer admin',
+    removeAdmin: 'Quitar admin',
+  },
+
+  // AI Insights
+  ai: {
+    title: 'Todavía estoy aprendiendo...',
+    needMoreData: 'Necesito unos días más para entender tus patrones y dar consejos útiles.',
+    daysWithExpenses: 'Días con gastos',
+    registeredExpenses: 'Gastos registrados',
+  },
+
+  // Toasts
+  toast: {
+    copied: '¡Copiado! 📋',
+    shareWithAnyone: 'Comparte con quien quieras',
+    codeRegenerated: '¡Código regenerado! 🔄',
+    newCodeGenerated: 'Nuevo código de compartir generado',
+    goodbye: '¡Hasta luego! 👋',
+    comeBackAnytime: 'Vuelve cuando quieras con tu código',
+    somethingWrong: '¡Ups! Algo salió mal 😕',
+    noPermission: 'Sin permiso',
+    onlyAdmins: 'Solo los administradores pueden hacer esto',
+    preferencesUpdated: '¡Preferencias actualizadas! ✨',
+  },
+
+  // Languages
+  languages: {
+    'pt-BR': '🇧🇷 Português (Brasil)',
+    'en-US': '🇺🇸 English (US)',
+    'es-ES': '🇪🇸 Español',
+  },
+
+  // Currencies
+  currencies: {
+    BRL: 'R$ Real Brasileño',
+    USD: '$ Dólar USD',
+    EUR: '€ Euro',
+  },
+
+  // Create Space
+  createSpace: {
+    title: 'Crear nuevo espacio',
+    subtitle: 'Un lugar para ti y quien quieras',
+    spaceName: 'Nombre del espacio',
+    spaceNamePlaceholder: 'Ej.: Casa, Viaje, etc.',
+  },
+
+  // Index/Home
+  home: {
+    welcome: 'Bienvenido a ContaCasal',
+    subtitle: 'Divide gastos de forma simple y justa',
+    createNewSpace: 'Crear nuevo espacio',
+    orEnterCode: 'o ingresa el código de invitación',
+    enterCode: 'Ingresa el código',
+    join: 'Entrar',
+    invalidCode: 'Código inválido',
+  },
+};
