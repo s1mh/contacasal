@@ -67,28 +67,28 @@ function AgreementForm({
   onSplitChange,
   onSubmit,
 }: AgreementFormProps) {
-  const { t } = usePreferences();
+  const { t: prefT } = usePreferences();
   return (
     <div className="space-y-4 py-4">
       <div className="space-y-2">
-        <Label>{t('Nome do acordo')}</Label>
+        <Label>{prefT('Nome do acordo')}</Label>
         <Input
           value={name}
           onChange={(e) => onNameChange(e.target.value)}
-          placeholder={t('Ex: Aluguel, Internet...')}
+          placeholder={prefT('Ex: Aluguel, Internet...')}
         />
       </div>
 
       <div className="grid grid-cols-2 gap-4">
         <div className="space-y-2">
-          <Label>{t('Valor')}</Label>
+          <Label>{prefT('Valor')}</Label>
           <CurrencyInput
             value={amount}
             onChange={onAmountChange}
           />
         </div>
         <div className="space-y-2">
-          <Label>{t('Dia do mês')}</Label>
+          <Label>{prefT('Dia do mês')}</Label>
           <Input
             type="number"
             inputMode="numeric"
@@ -101,7 +101,7 @@ function AgreementForm({
       </div>
 
       <div className="space-y-2">
-        <Label>{t('Quem paga')}</Label>
+        <Label>{prefT('Quem paga')}</Label>
         <Select value={paidBy.toString()} onValueChange={(v) => onPaidByChange(parseInt(v))}>
           <SelectTrigger>
             <SelectValue />
@@ -117,10 +117,10 @@ function AgreementForm({
       </div>
 
       <div className="space-y-2">
-        <Label>{t('Categoria')}</Label>
+        <Label>{prefT('Categoria')}</Label>
         <Select value={tagId} onValueChange={onTagChange}>
           <SelectTrigger>
-          <SelectValue placeholder={t('Selecione...')} />
+          <SelectValue placeholder={prefT('Selecione...')} />
           </SelectTrigger>
           <SelectContent>
             {tags.map((tag) => (
@@ -133,7 +133,7 @@ function AgreementForm({
       </div>
 
       <div className="space-y-3">
-        <Label>{t('Divisão')}</Label>
+        <Label>{prefT('Divisão')}</Label>
         <div className="flex items-center justify-between px-2">
           <span className="text-sm" style={{ color: person1Color }}>
             {person1Name}: {splitPerson1}%
@@ -159,8 +159,8 @@ function AgreementForm({
         className="w-full"
       >
         {isLoading
-          ? (isEditing ? t('Salvando...') : t('Criando...'))
-          : (isEditing ? t('Salvar Alterações') : t('Criar Acordo'))}
+          ? (isEditing ? prefT('Salvando...') : prefT('Criando...'))
+          : (isEditing ? prefT('Salvar Alterações') : prefT('Criar Acordo'))}
       </Button>
     </div>
   );
@@ -175,7 +175,7 @@ export function AgreementManager({
   onDeleteAgreement,
   coupleId 
 }: AgreementManagerProps) {
-  const { t } = usePreferences();
+  const { t: prefT } = usePreferences();
   const [isOpen, setIsOpen] = useState(false);
   const [editingAgreement, setEditingAgreement] = useState<Agreement | null>(null);
   const [name, setName] = useState('');
@@ -263,18 +263,18 @@ export function AgreementManager({
       <div className="flex items-center justify-between">
         <h3 className="text-[10px] sm:text-xs font-medium text-muted-foreground flex items-center gap-1">
           <RefreshCw className="w-3 h-3 sm:w-3.5 sm:h-3.5" />
-          {t('Acordos Recorrentes')}
+          {prefT('Acordos Recorrentes')}
         </h3>
         <Dialog open={isOpen} onOpenChange={setIsOpen}>
           <DialogTrigger asChild>
             <Button size="sm" className="h-6 sm:h-7 text-[10px] sm:text-xs px-2">
               <Plus className="w-3 h-3 sm:w-3.5 sm:h-3.5 mr-1" />
-              {t('Novo Acordo')}
+              {prefT('Novo Acordo')}
             </Button>
           </DialogTrigger>
           <DialogContent>
             <DialogHeader>
-              <DialogTitle>{t('Novo Acordo Recorrente')}</DialogTitle>
+              <DialogTitle>{prefT('Novo Acordo Recorrente')}</DialogTitle>
             </DialogHeader>
             <AgreementForm
               name={name}
@@ -304,7 +304,7 @@ export function AgreementManager({
 
       {agreements.length === 0 ? (
         <p className="text-[10px] sm:text-xs text-muted-foreground text-center py-2">
-          {t('Nenhum acordo cadastrado. Acordos facilitam gastos recorrentes.')}
+          {prefT('Nenhum acordo cadastrado. Acordos facilitam gastos recorrentes.')}
         </p>
       ) : (
         <div className="space-y-1.5 sm:space-y-2">
@@ -334,7 +334,7 @@ export function AgreementManager({
                       {formatCurrency(agreement.amount)}
                     </p>
                     <p className="text-[9px] sm:text-[10px] text-muted-foreground">
-                      {t('Dia {day}', { day: agreement.day_of_month })} • {payer?.name} • {agreement.split_value.person1}%/{agreement.split_value.person2}%
+                      {prefT('Dia {day}', { day: agreement.day_of_month })} • {payer?.name} • {agreement.split_value.person1}%/{agreement.split_value.person2}%
                     </p>
                   </div>
                   <div className="flex items-center gap-0.5 sm:gap-1 flex-shrink-0">
@@ -385,7 +385,7 @@ export function AgreementManager({
       }}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>{t('Editar Acordo')}</DialogTitle>
+            <DialogTitle>{prefT('Editar Acordo')}</DialogTitle>
           </DialogHeader>
           <AgreementForm
             name={name}

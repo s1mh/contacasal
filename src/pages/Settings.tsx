@@ -36,7 +36,7 @@ export default function Settings() {
   } = useCoupleContext();
   const { shareCode } = useParams();
   const { toast } = useToast();
-  const { t } = usePreferences();
+  const { t: prefT } = usePreferences();
   const [regeneratingCode, setRegeneratingCode] = useState(false);
 
   const [editingName, setEditingName] = useState(false);
@@ -108,7 +108,7 @@ export default function Settings() {
       });
 
       if (data?.exists) {
-        setUsernameError(t('Este username já está em uso'));
+        setUsernameError(prefT('Este username já está em uso'));
         return;
       }
 
@@ -117,7 +117,7 @@ export default function Settings() {
       setUsernameValue('');
     } catch (err) {
       console.error('Error updating username:', err);
-      setUsernameError(t('Erro ao verificar username'));
+      setUsernameError(prefT('Erro ao verificar username'));
     } finally {
       setCheckingUsername(false);
     }
@@ -139,16 +139,16 @@ export default function Settings() {
   const handleCopyCode = () => {
     navigator.clipboard.writeText(couple.share_code || shareCode || '');
     toast({ 
-      title: t('Copiado! 📋'),
-      description: t('Compartilhe com quem você quiser')
+      title: prefT('Copiado! 📋'),
+      description: prefT('Compartilhe com quem você quiser')
     });
   };
 
   const handleRegenerateCode = async () => {
     if (!myProfile || !isAdmin(myProfile.id)) {
       toast({ 
-        title: t('Sem permissão'),
-        description: t('Apenas administradores podem regenerar o código'),
+        title: prefT('Sem permissão'),
+        description: prefT('Apenas administradores podem regenerar o código'),
         variant: 'destructive'
       });
       return;
@@ -161,16 +161,16 @@ export default function Settings() {
       
       if (data?.success) {
         toast({ 
-          title: t('Código regenerado! 🔄'),
-          description: t('Novo código de compartilhamento gerado')
+          title: prefT('Código regenerado! 🔄'),
+          description: prefT('Novo código de compartilhamento gerado')
         });
         await refetch();
       }
     } catch (err) {
       console.error('Error regenerating code:', err);
       toast({ 
-        title: t('Ops! Algo deu errado 😕'),
-        description: t('Não foi possível regenerar o código'),
+        title: prefT('Ops! Algo deu errado 😕'),
+        description: prefT('Não foi possível regenerar o código'),
         variant: 'destructive'
       });
     } finally {
@@ -182,8 +182,8 @@ export default function Settings() {
     if (shareCode) {
       localStorage.removeItem(`couple_${shareCode}`);
       toast({ 
-        title: t('Até logo! 👋'),
-        description: t('Volte quando quiser com seu código')
+        title: prefT('Até logo! 👋'),
+        description: prefT('Volte quando quiser com seu código')
       });
       navigate('/');
     }
@@ -201,15 +201,15 @@ export default function Settings() {
   if (!myProfile) {
     return (
       <div className="p-4 safe-top">
-        <h1 className="text-xl font-semibold mb-6">{t('Ajustes')}</h1>
-        <p className="text-muted-foreground">{t('Perfil não encontrado. Complete o onboarding primeiro.')}</p>
+        <h1 className="text-xl font-semibold mb-6">{prefT('Ajustes')}</h1>
+        <p className="text-muted-foreground">{prefT('Perfil não encontrado. Complete o onboarding primeiro.')}</p>
       </div>
     );
   }
 
   return (
     <AnimatedPage className="p-4 safe-top space-y-4">
-      <h1 className="text-xl font-semibold mb-6">{t('Meu Perfil')}</h1>
+      <h1 className="text-xl font-semibold mb-6">{prefT('Meu Perfil')}</h1>
 
       {/* My Profile */}
       <AnimatedItem delay={0}>
@@ -217,7 +217,7 @@ export default function Settings() {
           <div className="flex items-center gap-3 mb-4">
             <User className="w-4 h-4 text-muted-foreground" />
             <span className="text-sm font-medium text-muted-foreground">
-              {t('Meus dados')}
+              {prefT('Meus dados')}
             </span>
           </div>
 
@@ -225,7 +225,7 @@ export default function Settings() {
           <div className="flex items-center gap-4 mb-4">
             <Avatar avatarIndex={myProfile.avatar_index} size="xl" ringColor={myProfile.color} />
             <div className="flex-1">
-              <p className="text-sm text-muted-foreground mb-2">{t('Escolha o gatinho')}</p>
+              <p className="text-sm text-muted-foreground mb-2">{prefT('Escolha o gatinho')}</p>
               <div className="flex gap-2 flex-wrap">
                 {CAT_AVATARS.map((_, idx) => (
                   <button
@@ -245,7 +245,7 @@ export default function Settings() {
 
           {/* Name */}
           <div className="mb-4">
-            <label className="text-sm text-muted-foreground mb-2 block">{t('Nome')}</label>
+            <label className="text-sm text-muted-foreground mb-2 block">{prefT('Nome')}</label>
             {editingName ? (
               <div className="flex gap-2">
                 <Input
@@ -281,7 +281,7 @@ export default function Settings() {
           {/* Username - Editable */}
           <div className="mb-4">
             <label className="text-sm text-muted-foreground mb-2 block flex items-center gap-2">
-              <AtSign className="w-4 h-4" /> {t('Seu @')} <span className="text-xs font-normal">({t('toque para editar')})</span>
+              <AtSign className="w-4 h-4" /> {prefT('Seu @')} <span className="text-xs font-normal">({prefT('toque para editar')})</span>
             </label>
             {editingUsername ? (
               <div className="flex gap-2">
@@ -322,7 +322,7 @@ export default function Settings() {
                 }}
                 className="w-full text-left p-3 bg-muted/50 rounded-2xl hover:bg-muted/80 transition-colors border-2 border-transparent hover:border-primary/30"
               >
-                <span className="font-mono text-foreground">@{myProfile.username || t('Clique para definir')}</span>
+                <span className="font-mono text-foreground">@{myProfile.username || prefT('Clique para definir')}</span>
               </button>
             )}
             {usernameError && <p className="text-xs text-destructive mt-1">{usernameError}</p>}
@@ -331,7 +331,7 @@ export default function Settings() {
           {/* Color */}
           <div>
             <label className="text-sm text-muted-foreground mb-2 block flex items-center gap-2">
-              <Palette className="w-4 h-4" /> {t('Cor')}
+              <Palette className="w-4 h-4" /> {prefT('Cor')}
             </label>
             <div className="flex gap-2 flex-wrap">
               {PERSON_COLORS.map((color) => (
@@ -434,7 +434,7 @@ export default function Settings() {
           <div className="flex items-center justify-between mb-4">
             <div className="flex items-center gap-2">
               <Tag className="w-4 h-4 text-muted-foreground" />
-              <span className="text-sm font-medium text-muted-foreground">{t('Categorias')}</span>
+              <span className="text-sm font-medium text-muted-foreground">{prefT('Categorias')}</span>
             </div>
             <Button
               size="sm"
@@ -452,11 +452,11 @@ export default function Settings() {
               <Input
                 value={newTagName}
                 onChange={(e) => setNewTagName(e.target.value)}
-                placeholder={t('Nome da categoria')}
+                placeholder={prefT('Nome da categoria')}
                 className="mb-3"
               />
               <div className="flex items-center gap-2 mb-3">
-                <span className="text-xs text-muted-foreground">{t('Ícone')}:</span>
+                <span className="text-xs text-muted-foreground">{prefT('Ícone')}:</span>
                 <div className="flex gap-1 flex-wrap">
                   {Object.keys(TAG_ICONS).map((icon) => (
                     <button
@@ -473,7 +473,7 @@ export default function Settings() {
                 </div>
               </div>
               <div className="flex items-center gap-2 mb-3">
-                <span className="text-xs text-muted-foreground">{t('Cor')}:</span>
+                <span className="text-xs text-muted-foreground">{prefT('Cor')}:</span>
                 <div className="flex gap-1">
                   {['#F59E0B', '#3B82F6', '#EF4444', '#8B5CF6', '#06B6D4', '#10B981'].map((color) => (
                     <button
@@ -493,7 +493,7 @@ export default function Settings() {
                 disabled={!newTagName.trim()}
                 className="w-full"
               >
-                {t('Adicionar categoria')}
+                {prefT('Adicionar categoria')}
               </Button>
             </div>
           )}
@@ -524,7 +524,7 @@ export default function Settings() {
           <div className="flex items-center gap-2 mb-4">
             <Users className="w-4 h-4 text-muted-foreground" />
             <span className="text-sm font-medium text-muted-foreground">
-              {t('Membros')} ({couple.profiles.filter(isConfiguredProfile).length}/{couple.max_members || 5})
+              {prefT('Membros')} ({couple.profiles.filter(isConfiguredProfile).length}/{couple.max_members || 5})
             </span>
           </div>
 
@@ -538,7 +538,7 @@ export default function Settings() {
                     <div className="flex items-center gap-2">
                       <span className="font-medium">{profile.name}</span>
                       {profile.id === myProfile?.id && (
-                        <span className="text-xs text-muted-foreground">({t('você')})</span>
+                        <span className="text-xs text-muted-foreground">({prefT('você')})</span>
                       )}
                       {isAdmin(profile.id) && (
                         <Crown className="w-4 h-4 text-amber-500" />
@@ -555,7 +555,7 @@ export default function Settings() {
           {/* Note: Use Settings to manage member roles */}
           {myProfile && isAdmin(myProfile.id) && (
             <p className="text-xs text-muted-foreground mt-4 text-center">
-              {t('Para gerenciar membros, use os ajustes do espaço')}
+              {prefT('Para gerenciar membros, use os ajustes do espaço')}
             </p>
           )}
         </div>
@@ -566,17 +566,17 @@ export default function Settings() {
         <div className="bg-muted/50 rounded-2xl p-4 border-2 border-border/30">
           <div className="flex items-center justify-between mb-2">
             <div>
-              <p className="text-xs text-muted-foreground mb-1">{t('Código do espaço')}</p>
+              <p className="text-xs text-muted-foreground mb-1">{prefT('Código do espaço')}</p>
               <p className="font-mono text-lg font-semibold">{couple.share_code}</p>
               <p className="text-xs text-muted-foreground mt-1">
-                {t('Compartilhe para convidar pessoas (máx. 5)')}
+                {prefT('Compartilhe para convidar pessoas (máx. 5)')}
               </p>
             </div>
             <div className="flex gap-1">
               <button
                 onClick={handleCopyCode}
                 className="p-3 hover:bg-background rounded-xl transition-colors"
-                title={t('Copiar código')}
+                title={prefT('Copiar código')}
               >
                 <Copy className="w-5 h-5 text-muted-foreground" />
               </button>
@@ -585,7 +585,7 @@ export default function Settings() {
                   onClick={handleRegenerateCode}
                   disabled={regeneratingCode}
                   className="p-3 hover:bg-background rounded-xl transition-colors disabled:opacity-50"
-                  title={t('Regenerar código')}
+                  title={prefT('Regenerar código')}
                 >
                   <RefreshCw className={cn("w-5 h-5 text-muted-foreground", regeneratingCode && "animate-spin")} />
                 </button>
@@ -603,7 +603,7 @@ export default function Settings() {
           className="w-full text-muted-foreground hover:text-foreground"
         >
           <LogOut className="w-4 h-4 mr-2" />
-          {t('Sair deste dispositivo')}
+          {prefT('Sair deste dispositivo')}
         </Button>
       </AnimatedItem>
 
@@ -616,21 +616,21 @@ export default function Settings() {
               className="w-full text-destructive hover:text-destructive hover:bg-destructive/10"
             >
               <UserX className="w-4 h-4 mr-2" />
-              {t('Excluir meu perfil')}
+              {prefT('Excluir meu perfil')}
             </Button>
           </AlertDialogTrigger>
           <AlertDialogContent>
             <AlertDialogHeader>
-              <AlertDialogTitle>{t('⚠️ Excluir perfil permanentemente?')}</AlertDialogTitle>
+              <AlertDialogTitle>{prefT('⚠️ Excluir perfil permanentemente?')}</AlertDialogTitle>
               <AlertDialogDescription>
-                {t('Seu perfil será resetado para os valores padrão e você perderá suas configurações pessoais.')}{' '}
-                {t('Seus gastos serão mantidos no histórico do casal.')}
+                {prefT('Seu perfil será resetado para os valores padrão e você perderá suas configurações pessoais.')}{' '}
+                {prefT('Seus gastos serão mantidos no histórico do casal.')}
               </AlertDialogDescription>
             </AlertDialogHeader>
             <AlertDialogFooter>
-              <AlertDialogCancel>{t('Cancelar')}</AlertDialogCancel>
+              <AlertDialogCancel>{prefT('Cancelar')}</AlertDialogCancel>
               <AlertDialogAction onClick={handleDeleteProfile} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
-                {t('Excluir perfil')}
+                {prefT('Excluir perfil')}
               </AlertDialogAction>
             </AlertDialogFooter>
           </AlertDialogContent>

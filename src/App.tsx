@@ -19,9 +19,9 @@ import NotFound from "./pages/NotFound";
 const queryClient = new QueryClient();
 
 const AppRoutes = () => {
-  const { locale } = usePreferences();
+  const { locale: prefLocale } = usePreferences();
   return (
-    <div key={locale} className="transition-opacity duration-300">
+    <div key={prefLocale} className="transition-opacity duration-300">
       <BrowserRouter>
         <Routes>
           <Route path="/" element={<Index />} />

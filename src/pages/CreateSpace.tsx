@@ -10,7 +10,10 @@ import { CAT_AVATARS, PERSON_COLORS } from '@/lib/constants';
 import { Check, Heart, Sparkles, Lock, ArrowRight, ArrowLeft, Mail, SkipForward, AtSign, Loader2, Eye, EyeOff, Globe } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
-import { getActivePreferences, SupportedCurrency, SupportedLocale } from '@/lib/preferences';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { usePreferences } from '@/contexts/PreferencesContext';
+import { SupportedCurrency } from '@/lib/preferences';
+
 // Validation functions
 const isValidName = (name: string): boolean => {
   if (!name.trim()) return false;
@@ -52,19 +55,10 @@ const isWeakPin = (pin: string): { weak: boolean; reason?: string } => {
   return { weak: false };
 };
 
-const NAME_COMPLIMENTS = [
-  "Que nome lindo! 💕",
-  "Adorável! ✨",
-  "Amei esse nome! 🌟",
-  "Combina com você! 💫",
-  "Muito fofo! 🥰",
-  "Perfeito! 💝",
-];
-
 export default function CreateSpace() {
   const navigate = useNavigate();
   const { toast } = useToast();
-  const activePreferences = getActivePreferences();
+  const { locale: prefLocale, currency, setLocale, setCurrency, t: prefT } = usePreferences();
   
   const [step, setStep] = useState<'profile' | 'preferences' | 'pin' | 'email'>('profile');
   const [name, setName] = useState('');
@@ -83,8 +77,17 @@ export default function CreateSpace() {
   const [compliment, setCompliment] = useState('');
   const [showCompliment, setShowCompliment] = useState(false);
   const [creating, setCreating] = useState(false);
-  const [preferredLocale, setPreferredLocale] = useState<SupportedLocale>(activePreferences.locale);
-  const [preferredCurrency, setPreferredCurrency] = useState<SupportedCurrency>(activePreferences.currency);
+  const [preferredLocale, setPreferredLocale] = useState(prefLocale);
+  const [preferredCurrency, setPreferredCurrency] = useState<SupportedCurrency>(currency);
+  const [isLocaleTransitioning, setIsLocaleTransitioning] = useState(false);
+  const nameCompliments = [
+    prefT('Que nome lindo! 💕'),
+    prefT('Adorável! ✨'),
+    prefT('Amei esse nome! 🌟'),
+    prefT('Combina com você! 💫'),
+    prefT('Muito fofo! 🥰'),
+    prefT('Perfeito! 💝'),
+  ];
 
   const handleNameChange = (value: string) => {
     const cleanedValue = value.replace(/[^a-zA-ZÀ-ÿ\s'-]/g, '');
@@ -95,7 +98,7 @@ export default function CreateSpace() {
   // Show compliment after typing
   const handleNameBlur = () => {
     if (isValidName(name) && looksLikeName(name)) {
-      const randomCompliment = NAME_COMPLIMENTS[Math.floor(Math.random() * NAME_COMPLIMENTS.length)];
+      const randomCompliment = nameCompliments[Math.floor(Math.random() * nameCompliments.length)];
       setCompliment(randomCompliment);
       setShowCompliment(true);
     }
@@ -127,7 +130,7 @@ export default function CreateSpace() {
         body: { username: usernameToCheck.trim() }
       });
       if (data?.exists) {
-        setUsernameError('Este username já está em uso');
+        setUsernameError(prefT('Este username já está em uso'));
       }
     } catch (err) {
       console.error('Error checking username:', err);
@@ -142,11 +145,21 @@ export default function CreateSpace() {
     }
   };
 
+  const handleLocaleChange = (value: string) => {
+    const newLocale = value as typeof prefLocale;
+    setIsLocaleTransitioning(true);
+    setPreferredLocale(newLocale);
+    setLocale(newLocale);
+    setTimeout(() => setIsLocaleTransitioning(false), 200);
+  };
+
+  const handleCurrencyChange = (value: string) => {
+    const newCurrency = value as SupportedCurrency;
+    setPreferredCurrency(newCurrency);
+    setCurrency(newCurrency);
+  };
+
   const handlePreferencesNext = () => {
-    localStorage.setItem('app_preferences', JSON.stringify({
-      locale: preferredLocale,
-      currency: preferredCurrency,
-    }));
     setStep('pin');
     generateUsername();
   };
@@ -157,7 +170,7 @@ export default function CreateSpace() {
     if (value.length === 4) {
       const weakCheck = isWeakPin(value);
       if (weakCheck.weak) {
-        setPinError(weakCheck.reason || 'Código muito fraco');
+        setPinError(weakCheck.reason ? prefT(weakCheck.reason) : prefT('Código muito fraco'));
       }
     }
   };
@@ -166,7 +179,7 @@ export default function CreateSpace() {
     if (pinCode.length === 4) {
       const weakCheck = isWeakPin(pinCode);
       if (weakCheck.weak) {
-        setPinError(weakCheck.reason || 'Código muito fraco');
+        setPinError(weakCheck.reason ? prefT(weakCheck.reason) : prefT('Código muito fraco'));
         return;
       }
       setStep('email');
@@ -175,7 +188,7 @@ export default function CreateSpace() {
 
   const handleComplete = async () => {
     if (email.trim() && !isValidEmail(email)) {
-      setEmailError('E-mail inválido');
+      setEmailError(prefT('E-mail inválido'));
       return;
     }
 
@@ -197,7 +210,7 @@ export default function CreateSpace() {
       });
 
       if (error || !data?.success || !data?.share_code) {
-        throw new Error(data?.error || 'Falha ao criar espaço');
+        throw new Error(data?.error || prefT('Falha ao criar espaço'));
       }
 
       const shareCode = data.share_code;
@@ -253,16 +266,18 @@ export default function CreateSpace() {
       }
 
       toast({
-        title: 'Espaço criado! 🎉',
-        description: username ? `Seu @ é @${username}` : 'Seu cantinho está pronto'
+        title: prefT('Espaço criado! 🎉'),
+        description: username
+          ? prefT('Seu @ é @{username}', { username })
+          : prefT('Seu cantinho está pronto')
       });
 
       navigate(`/c/${shareCode}`);
     } catch (err) {
       console.error('Error creating space:', err);
       toast({
-        title: 'Erro ao criar espaço',
-        description: 'Tente novamente',
+        title: prefT('Erro ao criar espaço'),
+        description: prefT('Tente novamente'),
         variant: 'destructive'
       });
     } finally {
@@ -301,36 +316,43 @@ export default function CreateSpace() {
         <DialogContent className="sm:max-w-md overflow-hidden">
           <DialogHeader>
             <DialogTitle className="text-center flex items-center justify-center gap-2 animate-fade-in">
-              {step === 'preferences' ? (
-                <Globe className="w-5 h-5 text-primary" />
-              ) : (
-                <Heart className="w-5 h-5 text-primary animate-pulse" />
-              )}
-              {step === 'profile' ? 'Crie seu perfil' : step === 'preferences' ? 'Escolha idioma e moeda' : step === 'pin' ? 'Crie seu código' : 'Adicione seu e-mail'}
+              <Heart className="w-5 h-5 text-primary animate-pulse" />
+              {step === 'profile'
+                ? prefT('Crie seu perfil')
+                : step === 'preferences'
+                ? prefT('Escolha idioma e moeda')
+                : step === 'pin'
+                ? prefT('Crie seu código')
+                : prefT('Adicione seu e-mail')}
             </DialogTitle>
             <DialogDescription className="text-center animate-fade-in">
               {step === 'profile' 
-                ? 'Personalize como você aparecerá no app'
+                ? prefT('Personalize como você aparecerá no app')
                 : step === 'preferences'
-                ? 'Defina como valores e datas serão exibidos'
+                ? prefT('Defina como valores e datas serão exibidos')
                 : step === 'pin'
-                ? 'Código de 4 dígitos para entrar em outros dispositivos'
-                : 'Para recuperar seu código se esquecer (opcional)'
+                ? prefT('Código de 4 dígitos para entrar em outros dispositivos')
+                : prefT('Para recuperar seu código se esquecer (opcional)')
               }
             </DialogDescription>
           </DialogHeader>
 
-          <div className="space-y-6 py-4">
+          <div
+            className={cn(
+              "space-y-6 py-4 transition-opacity duration-300",
+              isLocaleTransitioning && "opacity-0"
+            )}
+          >
             {step === 'profile' ? (
               <>
                 {/* Name Input */}
                 <div className="space-y-2 animate-fade-in">
-                  <label className="text-sm font-medium text-muted-foreground">Seu nome</label>
+                  <label className="text-sm font-medium text-muted-foreground">{prefT('Seu nome')}</label>
                   <Input
                     value={name}
                     onChange={(e) => handleNameChange(e.target.value)}
                     onBlur={handleNameBlur}
-                    placeholder="Como você quer ser chamado(a)?"
+                    placeholder={prefT('Como você quer ser chamado(a)?')}
                     className="text-center text-lg"
                     autoFocus
                     maxLength={20}
@@ -345,7 +367,7 @@ export default function CreateSpace() {
 
                 {/* Avatar Selection */}
                 <div className="space-y-2 animate-fade-in">
-                  <label className="text-sm font-medium text-muted-foreground">Escolha seu gatinho</label>
+                  <label className="text-sm font-medium text-muted-foreground">{prefT('Escolha seu gatinho')}</label>
                   <div className="grid grid-cols-4 gap-3">
                     {CAT_AVATARS.map((avatar, index) => (
                       <button
@@ -371,7 +393,7 @@ export default function CreateSpace() {
 
                 {/* Color Selection */}
                 <div className="space-y-2 animate-fade-in">
-                  <label className="text-sm font-medium text-muted-foreground">Sua cor</label>
+                  <label className="text-sm font-medium text-muted-foreground">{prefT('Sua cor')}</label>
                   <div className="flex gap-2 justify-center flex-wrap">
                     {PERSON_COLORS.map((c) => (
                       <button
@@ -398,7 +420,7 @@ export default function CreateSpace() {
                   >
                     <img src={CAT_AVATARS[avatarIndex - 1]} alt="Preview" className="w-full h-full object-cover" />
                   </div>
-                  <span className="font-semibold text-lg">{name.trim() || 'Seu nome'}</span>
+                  <span className="font-semibold text-lg">{name.trim() || prefT('Seu nome')}</span>
                 </div>
 
                 <Button 
@@ -406,53 +428,48 @@ export default function CreateSpace() {
                   disabled={!name.trim() || !isValidName(name)} 
                   className="w-full"
                 >
-                  Continuar
+                  {prefT('Continuar')}
                   <ArrowRight className="w-4 h-4 ml-2" />
                 </Button>
               </>
             ) : step === 'preferences' ? (
               <>
-                {/* Preferences Step */}
                 <div className="flex flex-col gap-6 animate-fade-in">
                   <div className="space-y-2">
-                    <label className="text-sm font-medium text-muted-foreground">Idioma</label>
-                    <Select value={preferredLocale} onValueChange={(value) => setPreferredLocale(value as SupportedLocale)}>
+                    <label className="text-sm font-medium text-muted-foreground">{prefT('Idioma')}</label>
+                    <Select value={preferredLocale} onValueChange={handleLocaleChange}>
                       <SelectTrigger>
                         <SelectValue />
                       </SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="pt-BR">🇧🇷 Português (Brasil)</SelectItem>
-                        <SelectItem value="en-US">🇺🇸 English (US)</SelectItem>
-                        <SelectItem value="es-ES">🇪🇸 Español</SelectItem>
+                        <SelectItem value="pt-BR">{prefT('Português (Brasil)')}</SelectItem>
+                        <SelectItem value="en-US">{prefT('English (US)')}</SelectItem>
+                        <SelectItem value="es-ES">{prefT('Español')}</SelectItem>
                       </SelectContent>
                     </Select>
                   </div>
 
                   <div className="space-y-2">
-                    <label className="text-sm font-medium text-muted-foreground">Moeda</label>
-                    <Select value={preferredCurrency} onValueChange={(value) => setPreferredCurrency(value as SupportedCurrency)}>
+                    <label className="text-sm font-medium text-muted-foreground">{prefT('Moeda')}</label>
+                    <Select value={preferredCurrency} onValueChange={handleCurrencyChange}>
                       <SelectTrigger>
                         <SelectValue />
                       </SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="BRL">R$ Real Brasileiro</SelectItem>
-                        <SelectItem value="USD">$ US Dollar</SelectItem>
-                        <SelectItem value="EUR">€ Euro</SelectItem>
+                        <SelectItem value="BRL">{prefT('Real (R$)')}</SelectItem>
+                        <SelectItem value="USD">{prefT('Dólar (US$)')}</SelectItem>
+                        <SelectItem value="EUR">{prefT('Euro (€)')}</SelectItem>
                       </SelectContent>
                     </Select>
                   </div>
 
                   <div className="flex gap-2 w-full">
-                    <Button
-                      variant="ghost"
-                      onClick={() => setStep('profile')}
-                      className="flex-1"
-                    >
+                    <Button variant="ghost" onClick={() => setStep('profile')} className="flex-1">
                       <ArrowLeft className="w-4 h-4 mr-2" />
-                      Voltar
+                      {prefT('Voltar')}
                     </Button>
                     <Button onClick={handlePreferencesNext} className="flex-1">
-                      Continuar
+                      {prefT('Continuar')}
                       <ArrowRight className="w-4 h-4 ml-2" />
                     </Button>
                   </div>
@@ -499,10 +516,10 @@ export default function CreateSpace() {
                         {generatingUsername ? (
                           <span className="flex items-center gap-1">
                             <Loader2 className="w-3 h-3 animate-spin" />
-                            Gerando...
+                            {prefT('Gerando seu @...')}
                           </span>
                         ) : (
-                          <span>{username || 'Clique para editar'}</span>
+                          <span>{username || prefT('Clique para definir')}</span>
                         )}
                       </button>
                     )}
@@ -515,7 +532,7 @@ export default function CreateSpace() {
                   <div className="flex flex-col items-center gap-2">
                     <div className="flex items-center gap-2 text-sm text-muted-foreground mb-2">
                       <Lock className="w-4 h-4" />
-                      <span>Crie um código pessoal</span>
+                      <span>{prefT('Crie um código pessoal')}</span>
                     </div>
                     
                     <div className="flex items-center gap-2">
@@ -542,14 +559,14 @@ export default function CreateSpace() {
                   <div className="flex gap-2 w-full">
                     <Button variant="ghost" onClick={() => setStep('preferences')} className="flex-1">
                       <ArrowLeft className="w-4 h-4 mr-2" />
-                      Voltar
+                      {prefT('Voltar')}
                     </Button>
                     <Button 
                       onClick={handlePinComplete} 
                       disabled={pinCode.length !== 4 || !!pinError || !!usernameError} 
                       className="flex-1"
                     >
-                      Continuar
+                      {prefT('Continuar')}
                       <ArrowRight className="w-4 h-4 ml-2" />
                     </Button>
                   </div>
@@ -579,7 +596,7 @@ export default function CreateSpace() {
                   <div className="flex flex-col items-center gap-2 w-full">
                     <div className="flex items-center gap-2 text-sm text-muted-foreground mb-2">
                       <Mail className="w-4 h-4" />
-                      <span>E-mail para recuperação</span>
+                      <span>{prefT('E-mail para recuperação')}</span>
                     </div>
                     
                     <Input
@@ -589,7 +606,7 @@ export default function CreateSpace() {
                         setEmail(e.target.value);
                         setEmailError('');
                       }}
-                      placeholder="seu@email.com"
+                      placeholder={prefT('seu@email.com')}
                       className="text-center"
                     />
                     
@@ -597,7 +614,7 @@ export default function CreateSpace() {
                     
                     {!emailError && (
                       <p className="text-xs text-muted-foreground text-center mt-1">
-                        Se esquecer seu código, enviaremos um link de recuperação
+                        {prefT('Se esquecer seu código, enviaremos um link de recuperação')}
                       </p>
                     )}
                   </div>
@@ -605,7 +622,7 @@ export default function CreateSpace() {
                   <div className="flex gap-2 w-full">
                     <Button variant="ghost" onClick={() => setStep('pin')} className="flex-1">
                       <ArrowLeft className="w-4 h-4 mr-2" />
-                      Voltar
+                      {prefT('Voltar')}
                     </Button>
                     <Button 
                       onClick={handleComplete} 
@@ -615,12 +632,12 @@ export default function CreateSpace() {
                       {creating ? (
                         <>
                           <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                          Criando...
+                          {prefT('Criando...')}
                         </>
                       ) : (
                         <>
                           <Heart className="w-4 h-4 mr-2" />
-                          Criar espaço
+                          {prefT('Criar espaço')}
                         </>
                       )}
                     </Button>
@@ -633,7 +650,7 @@ export default function CreateSpace() {
                     disabled={creating}
                   >
                     <SkipForward className="w-4 h-4 mr-2" />
-                    Pular esta etapa
+                    {prefT('Pular esta etapa')}
                   </Button>
                 </div>
               </>
