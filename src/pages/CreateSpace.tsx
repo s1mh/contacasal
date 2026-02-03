@@ -4,12 +4,13 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } f
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { InputOTP, InputOTPGroup, InputOTPSlot, InputOTPSlotMasked } from '@/components/ui/input-otp';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { cn } from '@/lib/utils';
 import { CAT_AVATARS, PERSON_COLORS } from '@/lib/constants';
-import { Check, Heart, Sparkles, Lock, ArrowRight, ArrowLeft, Mail, SkipForward, AtSign, Loader2, Eye, EyeOff } from 'lucide-react';
+import { Check, Heart, Sparkles, Lock, ArrowRight, ArrowLeft, Mail, SkipForward, AtSign, Loader2, Eye, EyeOff, Globe } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
-
+import { getActivePreferences, SupportedCurrency, SupportedLocale } from '@/lib/preferences';
 // Validation functions
 const isValidName = (name: string): boolean => {
   if (!name.trim()) return false;
@@ -63,8 +64,9 @@ const NAME_COMPLIMENTS = [
 export default function CreateSpace() {
   const navigate = useNavigate();
   const { toast } = useToast();
+  const activePreferences = getActivePreferences();
   
-  const [step, setStep] = useState<'profile' | 'pin' | 'email'>('profile');
+  const [step, setStep] = useState<'profile' | 'preferences' | 'pin' | 'email'>('profile');
   const [name, setName] = useState('');
   const [avatarIndex, setAvatarIndex] = useState(1);
   const [color, setColor] = useState(PERSON_COLORS[0].value);
@@ -81,6 +83,8 @@ export default function CreateSpace() {
   const [compliment, setCompliment] = useState('');
   const [showCompliment, setShowCompliment] = useState(false);
   const [creating, setCreating] = useState(false);
+  const [preferredLocale, setPreferredLocale] = useState<SupportedLocale>(activePreferences.locale);
+  const [preferredCurrency, setPreferredCurrency] = useState<SupportedCurrency>(activePreferences.currency);
 
   const handleNameChange = (value: string) => {
     const cleanedValue = value.replace(/[^a-zA-ZÀ-ÿ\s'-]/g, '');
@@ -134,9 +138,17 @@ export default function CreateSpace() {
 
   const handleNextStep = () => {
     if (name.trim() && isValidName(name)) {
-      setStep('pin');
-      generateUsername();
+      setStep('preferences');
     }
+  };
+
+  const handlePreferencesNext = () => {
+    localStorage.setItem('app_preferences', JSON.stringify({
+      locale: preferredLocale,
+      currency: preferredCurrency,
+    }));
+    setStep('pin');
+    generateUsername();
   };
 
   const handlePinChange = (value: string) => {
@@ -289,12 +301,18 @@ export default function CreateSpace() {
         <DialogContent className="sm:max-w-md overflow-hidden">
           <DialogHeader>
             <DialogTitle className="text-center flex items-center justify-center gap-2 animate-fade-in">
-              <Heart className="w-5 h-5 text-primary animate-pulse" />
-              {step === 'profile' ? 'Crie seu perfil' : step === 'pin' ? 'Crie seu código' : 'Adicione seu e-mail'}
+              {step === 'preferences' ? (
+                <Globe className="w-5 h-5 text-primary" />
+              ) : (
+                <Heart className="w-5 h-5 text-primary animate-pulse" />
+              )}
+              {step === 'profile' ? 'Crie seu perfil' : step === 'preferences' ? 'Escolha idioma e moeda' : step === 'pin' ? 'Crie seu código' : 'Adicione seu e-mail'}
             </DialogTitle>
             <DialogDescription className="text-center animate-fade-in">
               {step === 'profile' 
                 ? 'Personalize como você aparecerá no app'
+                : step === 'preferences'
+                ? 'Defina como valores e datas serão exibidos'
                 : step === 'pin'
                 ? 'Código de 4 dígitos para entrar em outros dispositivos'
                 : 'Para recuperar seu código se esquecer (opcional)'
@@ -392,6 +410,54 @@ export default function CreateSpace() {
                   <ArrowRight className="w-4 h-4 ml-2" />
                 </Button>
               </>
+            ) : step === 'preferences' ? (
+              <>
+                {/* Preferences Step */}
+                <div className="flex flex-col gap-6 animate-fade-in">
+                  <div className="space-y-2">
+                    <label className="text-sm font-medium text-muted-foreground">Idioma</label>
+                    <Select value={preferredLocale} onValueChange={(value) => setPreferredLocale(value as SupportedLocale)}>
+                      <SelectTrigger>
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="pt-BR">🇧🇷 Português (Brasil)</SelectItem>
+                        <SelectItem value="en-US">🇺🇸 English (US)</SelectItem>
+                        <SelectItem value="es-ES">🇪🇸 Español</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+
+                  <div className="space-y-2">
+                    <label className="text-sm font-medium text-muted-foreground">Moeda</label>
+                    <Select value={preferredCurrency} onValueChange={(value) => setPreferredCurrency(value as SupportedCurrency)}>
+                      <SelectTrigger>
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="BRL">R$ Real Brasileiro</SelectItem>
+                        <SelectItem value="USD">$ US Dollar</SelectItem>
+                        <SelectItem value="EUR">€ Euro</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+
+                  <div className="flex gap-2 w-full">
+                    <Button
+                      variant="ghost"
+                      onClick={() => setStep('profile')}
+                      className="flex-1"
+                    >
+                      <ArrowLeft className="w-4 h-4 mr-2" />
+                      Voltar
+                    </Button>
+                    <Button onClick={handlePreferencesNext} className="flex-1">
+                      Continuar
+                      <ArrowRight className="w-4 h-4 ml-2" />
+                    </Button>
+                  </div>
+                </div>
+              </>
             ) : step === 'pin' ? (
               <>
                 {/* PIN Step */}
@@ -474,7 +540,7 @@ export default function CreateSpace() {
                   </div>
 
                   <div className="flex gap-2 w-full">
-                    <Button variant="ghost" onClick={() => setStep('profile')} className="flex-1">
+                    <Button variant="ghost" onClick={() => setStep('preferences')} className="flex-1">
                       <ArrowLeft className="w-4 h-4 mr-2" />
                       Voltar
                     </Button>
