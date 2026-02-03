@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import { Heart, ArrowRight, Sparkles, Loader2, Users, AtSign, Lock, HelpCircle, Eye, EyeOff } from "lucide-react";
+import { Heart, ArrowRight, Sparkles, Loader2, Users, AtSign, Lock, HelpCircle, Eye, EyeOff, Globe } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { InputOTP, InputOTPGroup, InputOTPSlot, InputOTPSlotMasked } from "@/components/ui/input-otp";
@@ -11,6 +11,9 @@ import { CAT_AVATARS } from "@/lib/constants";
 import { devLog } from "@/lib/validation";
 import { cn } from "@/lib/utils";
 import { RecoveryModal } from "@/components/RecoveryModal";
+import { usePreferences } from "@/contexts/PreferencesContext";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
+import { SupportedLocale } from "@/lib/i18n";
 
 interface LastSpace {
   shareCode: string;
@@ -21,10 +24,17 @@ interface LastSpace {
   timestamp?: number;
 }
 
+const LOCALE_LABELS: Record<SupportedLocale, { label: string; flag: string }> = {
+  'pt-BR': { label: 'Português', flag: '🇧🇷' },
+  'en-US': { label: 'English', flag: '🇺🇸' },
+  'es-ES': { label: 'Español', flag: '🇪🇸' },
+};
+
 export default function Index() {
   const navigate = useNavigate();
   const { toast } = useToast();
   const { loading: authLoading, clearValidation, validateShareCode } = useAuthContext();
+  const { locale, setLocale, t } = usePreferences();
   const [loading, setLoading] = useState(false);
   const [existingCode, setExistingCode] = useState("");
   const [lastSpace, setLastSpace] = useState<LastSpace | null>(null);
@@ -213,14 +223,45 @@ export default function Index() {
             />
           </div>
           <Loader2 className="w-6 h-6 animate-spin text-primary" />
-          <p className="text-sm text-muted-foreground">Preparando o amor...</p>
+          <p className="text-sm text-muted-foreground">{t('Preparando o amor...')}</p>
         </div>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-background flex flex-col items-center justify-center p-6">
+    <div className="min-h-screen bg-background flex flex-col items-center justify-center p-6 relative">
+      {/* Language Selector - Top Right */}
+      <div className="absolute top-4 right-4 animate-fade-in">
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <Button
+              variant="ghost"
+              size="sm"
+              className="gap-2 text-muted-foreground hover:text-foreground"
+            >
+              <Globe className="w-4 h-4" />
+              <span className="text-sm">{LOCALE_LABELS[locale].flag}</span>
+            </Button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end">
+            {(Object.keys(LOCALE_LABELS) as SupportedLocale[]).map((loc) => (
+              <DropdownMenuItem
+                key={loc}
+                onClick={() => setLocale(loc)}
+                className={cn(
+                  "gap-2 cursor-pointer",
+                  locale === loc && "bg-accent"
+                )}
+              >
+                <span>{LOCALE_LABELS[loc].flag}</span>
+                <span>{LOCALE_LABELS[loc].label}</span>
+              </DropdownMenuItem>
+            ))}
+          </DropdownMenuContent>
+        </DropdownMenu>
+      </div>
+
       <div className="w-full max-w-sm">
         {/* Logo / Header */}
         <div className="text-center mb-8 animate-fade-slide-up">
@@ -251,8 +292,8 @@ export default function Index() {
               style={{ animationDelay: "100ms" }}
             />
           </div>
-          <h1 className="text-3xl font-bold text-foreground mb-2">Conta Compartilhada</h1>
-          <p className="text-muted-foreground">Dividam gastos com clareza</p>
+          <h1 className="text-3xl font-bold text-foreground mb-2">{t('Conta de Casal')}</h1>
+          <p className="text-muted-foreground">{t('Dividam gastos com clareza')}</p>
         </div>
 
         {/* Continue as saved user - Vertical layout with avatar on top */}
@@ -271,7 +312,7 @@ export default function Index() {
                 />
               </div>
               <div className="text-center">
-                <p className="text-xs text-muted-foreground">Continuar como</p>
+                <p className="text-xs text-muted-foreground">{t('Continuar como')}</p>
                 <p className="font-semibold text-lg">{lastSpace.name}</p>
                 {lastSpace.username && (
                   <p className="text-sm text-muted-foreground">@{lastSpace.username}</p>
@@ -292,8 +333,8 @@ export default function Index() {
                 <AtSign className="w-5 h-5 text-primary" />
               </div>
               <div>
-                <h2 className="font-semibold text-foreground">Entrar com @</h2>
-                <p className="text-xs text-muted-foreground">Use seu username pessoal</p>
+                <h2 className="font-semibold text-foreground">{t('Entrar com @')}</h2>
+                <p className="text-xs text-muted-foreground">{t('Use seu username pessoal')}</p>
               </div>
             </div>
 
@@ -315,7 +356,7 @@ export default function Index() {
               <div className="flex flex-col items-center gap-2">
                 <div className="flex items-center gap-2 text-sm text-muted-foreground">
                   <Lock className="w-4 h-4" />
-                  <span>Código pessoal</span>
+                  <span>{t('Código pessoal')}</span>
                 </div>
 
                 <div className="flex items-center gap-2">
@@ -362,7 +403,7 @@ export default function Index() {
                 {usernameLoading && (
                   <div className="flex items-center gap-2 text-sm text-muted-foreground">
                     <Loader2 className="w-4 h-4 animate-spin" />
-                    <span>Verificando...</span>
+                    <span>{t('Verificando...')}</span>
                   </div>
                 )}
 
@@ -372,14 +413,13 @@ export default function Index() {
 
                 {attemptsRemaining !== null && attemptsRemaining > 0 && attemptsRemaining <= 3 && (
                   <p className="text-xs text-amber-600 dark:text-amber-400 animate-fade-in">
-                    {attemptsRemaining} tentativa{attemptsRemaining > 1 ? "s" : ""} restante
-                    {attemptsRemaining > 1 ? "s" : ""}
+                    {attemptsRemaining} {attemptsRemaining > 1 ? t('tentativas restantes') : t('tentativa restante')}
                   </p>
                 )}
 
                 {lockedUntil && (
                   <p className="text-xs text-destructive animate-fade-in">
-                    Conta bloqueada por {formatLockedTime(lockedUntil)}
+                    {t('Conta bloqueada por')} {formatLockedTime(lockedUntil)}
                   </p>
                 )}
               </div>
@@ -393,11 +433,11 @@ export default function Index() {
                 {usernameLoading ? (
                   <>
                     <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                    Entrando...
+                    {t('Entrando...')}
                   </>
                 ) : (
                   <>
-                    Entrar
+                    {t('Entrar')}
                     <ArrowRight className="w-4 h-4 ml-2" />
                   </>
                 )}
@@ -411,7 +451,7 @@ export default function Index() {
                 disabled={usernameLoading}
               >
                 <HelpCircle className="w-4 h-4 mr-1" />
-                Esqueci meu código
+                {t('Esqueci meu código')}
               </Button>
 
               <Button
@@ -426,7 +466,7 @@ export default function Index() {
                 }}
                 className="w-full"
               >
-                Voltar
+                {t('Voltar')}
               </Button>
             </div>
           </div>
@@ -442,8 +482,8 @@ export default function Index() {
                   <Sparkles className="w-5 h-5 text-primary" />
                 </div>
                 <div>
-                  <h2 className="font-semibold text-foreground">Novo espaço</h2>
-                  <p className="text-xs text-muted-foreground">Crie um espaço para até 5 pessoas</p>
+                  <h2 className="font-semibold text-foreground">{t('Novo espaço')}</h2>
+                  <p className="text-xs text-muted-foreground">{t('Crie um espaço para até 5 pessoas')}</p>
                 </div>
               </div>
               <Button
@@ -454,11 +494,11 @@ export default function Index() {
                 {loading ? (
                   <>
                     <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                    Criando...
+                    {t('Criando...')}
                   </>
                 ) : (
                   <>
-                    Criar espaço
+                    {t('Criar espaço')}
                     <ArrowRight className="w-4 h-4 ml-2" />
                   </>
                 )}
@@ -475,15 +515,15 @@ export default function Index() {
                   <Users className="w-5 h-5 text-secondary-foreground" />
                 </div>
                 <div>
-                  <h2 className="font-semibold text-foreground">Entrar em espaço</h2>
-                  <p className="text-xs text-muted-foreground">Recebeu um código? Cole aqui</p>
+                  <h2 className="font-semibold text-foreground">{t('Entrar em espaço')}</h2>
+                  <p className="text-xs text-muted-foreground">{t('Recebeu um código? Cole aqui')}</p>
                 </div>
               </div>
               <div className="flex gap-2">
                 <Input
                   value={existingCode}
                   onChange={(e) => setExistingCode(e.target.value.toLowerCase())}
-                  placeholder="Cole o código aqui"
+                  placeholder={t('Cole o código aqui')}
                   className="flex-1 rounded-xl h-12 bg-muted border-0 transition-all duration-300 focus:ring-2 focus:ring-primary/50"
                   onKeyDown={(e) => e.key === "Enter" && handleJoinSpace()}
                 />
@@ -493,7 +533,7 @@ export default function Index() {
                   variant="outline"
                   className="rounded-xl h-12 px-4 transition-all duration-300 hover:scale-105"
                 >
-                  Entrar
+                  {t('Entrar')}
                 </Button>
               </div>
             </div>
@@ -506,7 +546,7 @@ export default function Index() {
                 className="w-full text-muted-foreground hover:text-foreground"
               >
                 <AtSign className="w-4 h-4 mr-2" />
-                Entrar com seu @username
+                {t('Entrar com seu @username')}
               </Button>
             </div>
           </>
@@ -514,7 +554,7 @@ export default function Index() {
 
         {/* Footer */}
         <div className="text-center mt-8 animate-fade-in" style={{ animationDelay: "500ms" }}>
-          <p className="text-xs text-muted-foreground">Feito com 💕 para casais</p>
+          <p className="text-xs text-muted-foreground">{t('Feito com 💕 para casais')}</p>
           <p className="text-[10px] text-muted-foreground/60 mt-1">Feito por Samuel para o Juan</p>
         </div>
       </div>
