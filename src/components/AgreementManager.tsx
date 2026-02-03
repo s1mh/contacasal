@@ -8,6 +8,7 @@ import { CurrencyInput } from '@/components/ui/currency-input';
 import { RefreshCw, Plus, Trash2, Pause, Play, Pencil } from 'lucide-react';
 import { Agreement, Profile, Tag } from '@/hooks/useCouple';
 import { formatCurrency } from '@/lib/constants';
+import { usePreferences } from '@/contexts/PreferencesContext';
 
 interface AgreementManagerProps {
   agreements: Agreement[];
@@ -19,6 +20,152 @@ interface AgreementManagerProps {
   coupleId: string;
 }
 
+interface AgreementFormProps {
+  name: string;
+  amount: number;
+  paidBy: number;
+  tagId: string;
+  dayOfMonth: string;
+  splitPerson1: number;
+  profiles: Profile[];
+  tags: Tag[];
+  person1Name?: string;
+  person1Color?: string;
+  person2Name?: string;
+  person2Color?: string;
+  isEditing?: boolean;
+  isLoading: boolean;
+  onNameChange: (value: string) => void;
+  onAmountChange: (value: number) => void;
+  onPaidByChange: (value: number) => void;
+  onTagChange: (value: string) => void;
+  onDayOfMonthChange: (value: string) => void;
+  onSplitChange: (value: number) => void;
+  onSubmit: () => void;
+}
+
+function AgreementForm({
+  name,
+  amount,
+  paidBy,
+  tagId,
+  dayOfMonth,
+  splitPerson1,
+  profiles,
+  tags,
+  person1Name,
+  person1Color,
+  person2Name,
+  person2Color,
+  isEditing = false,
+  isLoading,
+  onNameChange,
+  onAmountChange,
+  onPaidByChange,
+  onTagChange,
+  onDayOfMonthChange,
+  onSplitChange,
+  onSubmit,
+}: AgreementFormProps) {
+  const { t: prefT } = usePreferences();
+  return (
+    <div className="space-y-4 py-4">
+      <div className="space-y-2">
+        <Label>{prefT('Nome do acordo')}</Label>
+        <Input
+          value={name}
+          onChange={(e) => onNameChange(e.target.value)}
+          placeholder={prefT('Ex: Aluguel, Internet...')}
+        />
+      </div>
+
+      <div className="grid grid-cols-2 gap-4">
+        <div className="space-y-2">
+          <Label>{prefT('Valor')}</Label>
+          <CurrencyInput
+            value={amount}
+            onChange={onAmountChange}
+          />
+        </div>
+        <div className="space-y-2">
+          <Label>{prefT('Dia do mês')}</Label>
+          <Input
+            type="number"
+            inputMode="numeric"
+            min="1"
+            max="31"
+            value={dayOfMonth}
+            onChange={(e) => onDayOfMonthChange(e.target.value)}
+          />
+        </div>
+      </div>
+
+      <div className="space-y-2">
+        <Label>{prefT('Quem paga')}</Label>
+        <Select value={paidBy.toString()} onValueChange={(v) => onPaidByChange(parseInt(v))}>
+          <SelectTrigger>
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            {profiles.map((p) => (
+              <SelectItem key={p.id} value={p.position.toString()}>
+                {p.name}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+      </div>
+
+      <div className="space-y-2">
+        <Label>{prefT('Categoria')}</Label>
+        <Select value={tagId} onValueChange={onTagChange}>
+          <SelectTrigger>
+          <SelectValue placeholder={prefT('Selecione...')} />
+          </SelectTrigger>
+          <SelectContent>
+            {tags.map((tag) => (
+              <SelectItem key={tag.id} value={tag.id}>
+                {tag.name}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+      </div>
+
+      <div className="space-y-3">
+        <Label>{prefT('Divisão')}</Label>
+        <div className="flex items-center justify-between px-2">
+          <span className="text-sm" style={{ color: person1Color }}>
+            {person1Name}: {splitPerson1}%
+          </span>
+          <span className="text-sm" style={{ color: person2Color }}>
+            {person2Name}: {100 - splitPerson1}%
+          </span>
+        </div>
+        <input
+          type="range"
+          min="0"
+          max="100"
+          step="5"
+          value={splitPerson1}
+          onChange={(e) => onSplitChange(parseInt(e.target.value))}
+          className="w-full"
+        />
+      </div>
+
+      <Button
+        onClick={onSubmit}
+        disabled={!name.trim() || amount <= 0 || isLoading}
+        className="w-full"
+      >
+        {isLoading
+          ? (isEditing ? prefT('Salvando...') : prefT('Criando...'))
+          : (isEditing ? prefT('Salvar Alterações') : prefT('Criar Acordo'))}
+      </Button>
+    </div>
+  );
+}
+
 export function AgreementManager({ 
   agreements, 
   profiles, 
@@ -28,6 +175,7 @@ export function AgreementManager({
   onDeleteAgreement,
   coupleId 
 }: AgreementManagerProps) {
+  const { t: prefT } = usePreferences();
   const [isOpen, setIsOpen] = useState(false);
   const [editingAgreement, setEditingAgreement] = useState<Agreement | null>(null);
   const [name, setName] = useState('');
@@ -110,128 +258,53 @@ export function AgreementManager({
   const person1 = profiles.find(p => p.position === 1);
   const person2 = profiles.find(p => p.position === 2);
 
-  const AgreementForm = ({ isEditing = false }: { isEditing?: boolean }) => (
-    <div className="space-y-4 py-4">
-      <div className="space-y-2">
-        <Label>Nome do acordo</Label>
-        <Input
-          value={name}
-          onChange={(e) => setName(e.target.value)}
-          placeholder="Ex: Aluguel, Internet..."
-        />
-      </div>
-
-      <div className="grid grid-cols-2 gap-4">
-        <div className="space-y-2">
-          <Label>Valor</Label>
-          <CurrencyInput
-            value={amount}
-            onChange={setAmount}
-            placeholder="0,00"
-          />
-        </div>
-        <div className="space-y-2">
-          <Label>Dia do mês</Label>
-          <Input
-            type="number"
-            inputMode="numeric"
-            min="1"
-            max="31"
-            value={dayOfMonth}
-            onChange={(e) => setDayOfMonth(e.target.value)}
-          />
-        </div>
-      </div>
-
-      <div className="space-y-2">
-        <Label>Quem paga</Label>
-        <Select value={paidBy.toString()} onValueChange={(v) => setPaidBy(parseInt(v))}>
-          <SelectTrigger>
-            <SelectValue />
-          </SelectTrigger>
-          <SelectContent>
-            {profiles.map((p) => (
-              <SelectItem key={p.id} value={p.position.toString()}>
-                {p.name}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-      </div>
-
-      <div className="space-y-2">
-        <Label>Categoria</Label>
-        <Select value={tagId} onValueChange={setTagId}>
-          <SelectTrigger>
-            <SelectValue placeholder="Selecione..." />
-          </SelectTrigger>
-          <SelectContent>
-            {tags.map((tag) => (
-              <SelectItem key={tag.id} value={tag.id}>
-                {tag.name}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-      </div>
-
-      <div className="space-y-3">
-        <Label>Divisão</Label>
-        <div className="flex items-center justify-between px-2">
-          <span className="text-sm" style={{ color: person1?.color }}>
-            {person1?.name}: {splitPerson1}%
-          </span>
-          <span className="text-sm" style={{ color: person2?.color }}>
-            {person2?.name}: {100 - splitPerson1}%
-          </span>
-        </div>
-        <input
-          type="range"
-          min="0"
-          max="100"
-          step="5"
-          value={splitPerson1}
-          onChange={(e) => setSplitPerson1(parseInt(e.target.value))}
-          className="w-full"
-        />
-      </div>
-
-      <Button 
-        onClick={isEditing ? handleUpdate : handleAdd} 
-        disabled={!name.trim() || amount <= 0 || isLoading} 
-        className="w-full"
-      >
-        {isLoading ? (isEditing ? 'Salvando...' : 'Criando...') : (isEditing ? 'Salvar Alterações' : 'Criar Acordo')}
-      </Button>
-    </div>
-  );
-
   return (
     <div className="space-y-2 sm:space-y-3">
       <div className="flex items-center justify-between">
         <h3 className="text-[10px] sm:text-xs font-medium text-muted-foreground flex items-center gap-1">
           <RefreshCw className="w-3 h-3 sm:w-3.5 sm:h-3.5" />
-          Acordos Recorrentes
+          {prefT('Acordos Recorrentes')}
         </h3>
         <Dialog open={isOpen} onOpenChange={setIsOpen}>
           <DialogTrigger asChild>
             <Button size="sm" className="h-6 sm:h-7 text-[10px] sm:text-xs px-2">
               <Plus className="w-3 h-3 sm:w-3.5 sm:h-3.5 mr-1" />
-              Novo Acordo
+              {prefT('Novo Acordo')}
             </Button>
           </DialogTrigger>
           <DialogContent>
             <DialogHeader>
-              <DialogTitle>Novo Acordo Recorrente</DialogTitle>
+              <DialogTitle>{prefT('Novo Acordo Recorrente')}</DialogTitle>
             </DialogHeader>
-            <AgreementForm />
+            <AgreementForm
+              name={name}
+              amount={amount}
+              paidBy={paidBy}
+              tagId={tagId}
+              dayOfMonth={dayOfMonth}
+              splitPerson1={splitPerson1}
+              profiles={profiles}
+              tags={tags}
+              person1Name={person1?.name}
+              person1Color={person1?.color}
+              person2Name={person2?.name}
+              person2Color={person2?.color}
+              isLoading={isLoading}
+              onNameChange={setName}
+              onAmountChange={setAmount}
+              onPaidByChange={setPaidBy}
+              onTagChange={setTagId}
+              onDayOfMonthChange={setDayOfMonth}
+              onSplitChange={setSplitPerson1}
+              onSubmit={handleAdd}
+            />
           </DialogContent>
         </Dialog>
       </div>
 
       {agreements.length === 0 ? (
         <p className="text-[10px] sm:text-xs text-muted-foreground text-center py-2">
-          Nenhum acordo cadastrado. Acordos facilitam gastos recorrentes.
+          {prefT('Nenhum acordo cadastrado. Acordos facilitam gastos recorrentes.')}
         </p>
       ) : (
         <div className="space-y-1.5 sm:space-y-2">
@@ -261,7 +334,7 @@ export function AgreementManager({
                       {formatCurrency(agreement.amount)}
                     </p>
                     <p className="text-[9px] sm:text-[10px] text-muted-foreground">
-                      Dia {agreement.day_of_month} • {payer?.name} • {agreement.split_value.person1}%/{agreement.split_value.person2}%
+                      {prefT('Dia {day}', { day: agreement.day_of_month })} • {payer?.name} • {agreement.split_value.person1}%/{agreement.split_value.person2}%
                     </p>
                   </div>
                   <div className="flex items-center gap-0.5 sm:gap-1 flex-shrink-0">
@@ -312,9 +385,31 @@ export function AgreementManager({
       }}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>Editar Acordo</DialogTitle>
+            <DialogTitle>{prefT('Editar Acordo')}</DialogTitle>
           </DialogHeader>
-          <AgreementForm isEditing />
+          <AgreementForm
+            name={name}
+            amount={amount}
+            paidBy={paidBy}
+            tagId={tagId}
+            dayOfMonth={dayOfMonth}
+            splitPerson1={splitPerson1}
+            profiles={profiles}
+            tags={tags}
+            person1Name={person1?.name}
+            person1Color={person1?.color}
+            person2Name={person2?.name}
+            person2Color={person2?.color}
+            isEditing
+            isLoading={isLoading}
+            onNameChange={setName}
+            onAmountChange={setAmount}
+            onPaidByChange={setPaidBy}
+            onTagChange={setTagId}
+            onDayOfMonthChange={setDayOfMonth}
+            onSplitChange={setSplitPerson1}
+            onSubmit={handleUpdate}
+          />
         </DialogContent>
       </Dialog>
     </div>

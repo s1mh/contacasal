@@ -1,6 +1,7 @@
 import { forwardRef, useState, useEffect } from 'react';
 import { Input } from './input';
 import { cn } from '@/lib/utils';
+import { getActivePreferences, getCurrencySymbol } from '@/lib/preferences';
 
 interface CurrencyInputProps {
   value: number;
@@ -8,16 +9,23 @@ interface CurrencyInputProps {
   className?: string;
   placeholder?: string;
   disabled?: boolean;
+  showPrefix?: boolean;
 }
 
 // Format cents to display string (e.g., 70000 cents -> "700,00")
-const formatCentsToDisplay = (cents: number): string => {
+const formatCentsToDisplay = (
+  cents: number,
+  showPrefix: boolean,
+  locale: string,
+  currencySymbol: string
+): string => {
   if (cents === 0) return '';
-  const reais = cents / 100;
-  return reais.toLocaleString('pt-BR', {
+  const amount = cents / 100;
+  const formatted = amount.toLocaleString(locale, {
     minimumFractionDigits: 2,
     maximumFractionDigits: 2,
   });
+  return showPrefix ? `${currencySymbol} ${formatted}` : formatted;
 };
 
 // Convert value (in reais) to cents for internal use
@@ -27,7 +35,18 @@ const reaisToCents = (reais: number): number => Math.round(reais * 100);
 const centsToReais = (cents: number): number => cents / 100;
 
 export const CurrencyInput = forwardRef<HTMLInputElement, CurrencyInputProps>(
-  ({ value, onChange, className, placeholder = '0,00', disabled }, ref) => {
+  (
+    { value, onChange, className, placeholder, disabled, showPrefix = true },
+    ref
+  ) => {
+    const { locale, currency } = getActivePreferences();
+    const currencySymbol = getCurrencySymbol(locale, currency);
+    const formattedZero = new Intl.NumberFormat(locale, {
+      minimumFractionDigits: 2,
+      maximumFractionDigits: 2,
+    }).format(0);
+    const resolvedPlaceholder =
+      placeholder ?? (showPrefix ? `${currencySymbol} ${formattedZero}` : formattedZero);
     // Store value internally as cents (integer) for precise formatting
     const [cents, setCents] = useState(() => reaisToCents(value));
 
@@ -55,9 +74,9 @@ export const CurrencyInput = forwardRef<HTMLInputElement, CurrencyInputProps>(
         ref={ref}
         type="text"
         inputMode="numeric"
-        value={formatCentsToDisplay(cents)}
+        value={formatCentsToDisplay(cents, showPrefix, locale, currencySymbol)}
         onChange={handleChange}
-        placeholder={placeholder}
+        placeholder={resolvedPlaceholder}
         disabled={disabled}
         className={cn(className)}
       />

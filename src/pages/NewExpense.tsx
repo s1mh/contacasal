@@ -13,7 +13,8 @@ import { Slider } from '@/components/ui/slider';
 import { DatePickerField } from '@/components/DatePickerField';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { format, addMonths, startOfMonth } from 'date-fns';
-import { ptBR } from 'date-fns/locale';
+import { getCurrencySymbol, getDateFnsLocale } from '@/lib/preferences';
+import { usePreferences } from '@/contexts/PreferencesContext';
 
 type SplitType = 'equal' | 'percentage' | 'fixed' | 'full';
 type PaymentType = 'debit' | 'credit';
@@ -23,6 +24,9 @@ export default function NewExpense() {
   const { addExpenses } = useCoupleContext();
   const { shareCode } = useParams();
   const navigate = useNavigate();
+  const { locale: prefLocale, currency, t: prefT } = usePreferences();
+  const dateLocale = getDateFnsLocale(prefLocale);
+  const currencySymbol = getCurrencySymbol(prefLocale, currency);
 
   const [amount, setAmount] = useState(0);
   const [description, setDescription] = useState('');
@@ -166,25 +170,25 @@ export default function NewExpense() {
         >
           <ArrowLeft className="w-5 h-5" />
         </button>
-        <h1 className="text-xl font-semibold">Novo gasto</h1>
+        <h1 className="text-xl font-semibold">{prefT('Novo gasto')}</h1>
       </div>
 
       {/* Amount Input */}
       <div className="bg-card rounded-3xl p-6 shadow-lg border border-border/50 mb-4">
-        <label className="text-sm text-muted-foreground mb-2 block">Valor total</label>
+        <label className="text-sm text-muted-foreground mb-2 block">{prefT('Valor total')}</label>
         <div className="flex items-center gap-2">
-          <span className="text-2xl text-muted-foreground">R$</span>
+          <span className="text-2xl text-muted-foreground">{currencySymbol}</span>
           <CurrencyInput
             value={amount}
             onChange={setAmount}
-            placeholder="0,00"
+            showPrefix={false}
             className="text-4xl font-bold border-0 bg-transparent p-0 h-auto focus-visible:ring-0"
           />
         </div>
         <Input
           value={description}
           onChange={(e) => setDescription(e.target.value)}
-          placeholder="Descrição (opcional)"
+          placeholder={prefT('Descrição (opcional)')}
           className="mt-4 rounded-xl bg-muted border-0"
         />
       </div>
@@ -194,13 +198,13 @@ export default function NewExpense() {
         <DatePickerField
           value={expenseDate}
           onChange={setExpenseDate}
-          label="Data da compra"
+          label={prefT('Data da compra')}
         />
       </div>
 
       {/* Payment Type */}
       <div className="bg-card rounded-3xl p-4 shadow-lg border border-border/50 mb-4">
-        <label className="text-sm text-muted-foreground mb-3 block">Forma de pagamento</label>
+        <label className="text-sm text-muted-foreground mb-3 block">{prefT('Forma de pagamento')}</label>
         <div className="flex gap-2 mb-4">
           <button
             onClick={() => {
@@ -216,7 +220,7 @@ export default function NewExpense() {
             )}
           >
             <CreditCard className="w-4 h-4" />
-            <span className="font-medium">Débito</span>
+            <span className="font-medium">{prefT('Débito')}</span>
           </button>
           <button
             onClick={() => setPaymentType('credit')}
@@ -228,7 +232,7 @@ export default function NewExpense() {
             )}
           >
             <CreditCard className="w-4 h-4" />
-            <span className="font-medium">Crédito</span>
+            <span className="font-medium">{prefT('Crédito')}</span>
           </button>
         </div>
 
@@ -236,15 +240,15 @@ export default function NewExpense() {
           <div className="space-y-4 animate-fade-in">
             {creditCards.length === 0 ? (
               <p className="text-sm text-muted-foreground text-center py-2">
-                Nenhum cartão de crédito cadastrado para {payerProfile?.name}.
+                {prefT('Nenhum cartão de crédito cadastrado para {name}.', { name: payerProfile?.name || '' })}
                 <br />
-                <span className="text-xs">Cadastre em Ajustes → Cartões</span>
+                <span className="text-xs">{prefT('Cadastre em Ajustes → Cartões')}</span>
               </p>
             ) : (
               <>
                 <Select value={selectedCardId || ''} onValueChange={setSelectedCardId}>
                   <SelectTrigger>
-                    <SelectValue placeholder="Selecione o cartão" />
+                    <SelectValue placeholder={prefT('Selecione...')} />
                   </SelectTrigger>
                   <SelectContent>
                     {creditCards.map(card => (
@@ -263,7 +267,7 @@ export default function NewExpense() {
 
                 {/* Installments */}
                 <div className="space-y-2">
-                  <label className="text-sm text-muted-foreground">Parcelas</label>
+                  <label className="text-sm text-muted-foreground">{prefT('Parcelas')}</label>
                   <Select 
                     value={installments.toString()} 
                     onValueChange={(v) => setInstallments(parseInt(v))}
@@ -287,14 +291,16 @@ export default function NewExpense() {
                     <Info className="w-4 h-4 text-primary mt-0.5" />
                     <div>
                       <p className="font-medium">
-                        Entrará na fatura de {format(billingMonth, 'MMMM', { locale: ptBR })}
+                        {prefT('Entrará na fatura de {month}', { month: format(billingMonth, 'MMMM', { locale: dateLocale }) })}
                       </p>
                       <p className="text-xs text-muted-foreground">
-                        Fechamento dia {selectedCard.closing_day} • Vencimento dia {selectedCard.due_day}
+                        {prefT('Fechamento dia {day}', { day: selectedCard.closing_day ?? '' })} • {prefT('Vencimento dia {day}', { day: selectedCard.due_day ?? '' })}
                       </p>
                       {installments > 1 && (
                         <p className="text-xs text-muted-foreground mt-1">
-                          Última parcela: {format(addMonths(billingMonth, installments - 1), 'MMMM yyyy', { locale: ptBR })}
+                          {prefT('Última parcela: {month}', {
+                            month: format(addMonths(billingMonth, installments - 1), 'MMMM yyyy', { locale: dateLocale }),
+                          })}
                         </p>
                       )}
                     </div>
@@ -308,10 +314,10 @@ export default function NewExpense() {
 
       {/* Who Paid */}
       <div className="bg-card rounded-3xl p-4 shadow-lg border border-border/50 mb-4">
-        <label className="text-sm text-muted-foreground mb-3 block">Quem pagou?</label>
+        <label className="text-sm text-muted-foreground mb-3 block">{prefT('Quem pagou')}</label>
         {configuredProfiles.length === 0 ? (
           <p className="text-sm text-muted-foreground text-center py-2">
-            Configure seu perfil em Ajustes primeiro
+            {prefT('Configure seu perfil em Ajustes primeiro')}
           </p>
         ) : configuredProfiles.length === 1 ? (
           <div className="flex gap-3">
@@ -343,7 +349,7 @@ export default function NewExpense() {
 
       {/* Split Type */}
       <div className="bg-card rounded-3xl p-4 shadow-lg border border-border/50 mb-4">
-        <label className="text-sm text-muted-foreground mb-3 block">Divisão</label>
+        <label className="text-sm text-muted-foreground mb-3 block">{prefT('Divisão')}</label>
         <div className="grid grid-cols-2 gap-2 mb-4">
           {(Object.entries(SPLIT_TYPES) as [SplitType, typeof SPLIT_TYPES.equal][]).map(([type, info]) => (
             <button
@@ -429,7 +435,7 @@ export default function NewExpense() {
 
       {/* Tags */}
       <div className="bg-card rounded-3xl p-4 shadow-lg border border-border/50 mb-4">
-        <label className="text-sm text-muted-foreground mb-3 block">Categoria</label>
+        <label className="text-sm text-muted-foreground mb-3 block">{prefT('Categoria')}</label>
         <div className="flex flex-wrap gap-2">
           <button
             onClick={() => setSelectedTagId(null)}
@@ -460,7 +466,7 @@ export default function NewExpense() {
         <div className="bg-muted/50 rounded-2xl p-4 mb-4 animate-fade-in">
           <div className="flex items-center gap-2 mb-3">
             <Calculator className="w-4 h-4 text-muted-foreground" />
-            <span className="text-sm font-medium">Resumo da divisão</span>
+            <span className="text-sm font-medium">{prefT('Resumo da divisão')}</span>
           </div>
           <div className="space-y-2">
             {[person1, person2].map((person) => person && (
@@ -485,11 +491,11 @@ export default function NewExpense() {
         className="w-full py-6 rounded-2xl text-lg"
       >
         {loading ? (
-          <>Salvando...</>
+          <>{prefT('Salvando...')}</>
         ) : (
           <>
             <Check className="w-5 h-5 mr-2" />
-            Salvar gasto
+            {prefT('Salvar')}
           </>
         )}
       </Button>
