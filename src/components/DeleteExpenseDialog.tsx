@@ -13,7 +13,7 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { Expense } from '@/contexts/CoupleContext';
 import { formatCurrency } from '@/lib/constants';
 import { format, parseISO } from 'date-fns';
-import { ptBR } from 'date-fns/locale';
+import { getActivePreferences, getDateFnsLocale } from '@/lib/preferences';
 
 interface DeleteExpenseDialogProps {
   expense: Expense;
@@ -34,6 +34,8 @@ export function DeleteExpenseDialog({
 }: DeleteExpenseDialogProps) {
   const [selectedIds, setSelectedIds] = useState<string[]>([expense.id]);
   const [mode, setMode] = useState<'confirm' | 'select'>('confirm');
+  const { locale } = getActivePreferences();
+  const dateLocale = getDateFnsLocale(locale);
   
   const isInstallment = expense.installments > 1;
   const hasMultipleInstallments = relatedExpenses.length > 1;
@@ -151,8 +153,8 @@ export function DeleteExpenseDialog({
                   </p>
                   <p className="text-xs text-muted-foreground">
                     {exp.billing_month 
-                      ? format(parseISO(exp.billing_month), 'MMMM yyyy', { locale: ptBR })
-                      : format(parseISO(exp.expense_date), 'MMMM yyyy', { locale: ptBR })
+                      ? format(parseISO(exp.billing_month), 'MMMM yyyy', { locale: dateLocale })
+                      : format(parseISO(exp.expense_date), 'MMMM yyyy', { locale: dateLocale })
                     }
                   </p>
                 </div>

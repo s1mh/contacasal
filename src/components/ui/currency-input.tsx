@@ -1,6 +1,7 @@
 import { forwardRef, useState, useEffect } from 'react';
 import { Input } from './input';
 import { cn } from '@/lib/utils';
+import { getActivePreferences, getCurrencySymbol } from '@/lib/preferences';
 
 interface CurrencyInputProps {
   value: number;
@@ -12,14 +13,19 @@ interface CurrencyInputProps {
 }
 
 // Format cents to display string (e.g., 70000 cents -> "700,00")
-const formatCentsToDisplay = (cents: number, showPrefix: boolean): string => {
+const formatCentsToDisplay = (
+  cents: number,
+  showPrefix: boolean,
+  locale: string,
+  currencySymbol: string
+): string => {
   if (cents === 0) return '';
-  const reais = cents / 100;
-  const formatted = reais.toLocaleString('pt-BR', {
+  const amount = cents / 100;
+  const formatted = amount.toLocaleString(locale, {
     minimumFractionDigits: 2,
     maximumFractionDigits: 2,
   });
-  return showPrefix ? `R$ ${formatted}` : formatted;
+  return showPrefix ? `${currencySymbol} ${formatted}` : formatted;
 };
 
 // Convert value (in reais) to cents for internal use
@@ -33,7 +39,14 @@ export const CurrencyInput = forwardRef<HTMLInputElement, CurrencyInputProps>(
     { value, onChange, className, placeholder, disabled, showPrefix = true },
     ref
   ) => {
-    const resolvedPlaceholder = placeholder ?? (showPrefix ? 'R$ 0,00' : '0,00');
+    const { locale, currency } = getActivePreferences();
+    const currencySymbol = getCurrencySymbol(locale, currency);
+    const formattedZero = new Intl.NumberFormat(locale, {
+      minimumFractionDigits: 2,
+      maximumFractionDigits: 2,
+    }).format(0);
+    const resolvedPlaceholder =
+      placeholder ?? (showPrefix ? `${currencySymbol} ${formattedZero}` : formattedZero);
     // Store value internally as cents (integer) for precise formatting
     const [cents, setCents] = useState(() => reaisToCents(value));
 
@@ -61,7 +74,7 @@ export const CurrencyInput = forwardRef<HTMLInputElement, CurrencyInputProps>(
         ref={ref}
         type="text"
         inputMode="numeric"
-        value={formatCentsToDisplay(cents, showPrefix)}
+        value={formatCentsToDisplay(cents, showPrefix, locale, currencySymbol)}
         onChange={handleChange}
         placeholder={resolvedPlaceholder}
         disabled={disabled}

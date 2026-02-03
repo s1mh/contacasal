@@ -6,6 +6,7 @@ import catAvatar5 from '@/assets/cat-avatar-5.png';
 import catAvatar6 from '@/assets/cat-avatar-6.png';
 import catAvatar7 from '@/assets/cat-avatar-7.png';
 import catAvatar8 from '@/assets/cat-avatar-8.png';
+import { getActivePreferences } from '@/lib/preferences';
 
 export const CAT_AVATARS = [
   catAvatar1,
@@ -50,15 +51,17 @@ export const SPLIT_TYPES = {
 };
 
 export const formatCurrency = (value: number): string => {
-  const formatted = new Intl.NumberFormat('pt-BR', {
-    minimumFractionDigits: 2,
-    maximumFractionDigits: 2,
+  const { locale, currency } = getActivePreferences();
+  return new Intl.NumberFormat(locale, {
+    style: 'currency',
+    currency,
   }).format(value);
   return `$ ${formatted}`;
 };
 
 export const formatDate = (date: string | Date): string => {
-  return new Intl.DateTimeFormat('pt-BR', {
+  const { locale } = getActivePreferences();
+  return new Intl.DateTimeFormat(locale, {
     day: '2-digit',
     month: 'short',
   }).format(new Date(date));
