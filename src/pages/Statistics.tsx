@@ -7,17 +7,17 @@ import { AnimatedPage, AnimatedItem } from '@/components/AnimatedPage';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { BarChart3, PieChart, TrendingUp, Users } from 'lucide-react';
 import { subMonths, startOfMonth, endOfMonth, isWithinInterval, format } from 'date-fns';
-import { getActivePreferences, getDateFnsLocale } from '@/lib/preferences';
-import { formatCurrency } from '@/lib/constants';
+import { getDateFnsLocale } from '@/lib/preferences';
 import { isConfiguredProfile } from '@/lib/utils';
+import { useI18n } from '@/contexts/I18nContext';
 
 type Period = 'current' | 'last3' | 'last6' | 'year' | 'all';
 
 export default function Statistics() {
+  const { t, locale, formatCurrency, interpolate } = useI18n();
   const { couple } = useOutletContext<{ couple: Couple }>();
   const [period, setPeriod] = useState<Period>('current');
   const [selectedTag, setSelectedTag] = useState<string>('all');
-  const { locale } = getActivePreferences();
   const dateLocale = getDateFnsLocale(locale);
 
   const filteredExpenses = useMemo(() => {
@@ -80,12 +80,12 @@ export default function Statistics() {
   const periodLabel = useMemo(() => {
     switch (period) {
       case 'current': return format(new Date(), 'MMMM yyyy', { locale: dateLocale });
-      case 'last3': return 'Últimos 3 meses';
-      case 'last6': return 'Últimos 6 meses';
-      case 'year': return 'Último ano';
-      case 'all': return 'Todo período';
+      case 'last3': return t.statistics.threeMonths;
+      case 'last6': return t.statistics.sixMonths;
+      case 'year': return t.statistics.twelveMonths;
+      case 'all': return t.statistics.allTime;
     }
-  }, [period]);
+  }, [period, dateLocale, t]);
 
   return (
     <AnimatedPage className="p-6 space-y-6">
@@ -94,7 +94,7 @@ export default function Statistics() {
         <div className="flex items-center justify-between">
           <h1 className="text-2xl font-bold flex items-center gap-2">
             <BarChart3 className="w-6 h-6 text-primary" />
-            Estatísticas
+            {t.statistics.title}
           </h1>
           <ExportButton 
             expenses={filteredExpenses} 
@@ -113,20 +113,20 @@ export default function Statistics() {
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="current">Mês atual</SelectItem>
-              <SelectItem value="last3">3 meses</SelectItem>
-              <SelectItem value="last6">6 meses</SelectItem>
-              <SelectItem value="year">12 meses</SelectItem>
-              <SelectItem value="all">Tudo</SelectItem>
+              <SelectItem value="current">{t.statistics.currentMonth}</SelectItem>
+              <SelectItem value="last3">{t.statistics.threeMonths}</SelectItem>
+              <SelectItem value="last6">{t.statistics.sixMonths}</SelectItem>
+              <SelectItem value="year">{t.statistics.twelveMonths}</SelectItem>
+              <SelectItem value="all">{t.statistics.allTime}</SelectItem>
             </SelectContent>
           </Select>
 
           <Select value={selectedTag} onValueChange={setSelectedTag}>
             <SelectTrigger className="flex-1">
-              <SelectValue placeholder="Categoria" />
+              <SelectValue placeholder={t.expenses.category} />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="all">Todas categorias</SelectItem>
+              <SelectItem value="all">{t.statistics.allCategories}</SelectItem>
               {couple.tags.map(tag => (
                 <SelectItem key={tag.id} value={tag.id}>{tag.name}</SelectItem>
               ))}
@@ -139,12 +139,14 @@ export default function Statistics() {
       <AnimatedItem delay={200}>
         <div className="grid grid-cols-2 gap-4">
           <div className="p-4 rounded-2xl bg-card border border-border">
-            <p className="text-xs text-muted-foreground mb-1">Total gasto</p>
+            <p className="text-xs text-muted-foreground mb-1">{t.statistics.totalSpent}</p>
             <p className="text-xl font-bold text-primary">{formatCurrency(stats.total)}</p>
-            <p className="text-xs text-muted-foreground mt-1">{stats.count} despesa(s)</p>
+            <p className="text-xs text-muted-foreground mt-1">
+              {interpolate(t.statistics.expensesCount, { count: stats.count.toString() })}
+            </p>
           </div>
           <div className="p-4 rounded-2xl bg-card border border-border">
-            <p className="text-xs text-muted-foreground mb-1">Média por gasto</p>
+            <p className="text-xs text-muted-foreground mb-1">{t.statistics.averagePerExpense}</p>
             <p className="text-xl font-bold">{formatCurrency(stats.avgPerExpense)}</p>
           </div>
         </div>
@@ -157,7 +159,7 @@ export default function Statistics() {
           <div className="p-4 rounded-2xl bg-card border border-border space-y-4">
             <div className="flex items-center gap-2">
               <PieChart className="w-4 h-4 text-muted-foreground" />
-              <h3 className="font-medium">Por Categoria</h3>
+              <h3 className="font-medium">{t.statistics.byCategory}</h3>
             </div>
             <ExpensesByTagChart expenses={filteredExpenses} tags={couple.tags} />
           </div>
@@ -168,7 +170,7 @@ export default function Statistics() {
           <div className="p-4 rounded-2xl bg-card border border-border space-y-4">
             <div className="flex items-center gap-2">
               <Users className="w-4 h-4 text-muted-foreground" />
-              <h3 className="font-medium">Por Pessoa</h3>
+              <h3 className="font-medium">{t.statistics.byPerson}</h3>
             </div>
             <ExpensesByPersonChart expenses={filteredExpenses} profiles={couple.profiles} />
           </div>
@@ -179,7 +181,7 @@ export default function Statistics() {
           <div className="p-4 rounded-2xl bg-card border border-border space-y-4">
             <div className="flex items-center gap-2">
               <TrendingUp className="w-4 h-4 text-muted-foreground" />
-              <h3 className="font-medium">Evolução Mensal</h3>
+              <h3 className="font-medium">{t.statistics.monthlyEvolution}</h3>
             </div>
             <MonthlyEvolutionChart expenses={couple.expenses} />
           </div>
