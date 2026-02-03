@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useOutletContext, useParams, useNavigate } from 'react-router-dom';
-import { User, Palette, Tag, Plus, Trash2, Check, Copy, LogOut, UserX, AtSign, RefreshCw, Users, Crown } from 'lucide-react';
+import { User, Palette, Tag, Plus, Trash2, Check, Copy, LogOut, UserX, AtSign, RefreshCw, Users, Crown, Globe, Coins } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Avatar } from '@/components/Avatar';
@@ -10,6 +10,7 @@ import { AgreementManager } from '@/components/AgreementManager';
 import { MemberManagement } from '@/components/MemberManagement';
 import { AnimatedPage, AnimatedItem } from '@/components/AnimatedPage';
 import { Couple, useCoupleContext } from '@/contexts/CoupleContext';
+import { useI18n } from '@/contexts/I18nContext';
 import { CAT_AVATARS, PERSON_COLORS, TAG_ICONS } from '@/lib/constants';
 import { cn, isConfiguredProfile } from '@/lib/utils';
 import { useToast } from '@/hooks/use-toast';
@@ -51,6 +52,20 @@ export default function Settings() {
 
   // Get only MY profile
   const myProfile = couple.profiles.find(p => p.position === myPosition);
+
+  const handleLocaleChange = (newLocale: SupportedLocale) => {
+    setLocale(newLocale);
+    toast({ 
+      title: t.toast.preferencesUpdated,
+    });
+  };
+
+  const handleCurrencyChange = (newCurrency: SupportedCurrency) => {
+    setCurrency(newCurrency);
+    toast({ 
+      title: t.toast.preferencesUpdated,
+    });
+  };
 
   const handleStartEditing = () => {
     if (myProfile) {
@@ -331,6 +346,56 @@ export default function Settings() {
                   title={color.name}
                 />
               ))}
+            </div>
+          </div>
+        </div>
+      </AnimatedItem>
+
+      {/* Preferences */}
+      <AnimatedItem delay={50}>
+        <div className="bg-card rounded-3xl p-4 shadow-lg border border-border/50">
+          <div className="flex items-center gap-3 mb-4">
+            <Globe className="w-4 h-4 text-muted-foreground" />
+            <span className="text-sm font-medium text-muted-foreground">
+              {t.settings.preferences}
+            </span>
+          </div>
+
+          <div className="space-y-4">
+            {/* Language */}
+            <div>
+              <label className="text-sm text-muted-foreground mb-2 block">{t.settings.language}</label>
+              <Select value={locale} onValueChange={(value) => handleLocaleChange(value as SupportedLocale)}>
+                <SelectTrigger>
+                  <SelectValue>
+                    {t.languages[locale]}
+                  </SelectValue>
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="pt-BR">{t.languages['pt-BR']}</SelectItem>
+                  <SelectItem value="en-US">{t.languages['en-US']}</SelectItem>
+                  <SelectItem value="es-ES">{t.languages['es-ES']}</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+
+            {/* Currency */}
+            <div>
+              <label className="text-sm text-muted-foreground mb-2 block flex items-center gap-2">
+                <Coins className="w-4 h-4" /> {t.settings.currency}
+              </label>
+              <Select value={currency} onValueChange={(value) => handleCurrencyChange(value as SupportedCurrency)}>
+                <SelectTrigger>
+                  <SelectValue>
+                    {t.currencies[currency]}
+                  </SelectValue>
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="BRL">{t.currencies.BRL}</SelectItem>
+                  <SelectItem value="USD">{t.currencies.USD}</SelectItem>
+                  <SelectItem value="EUR">{t.currencies.EUR}</SelectItem>
+                </SelectContent>
+              </Select>
             </div>
           </div>
         </div>

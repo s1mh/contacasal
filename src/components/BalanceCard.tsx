@@ -1,5 +1,4 @@
 import { cn, isConfiguredProfile } from '@/lib/utils';
-import { formatCurrency } from '@/lib/constants';
 import { Avatar } from './Avatar';
 import { Profile } from '@/hooks/useCouple';
 import { ArrowRight } from 'lucide-react';

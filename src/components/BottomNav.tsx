@@ -1,6 +1,7 @@
 import { Home, Clock, Plus, Settings, BarChart3 } from 'lucide-react';
 import { useLocation, useNavigate, useParams } from 'react-router-dom';
 import { cn } from '@/lib/utils';
+import { useI18n } from '@/contexts/I18nContext';
 
 interface NavItem {
   icon: typeof Home;
@@ -12,14 +13,15 @@ export function BottomNav() {
   const location = useLocation();
   const navigate = useNavigate();
   const { shareCode } = useParams();
+  const { t } = useI18n();
 
   const basePath = `/c/${shareCode}`;
 
   const navItems: NavItem[] = [
-    { icon: Home, label: 'Resumo', path: basePath },
-    { icon: Clock, label: 'Histórico', path: `${basePath}/historico` },
-    { icon: BarChart3, label: 'Stats', path: `${basePath}/estatisticas` },
-    { icon: Settings, label: 'Ajustes', path: `${basePath}/ajustes` },
+    { icon: Home, label: t.nav.summary, path: basePath },
+    { icon: Clock, label: t.nav.history, path: `${basePath}/historico` },
+    { icon: BarChart3, label: t.nav.stats, path: `${basePath}/estatisticas` },
+    { icon: Settings, label: t.nav.settings, path: `${basePath}/ajustes` },
   ];
 
   const isActive = (path: string) => {

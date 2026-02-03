@@ -11,7 +11,6 @@ import {
 } from '@/components/ui/alert-dialog';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Expense } from '@/contexts/CoupleContext';
-import { formatCurrency } from '@/lib/constants';
 import { format, parseISO } from 'date-fns';
 import { getDateFnsLocale } from '@/lib/preferences';
 import { usePreferences } from '@/contexts/PreferencesContext';
@@ -33,6 +32,7 @@ export function DeleteExpenseDialog({
   onDeleteSingle,
   onDeleteMultiple,
 }: DeleteExpenseDialogProps) {
+  const { t, locale, formatCurrency, interpolate } = useI18n();
   const [selectedIds, setSelectedIds] = useState<string[]>([expense.id]);
   const [mode, setMode] = useState<'confirm' | 'select'>('confirm');
   const { locale: prefLocale, t: prefT } = usePreferences();
