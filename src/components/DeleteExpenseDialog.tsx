@@ -11,9 +11,9 @@ import {
 } from '@/components/ui/alert-dialog';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Expense } from '@/contexts/CoupleContext';
-import { formatCurrency } from '@/lib/constants';
 import { format, parseISO } from 'date-fns';
-import { getActivePreferences, getDateFnsLocale } from '@/lib/preferences';
+import { getDateFnsLocale } from '@/lib/preferences';
+import { useI18n } from '@/contexts/I18nContext';
 
 interface DeleteExpenseDialogProps {
   expense: Expense;
@@ -32,9 +32,9 @@ export function DeleteExpenseDialog({
   onDeleteSingle,
   onDeleteMultiple,
 }: DeleteExpenseDialogProps) {
+  const { t, locale, formatCurrency, interpolate } = useI18n();
   const [selectedIds, setSelectedIds] = useState<string[]>([expense.id]);
   const [mode, setMode] = useState<'confirm' | 'select'>('confirm');
-  const { locale } = getActivePreferences();
   const dateLocale = getDateFnsLocale(locale);
   
   const isInstallment = expense.installments > 1;
@@ -70,15 +70,18 @@ export function DeleteExpenseDialog({
       <AlertDialog open={open} onOpenChange={onOpenChange}>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>Apagar gasto?</AlertDialogTitle>
+            <AlertDialogTitle>{t.deleteExpense.title}</AlertDialogTitle>
             <AlertDialogDescription>
-              {expense.description || 'Este gasto'} de {formatCurrency(expense.total_amount)} será removido.
+              {interpolate(t.deleteExpense.willBeRemoved, {
+                description: expense.description || t.expenses.description,
+                amount: formatCurrency(expense.total_amount)
+              })}
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel>Cancelar</AlertDialogCancel>
+            <AlertDialogCancel>{t.common.cancel}</AlertDialogCancel>
             <AlertDialogAction onClick={onDeleteSingle} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
-              Apagar
+              {t.common.delete}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
@@ -92,9 +95,9 @@ export function DeleteExpenseDialog({
       <AlertDialog open={open} onOpenChange={onOpenChange}>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>Apagar parcelamento?</AlertDialogTitle>
+            <AlertDialogTitle>{t.deleteExpense.titleInstallment}</AlertDialogTitle>
             <AlertDialogDescription>
-              Este gasto tem {expense.installments} parcelas. O que deseja fazer?
+              {interpolate(t.deleteExpense.hasInstallments, { count: expense.installments.toString() })}
             </AlertDialogDescription>
           </AlertDialogHeader>
           <div className="flex flex-col gap-2 py-4">
@@ -102,23 +105,23 @@ export function DeleteExpenseDialog({
               onClick={handleDeleteAll}
               className="p-3 rounded-xl border-2 border-destructive/50 hover:bg-destructive/10 text-left transition-colors"
             >
-              <p className="font-medium text-destructive">Apagar todas as parcelas</p>
+              <p className="font-medium text-destructive">{t.deleteExpense.deleteAll}</p>
               <p className="text-xs text-muted-foreground">
-                Remove todas as {relatedExpenses.length} parcelas encontradas
+                {interpolate(t.deleteExpense.deleteAllDesc, { count: relatedExpenses.length.toString() })}
               </p>
             </button>
             <button
               onClick={() => setMode('select')}
               className="p-3 rounded-xl border-2 border-border hover:border-primary/50 text-left transition-colors"
             >
-              <p className="font-medium">Selecionar parcelas</p>
+              <p className="font-medium">{t.deleteExpense.selectInstallments}</p>
               <p className="text-xs text-muted-foreground">
-                Escolher quais meses apagar
+                {t.deleteExpense.selectInstallmentsDesc}
               </p>
             </button>
           </div>
           <AlertDialogFooter>
-            <AlertDialogCancel>Cancelar</AlertDialogCancel>
+            <AlertDialogCancel>{t.common.cancel}</AlertDialogCancel>
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
@@ -130,9 +133,9 @@ export function DeleteExpenseDialog({
     <AlertDialog open={open} onOpenChange={onOpenChange}>
       <AlertDialogContent className="max-h-[80vh] overflow-y-auto">
         <AlertDialogHeader>
-          <AlertDialogTitle>Selecionar parcelas</AlertDialogTitle>
+          <AlertDialogTitle>{t.deleteExpense.selectTitle}</AlertDialogTitle>
           <AlertDialogDescription>
-            Marque as parcelas que deseja apagar
+            {t.deleteExpense.selectDesc}
           </AlertDialogDescription>
         </AlertDialogHeader>
         <div className="space-y-2 py-4">
@@ -149,7 +152,7 @@ export function DeleteExpenseDialog({
                 />
                 <div className="flex-1">
                   <p className="font-medium text-sm">
-                    Parcela {exp.installment_number}/{exp.installments}
+                    {t.deleteExpense.installment} {exp.installment_number}/{exp.installments}
                   </p>
                   <p className="text-xs text-muted-foreground">
                     {exp.billing_month 
@@ -163,13 +166,13 @@ export function DeleteExpenseDialog({
             ))}
         </div>
         <AlertDialogFooter>
-          <AlertDialogCancel onClick={() => setMode('confirm')}>Voltar</AlertDialogCancel>
+          <AlertDialogCancel onClick={() => setMode('confirm')}>{t.common.back}</AlertDialogCancel>
           <AlertDialogAction 
             onClick={handleDeleteSelected}
             disabled={selectedIds.length === 0}
             className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
           >
-            Apagar {selectedIds.length} parcela{selectedIds.length > 1 ? 's' : ''}
+            {interpolate(t.deleteExpense.deleteCount, { count: selectedIds.length.toString() })}
           </AlertDialogAction>
         </AlertDialogFooter>
       </AlertDialogContent>

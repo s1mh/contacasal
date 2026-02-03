@@ -14,6 +14,7 @@ import { DatePickerField } from '@/components/DatePickerField';
 import { CurrencyInput } from '@/components/ui/currency-input';
 import { Slider } from '@/components/ui/slider';
 import { parseISO } from 'date-fns';
+import { useI18n } from '@/contexts/I18nContext';
 
 interface EditExpenseDialogProps {
   expense: Expense;
@@ -34,6 +35,7 @@ export function EditExpenseDialog({
   onOpenChange,
   onSave,
 }: EditExpenseDialogProps) {
+  const { t } = useI18n();
   const [amount, setAmount] = useState(expense.total_amount);
   const [description, setDescription] = useState(expense.description || '');
   const [expenseDate, setExpenseDate] = useState<Date>(parseISO(expense.expense_date));
@@ -107,13 +109,13 @@ export function EditExpenseDialog({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-md max-h-[90vh] overflow-y-auto">
         <DialogHeader>
-          <DialogTitle>Editar Gasto</DialogTitle>
+          <DialogTitle>{t.editExpense.title}</DialogTitle>
         </DialogHeader>
         
         <div className="space-y-4 py-4">
           {/* Amount */}
           <div className="space-y-2">
-            <Label>Valor</Label>
+            <Label>{t.editExpense.amount}</Label>
             <CurrencyInput
               value={amount}
               onChange={setAmount}
@@ -122,17 +124,17 @@ export function EditExpenseDialog({
 
           {/* Description */}
           <div className="space-y-2">
-            <Label>Descrição</Label>
+            <Label>{t.editExpense.description}</Label>
             <Input
               value={description}
               onChange={(e) => setDescription(e.target.value)}
-              placeholder="Descrição do gasto"
+              placeholder={t.editExpense.descriptionPlaceholder}
             />
           </div>
 
           {/* Date */}
           <div className="space-y-2">
-            <Label>Data</Label>
+            <Label>{t.editExpense.date}</Label>
             <DatePickerField
               value={expenseDate}
               onChange={(date) => date && setExpenseDate(date)}
@@ -141,7 +143,7 @@ export function EditExpenseDialog({
 
           {/* Paid by */}
           <div className="space-y-2">
-            <Label>Quem pagou</Label>
+            <Label>{t.editExpense.whoPaid}</Label>
             <Select value={paidBy.toString()} onValueChange={(v) => setPaidBy(parseInt(v))}>
               <SelectTrigger>
                 <SelectValue />
@@ -158,10 +160,10 @@ export function EditExpenseDialog({
 
           {/* Category */}
           <div className="space-y-2">
-            <Label>Categoria</Label>
+            <Label>{t.editExpense.category}</Label>
             <Select value={tagId} onValueChange={setTagId}>
               <SelectTrigger>
-                <SelectValue placeholder="Selecione..." />
+                <SelectValue placeholder={t.editExpense.selectCategory} />
               </SelectTrigger>
               <SelectContent>
                 {tags.map((tag) => (
@@ -175,15 +177,15 @@ export function EditExpenseDialog({
 
           {/* Split Type */}
           <div className="space-y-2">
-            <Label>Divisão</Label>
+            <Label>{t.editExpense.split}</Label>
             <Select value={splitType} onValueChange={(v) => setSplitType(v as typeof splitType)}>
               <SelectTrigger>
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="equal">50/50</SelectItem>
-                <SelectItem value="percentage">Percentual</SelectItem>
-                <SelectItem value="full">100% de um</SelectItem>
+                <SelectItem value="equal">{t.expenses.splitEqual}</SelectItem>
+                <SelectItem value="percentage">{t.editExpense.percentage}</SelectItem>
+                <SelectItem value="full">{t.editExpense.oneHundredPercent}</SelectItem>
               </SelectContent>
             </Select>
           </div>
@@ -214,7 +216,7 @@ export function EditExpenseDialog({
             disabled={!numericAmount || isLoading} 
             className="w-full"
           >
-            {isLoading ? 'Salvando...' : 'Salvar Alterações'}
+            {isLoading ? t.editExpense.saving : t.editExpense.saveChanges}
           </Button>
         </div>
       </DialogContent>
