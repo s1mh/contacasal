@@ -4,7 +4,8 @@ import { Expense, Profile, Tag } from '@/hooks/useCouple';
 import { formatCurrency } from '@/lib/constants';
 import { isConfiguredProfile } from '@/lib/utils';
 import { format, subMonths, startOfMonth, endOfMonth, isWithinInterval } from 'date-fns';
-import { ptBR } from 'date-fns/locale';
+import { getCurrencySymbol, getDateFnsLocale } from '@/lib/preferences';
+import { usePreferences } from '@/contexts/PreferencesContext';
 
 interface ChartsProps {
   expenses: Expense[];
@@ -13,6 +14,7 @@ interface ChartsProps {
 }
 
 export function ExpensesByTagChart({ expenses, tags }: { expenses: Expense[]; tags: Tag[] }) {
+  const { t } = usePreferences();
   const data = useMemo(() => {
     const byTag = expenses.reduce((acc, expense) => {
       const tagId = expense.tag_id || 'other';
@@ -35,7 +37,7 @@ export function ExpensesByTagChart({ expenses, tags }: { expenses: Expense[]; ta
   if (data.length === 0) {
     return (
       <div className="flex items-center justify-center h-48 text-muted-foreground">
-        Sem dados para exibir
+        {t('Sem dados para exibir')}
       </div>
     );
   }
@@ -86,6 +88,7 @@ export function ExpensesByTagChart({ expenses, tags }: { expenses: Expense[]; ta
 }
 
 export function ExpensesByPersonChart({ expenses, profiles }: { expenses: Expense[]; profiles: Profile[] }) {
+  const { t } = usePreferences();
   const data = useMemo(() => {
     const configuredProfiles = profiles.filter(isConfiguredProfile);
     
@@ -104,7 +107,7 @@ export function ExpensesByPersonChart({ expenses, profiles }: { expenses: Expens
   if (expenses.length === 0) {
     return (
       <div className="flex items-center justify-center h-48 text-muted-foreground">
-        Sem dados para exibir
+        {t('Sem dados para exibir')}
       </div>
     );
   }
@@ -133,13 +136,18 @@ export function ExpensesByPersonChart({ expenses, profiles }: { expenses: Expens
 }
 
 export function MonthlyEvolutionChart({ expenses }: { expenses: Expense[] }) {
+  const { t, locale, currency } = usePreferences();
+  const dateLocale = getDateFnsLocale(locale);
+  const currencySymbol = getCurrencySymbol(locale, currency);
+  const compactFormatter = new Intl.NumberFormat(locale, { maximumFractionDigits: 0 });
+
   const data = useMemo(() => {
     const months: { month: Date; label: string }[] = [];
     for (let i = 5; i >= 0; i--) {
       const month = subMonths(new Date(), i);
       months.push({
         month: startOfMonth(month),
-        label: format(month, 'MMM', { locale: ptBR }),
+        label: format(month, 'MMM', { locale: dateLocale }),
       });
     }
 
@@ -153,12 +161,12 @@ export function MonthlyEvolutionChart({ expenses }: { expenses: Expense[] }) {
       const total = monthExpenses.reduce((sum, e) => sum + e.total_amount, 0);
       return { name: label, value: total };
     });
-  }, [expenses]);
+  }, [expenses, dateLocale]);
 
   if (expenses.length === 0) {
     return (
       <div className="flex items-center justify-center h-48 text-muted-foreground">
-        Sem dados para exibir
+        {t('Sem dados para exibir')}
       </div>
     );
   }
@@ -167,7 +175,11 @@ export function MonthlyEvolutionChart({ expenses }: { expenses: Expense[] }) {
     <ResponsiveContainer width="100%" height={200}>
       <LineChart data={data} margin={{ left: 0, right: 10, top: 10 }}>
         <XAxis dataKey="name" tick={{ fontSize: 12 }} />
-        <YAxis tickFormatter={(value) => `R$${(value/1000).toFixed(0)}k`} tick={{ fontSize: 10 }} width={50} />
+        <YAxis
+          tickFormatter={(value) => `${currencySymbol}${compactFormatter.format(value / 1000)}k`}
+          tick={{ fontSize: 10 }}
+          width={60}
+        />
         <Tooltip 
           formatter={(value: number) => formatCurrency(value)}
           contentStyle={{ 
@@ -192,17 +204,17 @@ export function Charts({ expenses, profiles, tags }: ChartsProps) {
   return (
     <div className="space-y-8">
       <div className="space-y-3">
-        <h3 className="text-sm font-medium text-muted-foreground">Gastos por Categoria</h3>
+        <h3 className="text-sm font-medium text-muted-foreground">{t('Gastos por Categoria')}</h3>
         <ExpensesByTagChart expenses={expenses} tags={tags} />
       </div>
 
       <div className="space-y-3">
-        <h3 className="text-sm font-medium text-muted-foreground">Gastos por Pessoa</h3>
+        <h3 className="text-sm font-medium text-muted-foreground">{t('Gastos por Pessoa')}</h3>
         <ExpensesByPersonChart expenses={expenses} profiles={profiles} />
       </div>
 
       <div className="space-y-3">
-        <h3 className="text-sm font-medium text-muted-foreground">Evolução Mensal</h3>
+        <h3 className="text-sm font-medium text-muted-foreground">{t('Evolução Mensal')}</h3>
         <MonthlyEvolutionChart expenses={expenses} />
       </div>
     </div>
