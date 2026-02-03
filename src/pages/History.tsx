@@ -7,7 +7,7 @@ import { AnimatedPage, AnimatedItem } from '@/components/AnimatedPage';
 import { Couple, Expense, useCoupleContext } from '@/contexts/CoupleContext';
 import { formatCurrency } from '@/lib/constants';
 import { format, startOfMonth, endOfMonth, isWithinInterval, parseISO } from 'date-fns';
-import { ptBR } from 'date-fns/locale';
+import { getActivePreferences, getDateFnsLocale } from '@/lib/preferences';
 import { cn } from '@/lib/utils';
 import { Avatar } from '@/components/Avatar';
 import { DeleteExpenseDialog } from '@/components/DeleteExpenseDialog';
@@ -22,6 +22,8 @@ export default function History() {
   const [expenseToDelete, setExpenseToDelete] = useState<Expense | null>(null);
   const [editDialogOpen, setEditDialogOpen] = useState(false);
   const [expenseToEdit, setExpenseToEdit] = useState<Expense | null>(null);
+  const { locale } = getActivePreferences();
+  const dateLocale = getDateFnsLocale(locale);
 
   const monthStart = startOfMonth(selectedMonth);
   const monthEnd = endOfMonth(selectedMonth);
@@ -80,7 +82,7 @@ export default function History() {
               ←
             </button>
             <span className="px-3 text-sm font-medium min-w-[100px] text-center">
-              {format(selectedMonth, 'MMM yyyy', { locale: ptBR })}
+              {format(selectedMonth, 'MMM yyyy', { locale: dateLocale })}
             </span>
             <button
               onClick={() => navigateMonth(1)}
