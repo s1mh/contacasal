@@ -178,6 +178,7 @@ export default function NewExpense() {
             value={amount}
             onChange={setAmount}
             placeholder="0,00"
+            showPrefix={false}
             className="text-4xl font-bold border-0 bg-transparent p-0 h-auto focus-visible:ring-0"
           />
         </div>
