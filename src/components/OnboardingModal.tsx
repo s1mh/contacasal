@@ -8,6 +8,8 @@ import { CAT_AVATARS, PERSON_COLORS } from '@/lib/constants';
 import { Profile } from '@/contexts/CoupleContext';
 import { Check, Heart, Sparkles, Lock, ArrowRight, ArrowLeft, Mail, SkipForward, AtSign, Loader2, Eye, EyeOff, PartyPopper } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { getActivePreferences, setActivePreferences, SupportedCurrency, SupportedLocale } from '@/lib/preferences';
 
 interface OnboardingModalProps {
   open: boolean;
@@ -87,7 +89,7 @@ const isWeakPin = (pin: string): { weak: boolean; reason?: string } => {
 };
 
 export function OnboardingModal({ open, onClose, onComplete, profiles, shareCode, isNewMember = false, hostName, isJoining = false }: OnboardingModalProps) {
-  const [step, setStep] = useState<'welcome' | 'profile' | 'pin' | 'email'>(isNewMember ? 'welcome' : 'profile');
+  const [step, setStep] = useState<'welcome' | 'profile' | 'preferences' | 'pin' | 'email'>(isNewMember ? 'welcome' : 'profile');
   const [name, setName] = useState('');
   const [avatarIndex, setAvatarIndex] = useState(1);
   const [color, setColor] = useState(PERSON_COLORS[0].value);
@@ -106,6 +108,9 @@ export function OnboardingModal({ open, onClose, onComplete, profiles, shareCode
   const [hoveredAvatar, setHoveredAvatar] = useState<number | null>(null);
   const [complimentTimeout, setComplimentTimeout] = useState<NodeJS.Timeout | null>(null);
   const [isTransitioning, setIsTransitioning] = useState(false);
+  const activePreferences = getActivePreferences();
+  const [preferredLocale, setPreferredLocale] = useState<SupportedLocale>(activePreferences.locale);
+  const [preferredCurrency, setPreferredCurrency] = useState<SupportedCurrency>(activePreferences.currency);
 
   // Get the host profile name for welcome message (use prop or find from profiles)
   const hostProfile = profiles.find(isConfiguredProfile);
@@ -190,12 +195,21 @@ export function OnboardingModal({ open, onClose, onComplete, profiles, shareCode
   const handleNextStep = () => {
     if (name.trim() && isValidName(name) && !isTransitioning) {
       setIsTransitioning(true);
-      setStep('pin'); // Immediate transition
-      // Generate username in background
-      generateUsername().finally(() => {
-        setIsTransitioning(false);
-      });
+      setStep('preferences');
+      setIsTransitioning(false);
     }
+  };
+
+  const handlePreferencesNext = () => {
+    setActivePreferences(shareCode, {
+      locale: preferredLocale,
+      currency: preferredCurrency,
+    });
+    setIsTransitioning(true);
+    setStep('pin');
+    generateUsername().finally(() => {
+      setIsTransitioning(false);
+    });
   };
 
   const handlePinChange = (value: string) => {
@@ -273,6 +287,10 @@ export function OnboardingModal({ open, onClose, onComplete, profiles, shareCode
   };
 
   const handleComplete = () => {
+    setActivePreferences(shareCode, {
+      locale: preferredLocale,
+      currency: preferredCurrency,
+    });
     // Validate email if provided
     if (email.trim() && !isValidEmail(email)) {
       setEmailError('E-mail inválido');
@@ -305,6 +323,10 @@ export function OnboardingModal({ open, onClose, onComplete, profiles, shareCode
   };
 
   const handleSkipEmail = () => {
+    setActivePreferences(shareCode, {
+      locale: preferredLocale,
+      currency: preferredCurrency,
+    });
     const position = getAvailablePosition();
     const formattedName = name.trim()
       .toLowerCase()
@@ -379,6 +401,8 @@ export function OnboardingModal({ open, onClose, onComplete, profiles, shareCode
               ? 'Bem-vindo!' 
               : step === 'profile' 
               ? 'Olá! Crie seu perfil' 
+              : step === 'preferences'
+              ? 'Escolha idioma e moeda'
               : step === 'pin' 
               ? 'Crie seu código' 
               : 'Adicione seu e-mail'}
@@ -388,6 +412,8 @@ export function OnboardingModal({ open, onClose, onComplete, profiles, shareCode
               ? `${displayHostName || 'Alguém'} convidou você para compartilhar despesas`
               : step === 'profile'
               ? 'Personalize como você aparecerá no app'
+              : step === 'preferences'
+              ? 'Defina como valores e datas serão exibidos'
               : step === 'pin'
               ? 'Código de 4 dígitos para entrar em outros dispositivos'
               : 'Para recuperar seu código se esquecer (opcional)'
@@ -608,6 +634,53 @@ export function OnboardingModal({ open, onClose, onComplete, profiles, shareCode
                 )}
               </Button>
             </>
+          ) : step === 'preferences' ? (
+            <>
+              <div className="flex flex-col gap-6 animate-fade-in">
+                <div className="space-y-2">
+                  <label className="text-sm font-medium text-muted-foreground">Idioma</label>
+                  <Select value={preferredLocale} onValueChange={(value) => setPreferredLocale(value as SupportedLocale)}>
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="pt-BR">Português (Brasil)</SelectItem>
+                      <SelectItem value="en-US">English (US)</SelectItem>
+                      <SelectItem value="es-ES">Español</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                <div className="space-y-2">
+                  <label className="text-sm font-medium text-muted-foreground">Moeda</label>
+                  <Select value={preferredCurrency} onValueChange={(value) => setPreferredCurrency(value as SupportedCurrency)}>
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="BRL">Real (R$)</SelectItem>
+                      <SelectItem value="USD">Dólar (US$)</SelectItem>
+                      <SelectItem value="EUR">Euro (€)</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                <div className="flex gap-2 w-full">
+                  <Button
+                    variant="ghost"
+                    onClick={() => setStep('profile')}
+                    className="flex-1"
+                  >
+                    <ArrowLeft className="w-4 h-4 mr-2" />
+                    Voltar
+                  </Button>
+                  <Button onClick={handlePreferencesNext} className="flex-1">
+                    Continuar
+                    <ArrowRight className="w-4 h-4 ml-2" />
+                  </Button>
+                </div>
+              </div>
+            </>
           ) : step === 'pin' ? (
             <>
               {/* PIN Creation Step */}
@@ -683,13 +756,14 @@ export function OnboardingModal({ open, onClose, onComplete, profiles, shareCode
                 <div className="flex gap-2">
                   <div className="w-2 h-2 rounded-full bg-primary" />
                   <div className="w-2 h-2 rounded-full bg-primary" />
+                  <div className="w-2 h-2 rounded-full bg-primary" />
                   <div className="w-2 h-2 rounded-full bg-muted" />
                 </div>
 
                 <div className="flex gap-2 w-full">
                   <Button 
                     variant="ghost"
-                    onClick={() => setStep('profile')}
+                    onClick={() => setStep('preferences')}
                     className="flex-1"
                   >
                     <ArrowLeft className="w-4 h-4 mr-2" />

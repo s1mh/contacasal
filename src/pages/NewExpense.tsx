@@ -13,7 +13,7 @@ import { Slider } from '@/components/ui/slider';
 import { DatePickerField } from '@/components/DatePickerField';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { format, addMonths, startOfMonth } from 'date-fns';
-import { ptBR } from 'date-fns/locale';
+import { getActivePreferences, getCurrencySymbol, getDateFnsLocale } from '@/lib/preferences';
 
 type SplitType = 'equal' | 'percentage' | 'fixed' | 'full';
 type PaymentType = 'debit' | 'credit';
@@ -23,6 +23,9 @@ export default function NewExpense() {
   const { addExpenses } = useCoupleContext();
   const { shareCode } = useParams();
   const navigate = useNavigate();
+  const { locale, currency } = getActivePreferences();
+  const dateLocale = getDateFnsLocale(locale);
+  const currencySymbol = getCurrencySymbol(locale, currency);
 
   const [amount, setAmount] = useState(0);
   const [description, setDescription] = useState('');
@@ -173,11 +176,11 @@ export default function NewExpense() {
       <div className="bg-card rounded-3xl p-6 shadow-lg border border-border/50 mb-4">
         <label className="text-sm text-muted-foreground mb-2 block">Valor total</label>
         <div className="flex items-center gap-2">
-          <span className="text-2xl text-muted-foreground">R$</span>
+          <span className="text-2xl text-muted-foreground">{currencySymbol}</span>
           <CurrencyInput
             value={amount}
             onChange={setAmount}
-            placeholder="0,00"
+            showPrefix={false}
             className="text-4xl font-bold border-0 bg-transparent p-0 h-auto focus-visible:ring-0"
           />
         </div>
@@ -287,14 +290,14 @@ export default function NewExpense() {
                     <Info className="w-4 h-4 text-primary mt-0.5" />
                     <div>
                       <p className="font-medium">
-                        Entrará na fatura de {format(billingMonth, 'MMMM', { locale: ptBR })}
+                        Entrará na fatura de {format(billingMonth, 'MMMM', { locale: dateLocale })}
                       </p>
                       <p className="text-xs text-muted-foreground">
                         Fechamento dia {selectedCard.closing_day} • Vencimento dia {selectedCard.due_day}
                       </p>
                       {installments > 1 && (
                         <p className="text-xs text-muted-foreground mt-1">
-                          Última parcela: {format(addMonths(billingMonth, installments - 1), 'MMMM yyyy', { locale: ptBR })}
+                          Última parcela: {format(addMonths(billingMonth, installments - 1), 'MMMM yyyy', { locale: dateLocale })}
                         </p>
                       )}
                     </div>

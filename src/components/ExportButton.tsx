@@ -5,7 +5,7 @@ import { Download, FileSpreadsheet, FileText } from 'lucide-react';
 import { Expense, Profile, Tag } from '@/hooks/useCouple';
 import { formatCurrency, formatDate } from '@/lib/constants';
 import { format } from 'date-fns';
-import { ptBR } from 'date-fns/locale';
+import { getActivePreferences, getDateFnsLocale } from '@/lib/preferences';
 
 interface ExportButtonProps {
   expenses: Expense[];
@@ -16,6 +16,8 @@ interface ExportButtonProps {
 
 export function ExportButton({ expenses, profiles, tags, period }: ExportButtonProps) {
   const [isExporting, setIsExporting] = useState(false);
+  const { locale } = getActivePreferences();
+  const dateLocale = getDateFnsLocale(locale);
 
   const getProfileName = (position: number) => {
     return profiles.find(p => p.position === position)?.name || `Pessoa ${position}`;
@@ -71,7 +73,7 @@ export function ExportButton({ expenses, profiles, tags, period }: ExportButtonP
 
       let content = `RELATÓRIO DE GASTOS DO CASAL\n`;
       content += `${period ? `Período: ${period}\n` : ''}\n`;
-      content += `Gerado em: ${format(new Date(), "dd 'de' MMMM 'de' yyyy", { locale: ptBR })}\n`;
+      content += `Gerado em: ${format(new Date(), "dd 'de' MMMM 'de' yyyy", { locale: dateLocale })}\n`;
       content += `${'='.repeat(50)}\n\n`;
 
       content += `RESUMO\n`;
