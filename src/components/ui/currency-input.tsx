@@ -8,16 +8,18 @@ interface CurrencyInputProps {
   className?: string;
   placeholder?: string;
   disabled?: boolean;
+  showPrefix?: boolean;
 }
 
 // Format cents to display string (e.g., 70000 cents -> "700,00")
-const formatCentsToDisplay = (cents: number): string => {
+const formatCentsToDisplay = (cents: number, showPrefix: boolean): string => {
   if (cents === 0) return '';
   const reais = cents / 100;
-  return reais.toLocaleString('pt-BR', {
+  const formatted = reais.toLocaleString('pt-BR', {
     minimumFractionDigits: 2,
     maximumFractionDigits: 2,
   });
+  return showPrefix ? `R$ ${formatted}` : formatted;
 };
 
 // Convert value (in reais) to cents for internal use
@@ -27,7 +29,11 @@ const reaisToCents = (reais: number): number => Math.round(reais * 100);
 const centsToReais = (cents: number): number => cents / 100;
 
 export const CurrencyInput = forwardRef<HTMLInputElement, CurrencyInputProps>(
-  ({ value, onChange, className, placeholder = '0,00', disabled }, ref) => {
+  (
+    { value, onChange, className, placeholder, disabled, showPrefix = true },
+    ref
+  ) => {
+    const resolvedPlaceholder = placeholder ?? (showPrefix ? 'R$ 0,00' : '0,00');
     // Store value internally as cents (integer) for precise formatting
     const [cents, setCents] = useState(() => reaisToCents(value));
 
@@ -55,9 +61,9 @@ export const CurrencyInput = forwardRef<HTMLInputElement, CurrencyInputProps>(
         ref={ref}
         type="text"
         inputMode="numeric"
-        value={formatCentsToDisplay(cents)}
+        value={formatCentsToDisplay(cents, showPrefix)}
         onChange={handleChange}
-        placeholder={placeholder}
+        placeholder={resolvedPlaceholder}
         disabled={disabled}
         className={cn(className)}
       />
