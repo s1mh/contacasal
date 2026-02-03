@@ -14,7 +14,7 @@ interface ChartsProps {
 }
 
 export function ExpensesByTagChart({ expenses, tags }: { expenses: Expense[]; tags: Tag[] }) {
-  const { t } = usePreferences();
+  const { t: prefT } = usePreferences();
   const data = useMemo(() => {
     const byTag = expenses.reduce((acc, expense) => {
       const tagId = expense.tag_id || 'other';
@@ -37,7 +37,7 @@ export function ExpensesByTagChart({ expenses, tags }: { expenses: Expense[]; ta
   if (data.length === 0) {
     return (
       <div className="flex items-center justify-center h-48 text-muted-foreground">
-        {t('Sem dados para exibir')}
+        {prefT('Sem dados para exibir')}
       </div>
     );
   }
@@ -88,7 +88,7 @@ export function ExpensesByTagChart({ expenses, tags }: { expenses: Expense[]; ta
 }
 
 export function ExpensesByPersonChart({ expenses, profiles }: { expenses: Expense[]; profiles: Profile[] }) {
-  const { t } = usePreferences();
+  const { t: prefT } = usePreferences();
   const data = useMemo(() => {
     const configuredProfiles = profiles.filter(isConfiguredProfile);
     
@@ -107,7 +107,7 @@ export function ExpensesByPersonChart({ expenses, profiles }: { expenses: Expens
   if (expenses.length === 0) {
     return (
       <div className="flex items-center justify-center h-48 text-muted-foreground">
-        {t('Sem dados para exibir')}
+        {prefT('Sem dados para exibir')}
       </div>
     );
   }
@@ -136,10 +136,10 @@ export function ExpensesByPersonChart({ expenses, profiles }: { expenses: Expens
 }
 
 export function MonthlyEvolutionChart({ expenses }: { expenses: Expense[] }) {
-  const { t, locale, currency } = usePreferences();
-  const dateLocale = getDateFnsLocale(locale);
-  const currencySymbol = getCurrencySymbol(locale, currency);
-  const compactFormatter = new Intl.NumberFormat(locale, { maximumFractionDigits: 0 });
+  const { t: prefT, locale: prefLocale, currency } = usePreferences();
+  const dateLocale = getDateFnsLocale(prefLocale);
+  const currencySymbol = getCurrencySymbol(prefLocale, currency);
+  const compactFormatter = new Intl.NumberFormat(prefLocale, { maximumFractionDigits: 0 });
 
   const data = useMemo(() => {
     const months: { month: Date; label: string }[] = [];
@@ -166,7 +166,7 @@ export function MonthlyEvolutionChart({ expenses }: { expenses: Expense[] }) {
   if (expenses.length === 0) {
     return (
       <div className="flex items-center justify-center h-48 text-muted-foreground">
-        {t('Sem dados para exibir')}
+        {prefT('Sem dados para exibir')}
       </div>
     );
   }
@@ -201,20 +201,21 @@ export function MonthlyEvolutionChart({ expenses }: { expenses: Expense[] }) {
 }
 
 export function Charts({ expenses, profiles, tags }: ChartsProps) {
+  const { t: prefT } = usePreferences();
   return (
     <div className="space-y-8">
       <div className="space-y-3">
-        <h3 className="text-sm font-medium text-muted-foreground">{t('Gastos por Categoria')}</h3>
+        <h3 className="text-sm font-medium text-muted-foreground">{prefT('Gastos por Categoria')}</h3>
         <ExpensesByTagChart expenses={expenses} tags={tags} />
       </div>
 
       <div className="space-y-3">
-        <h3 className="text-sm font-medium text-muted-foreground">{t('Gastos por Pessoa')}</h3>
+        <h3 className="text-sm font-medium text-muted-foreground">{prefT('Gastos por Pessoa')}</h3>
         <ExpensesByPersonChart expenses={expenses} profiles={profiles} />
       </div>
 
       <div className="space-y-3">
-        <h3 className="text-sm font-medium text-muted-foreground">{t('Evolução Mensal')}</h3>
+        <h3 className="text-sm font-medium text-muted-foreground">{prefT('Evolução Mensal')}</h3>
         <MonthlyEvolutionChart expenses={expenses} />
       </div>
     </div>

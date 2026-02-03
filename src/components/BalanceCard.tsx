@@ -14,7 +14,7 @@ interface BalanceCardProps {
 }
 
 export function BalanceCard({ profiles, balance }: BalanceCardProps) {
-  const { t } = usePreferences();
+  const { t: prefT } = usePreferences();
   const person1 = profiles.find(p => p.position === 1);
   const person2 = profiles.find(p => p.position === 2);
 
@@ -32,7 +32,7 @@ export function BalanceCard({ profiles, balance }: BalanceCardProps) {
 
   return (
     <div className="bg-card rounded-3xl p-6 shadow-glass animate-fade-in">
-      <h2 className="text-sm font-medium text-muted-foreground mb-4">{t('Equilíbrio atual')}</h2>
+      <h2 className="text-sm font-medium text-muted-foreground mb-4">{prefT('Equilíbrio atual')}</h2>
 
       {/* Show waiting message when only one person is configured */}
       {!bothConfigured ? (
@@ -45,10 +45,10 @@ export function BalanceCard({ profiles, balance }: BalanceCardProps) {
           )}
           <div className="text-center mt-3">
             <p className="text-lg font-semibold text-secondary-foreground">
-              {t('Aguardando parceiro(a) 💕')}
+              {prefT('Aguardando parceiro(a) 💕')}
             </p>
             <p className="text-sm text-muted-foreground mt-1">
-              {t('Compartilhe o link para começarem juntos')}
+              {prefT('Compartilhe o link para começarem juntos')}
             </p>
           </div>
         </div>
@@ -57,10 +57,10 @@ export function BalanceCard({ profiles, balance }: BalanceCardProps) {
           <Avatar avatarIndex={person1.avatar_index} size="lg" ringColor={person1.color} />
           <div className="text-center">
             <p className="text-lg font-semibold text-secondary-foreground">
-              {t('Tudo equilibrado! 🎉')}
+              {prefT('Tudo equilibrado! 🎉')}
             </p>
             <p className="text-sm text-muted-foreground mt-1">
-              {t('Vocês estão em dia')}
+              {prefT('Vocês estão em dia')}
             </p>
           </div>
           <Avatar avatarIndex={person2.avatar_index} size="lg" ringColor={person2.color} />
@@ -94,10 +94,10 @@ export function BalanceCard({ profiles, balance }: BalanceCardProps) {
 
       <p className="text-center text-xs text-muted-foreground mt-4">
         {!bothConfigured 
-          ? t('Use o botão "Compartilhar" para convidar')
+          ? prefT('Use o botão "Compartilhar" para convidar')
           : isBalanced 
-            ? t('Continue registrando para manter o equilíbrio 💕')
-            : t('O equilíbrio está em {amount} com {name}', {
+            ? prefT('Continue registrando para manter o equilíbrio 💕')
+            : prefT('O equilíbrio está em {amount} com {name}', {
               amount: formatCurrency(amount),
               name: receivingPerson.name,
             })

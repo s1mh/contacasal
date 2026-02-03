@@ -16,10 +16,10 @@ interface DatePickerFieldProps {
 
 export function DatePickerField({ value, onChange, label }: DatePickerFieldProps) {
   const [open, setOpen] = useState(false);
-  const { locale, t } = usePreferences();
-  const dateLocale = getDateFnsLocale(locale);
-  const relativeFormatter = new Intl.RelativeTimeFormat(locale, { numeric: 'auto' });
-  const selectDateLabel = t('Selecionar data');
+  const { locale: prefLocale, t: prefT } = usePreferences();
+  const dateLocale = getDateFnsLocale(prefLocale);
+  const relativeFormatter = new Intl.RelativeTimeFormat(prefLocale, { numeric: 'auto' });
+  const selectDateLabel = prefT('Selecionar data');
 
   const getDisplayDate = (date: Date) => {
     if (isToday(date)) return relativeFormatter.format(0, 'day');
