@@ -8,8 +8,6 @@ import { CAT_AVATARS, PERSON_COLORS } from '@/lib/constants';
 import { Profile } from '@/contexts/CoupleContext';
 import { Check, Heart, Sparkles, Lock, ArrowRight, ArrowLeft, Mail, SkipForward, AtSign, Loader2, Eye, EyeOff, PartyPopper } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { setActivePreferences, SupportedCurrency } from '@/lib/preferences';
 import { usePreferences } from '@/contexts/PreferencesContext';
 
 interface OnboardingModalProps {
@@ -80,7 +78,7 @@ const isWeakPin = (pin: string): { weak: boolean; reasonKey?: 'pinSameDigits' | 
 };
 
 export function OnboardingModal({ open, onClose, onComplete, profiles, shareCode, isNewMember = false, hostName, isJoining = false }: OnboardingModalProps) {
-  const [step, setStep] = useState<'welcome' | 'profile' | 'preferences' | 'pin' | 'email'>(isNewMember ? 'welcome' : 'profile');
+  const [step, setStep] = useState<'welcome' | 'profile' | 'pin' | 'email'>(isNewMember ? 'welcome' : 'profile');
   const [name, setName] = useState('');
   const [avatarIndex, setAvatarIndex] = useState(1);
   const [color, setColor] = useState(PERSON_COLORS[0].value);
@@ -99,10 +97,7 @@ export function OnboardingModal({ open, onClose, onComplete, profiles, shareCode
   const [hoveredAvatar, setHoveredAvatar] = useState<number | null>(null);
   const [complimentTimeout, setComplimentTimeout] = useState<NodeJS.Timeout | null>(null);
   const [isTransitioning, setIsTransitioning] = useState(false);
-  const { locale: prefLocale, currency, setLocale, setCurrency, t: prefT } = usePreferences();
-  const [preferredLocale, setPreferredLocale] = useState(prefLocale);
-  const [preferredCurrency, setPreferredCurrency] = useState<SupportedCurrency>(currency);
-  const [isLocaleTransitioning, setIsLocaleTransitioning] = useState(false);
+  const { t: prefT } = usePreferences();
   const nameCompliments = [
     prefT('Que nome lindo! 💕'),
     prefT('Adorável! ✨'),
@@ -195,35 +190,11 @@ export function OnboardingModal({ open, onClose, onComplete, profiles, shareCode
   const handleNextStep = () => {
     if (name.trim() && isValidName(name) && !isTransitioning) {
       setIsTransitioning(true);
-      setStep('preferences');
-      setIsTransitioning(false);
+      setStep('pin');
+      generateUsername().finally(() => {
+        setIsTransitioning(false);
+      });
     }
-  };
-
-  const handleLocaleChange = (value: string) => {
-    const newLocale = value as typeof prefLocale;
-    setIsLocaleTransitioning(true);
-    setPreferredLocale(newLocale);
-    setLocale(newLocale);
-    setTimeout(() => setIsLocaleTransitioning(false), 200);
-  };
-
-  const handleCurrencyChange = (value: string) => {
-    const newCurrency = value as SupportedCurrency;
-    setPreferredCurrency(newCurrency);
-    setCurrency(newCurrency);
-  };
-
-  const handlePreferencesNext = () => {
-    setActivePreferences(shareCode, {
-      locale: preferredLocale,
-      currency: preferredCurrency,
-    });
-    setIsTransitioning(true);
-    setStep('pin');
-    generateUsername().finally(() => {
-      setIsTransitioning(false);
-    });
   };
 
   const handlePinChange = (value: string) => {
@@ -303,10 +274,6 @@ export function OnboardingModal({ open, onClose, onComplete, profiles, shareCode
   };
 
   const handleComplete = () => {
-    setActivePreferences(shareCode, {
-      locale: preferredLocale,
-      currency: preferredCurrency,
-    });
     // Validate email if provided
     if (email.trim() && !isValidEmail(email)) {
       setEmailError(prefT('E-mail inválido'));
@@ -339,10 +306,6 @@ export function OnboardingModal({ open, onClose, onComplete, profiles, shareCode
   };
 
   const handleSkipEmail = () => {
-    setActivePreferences(shareCode, {
-      locale: preferredLocale,
-      currency: preferredCurrency,
-    });
     const position = getAvailablePosition();
     const formattedName = name.trim()
       .toLowerCase()
@@ -413,13 +376,11 @@ export function OnboardingModal({ open, onClose, onComplete, profiles, shareCode
             ) : (
               <Heart className="w-5 h-5 text-primary animate-pulse" />
             )}
-            {step === 'welcome' 
+            {step === 'welcome'
               ? prefT('Bem-vindo!')
-              : step === 'profile' 
+              : step === 'profile'
               ? prefT('Olá! Crie seu perfil')
-              : step === 'preferences'
-              ? prefT('Escolha idioma e moeda')
-              : step === 'pin' 
+              : step === 'pin'
               ? prefT('Crie seu código')
               : prefT('Adicione seu e-mail')}
           </DialogTitle>
@@ -428,8 +389,6 @@ export function OnboardingModal({ open, onClose, onComplete, profiles, shareCode
               ? prefT('{name} convidou você para compartilhar despesas', { name: displayHostName || prefT('Alguém') })
               : step === 'profile'
               ? prefT('Personalize como você aparecerá no app')
-              : step === 'preferences'
-              ? prefT('Defina como valores e datas serão exibidos')
               : step === 'pin'
               ? prefT('Código de 4 dígitos para entrar em outros dispositivos')
               : prefT('Para recuperar seu código se esquecer (opcional)')
@@ -437,12 +396,7 @@ export function OnboardingModal({ open, onClose, onComplete, profiles, shareCode
           </DialogDescription>
         </DialogHeader>
 
-        <div
-          className={cn(
-            "space-y-6 py-4 transition-opacity duration-300",
-            isLocaleTransitioning && "opacity-0"
-          )}
-        >
+        <div className="space-y-6 py-4">
           {step === 'welcome' ? (
             <>
               {/* Welcome Step */}
@@ -655,53 +609,6 @@ export function OnboardingModal({ open, onClose, onComplete, profiles, shareCode
                 )}
               </Button>
             </>
-          ) : step === 'preferences' ? (
-            <>
-              <div className="flex flex-col gap-6 animate-fade-in">
-                <div className="space-y-2">
-                  <label className="text-sm font-medium text-muted-foreground">{prefT('Idioma')}</label>
-                  <Select value={preferredLocale} onValueChange={handleLocaleChange}>
-                    <SelectTrigger>
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="pt-BR">{prefT('Português (Brasil)')}</SelectItem>
-                      <SelectItem value="en-US">{prefT('English (US)')}</SelectItem>
-                      <SelectItem value="es-ES">{prefT('Español')}</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-
-                <div className="space-y-2">
-                  <label className="text-sm font-medium text-muted-foreground">{prefT('Moeda')}</label>
-                  <Select value={preferredCurrency} onValueChange={handleCurrencyChange}>
-                    <SelectTrigger>
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="BRL">{prefT('Real (R$)')}</SelectItem>
-                      <SelectItem value="USD">{prefT('Dólar (US$)')}</SelectItem>
-                      <SelectItem value="EUR">{prefT('Euro (€)')}</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-
-                <div className="flex gap-2 w-full">
-                  <Button
-                    variant="ghost"
-                    onClick={() => setStep('profile')}
-                    className="flex-1"
-                  >
-                    <ArrowLeft className="w-4 h-4 mr-2" />
-                    {prefT('Voltar')}
-                  </Button>
-                  <Button onClick={handlePreferencesNext} className="flex-1">
-                    {prefT('Continuar')}
-                    <ArrowRight className="w-4 h-4 ml-2" />
-                  </Button>
-                </div>
-              </div>
-            </>
           ) : step === 'pin' ? (
             <>
               {/* PIN Creation Step */}
@@ -777,22 +684,21 @@ export function OnboardingModal({ open, onClose, onComplete, profiles, shareCode
                 <div className="flex gap-2">
                   <div className="w-2 h-2 rounded-full bg-primary" />
                   <div className="w-2 h-2 rounded-full bg-primary" />
-                  <div className="w-2 h-2 rounded-full bg-primary" />
                   <div className="w-2 h-2 rounded-full bg-muted" />
                 </div>
 
                 <div className="flex gap-2 w-full">
-                  <Button 
+                  <Button
                     variant="ghost"
-                    onClick={() => setStep('preferences')}
+                    onClick={() => setStep('profile')}
                     className="flex-1"
                   >
                     <ArrowLeft className="w-4 h-4 mr-2" />
                     {prefT('Voltar')}
                   </Button>
-                  <Button 
-                    onClick={handlePinComplete} 
-                    disabled={pinCode.length !== 4 || !!pinError} 
+                  <Button
+                    onClick={handlePinComplete}
+                    disabled={pinCode.length !== 4 || !!pinError}
                     className="flex-1"
                   >
                     {prefT('Continuar')}
@@ -806,12 +712,12 @@ export function OnboardingModal({ open, onClose, onComplete, profiles, shareCode
               {/* Email Step */}
               <div className="flex flex-col items-center gap-6 animate-fade-in">
                 {/* Profile Preview */}
-                <div 
+                <div
                   className="w-20 h-20 rounded-full overflow-hidden ring-4 transition-all animate-cat-idle"
                   style={{ boxShadow: `0 0 0 4px ${color}` }}
                 >
-                  <img 
-                    src={CAT_AVATARS[avatarIndex - 1]} 
+                  <img
+                    src={CAT_AVATARS[avatarIndex - 1]}
                     alt="Preview"
                     className="w-full h-full object-cover"
                   />
@@ -832,7 +738,7 @@ export function OnboardingModal({ open, onClose, onComplete, profiles, shareCode
                     <Mail className="w-4 h-4" />
                     <span>{prefT('E-mail para recuperação')}</span>
                   </div>
-                  
+
                   <div className="relative w-full">
                     <Input
                       type="email"
@@ -851,7 +757,7 @@ export function OnboardingModal({ open, onClose, onComplete, profiles, shareCode
                       </div>
                     )}
                   </div>
-                  
+
                   {emailError && !emailExists && (
                     <p className="text-sm text-destructive animate-fade-in">
                       {emailError}
@@ -863,8 +769,8 @@ export function OnboardingModal({ open, onClose, onComplete, profiles, shareCode
                       <p className="text-sm text-destructive mb-2">
                         {emailError}
                       </p>
-                      <Button 
-                        variant="link" 
+                      <Button
+                        variant="link"
                         size="sm"
                         onClick={handleSendRecoveryLink}
                         className="text-primary"
@@ -874,7 +780,7 @@ export function OnboardingModal({ open, onClose, onComplete, profiles, shareCode
                       </Button>
                     </div>
                   )}
-                  
+
                   {!emailExists && !emailError && (
                     <p className="text-xs text-muted-foreground text-center mt-1">
                       {prefT('Se esquecer seu código, enviaremos um link de recuperação')}

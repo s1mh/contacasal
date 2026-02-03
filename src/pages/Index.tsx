@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import { Heart, ArrowRight, Sparkles, Loader2, Users, AtSign, Lock, HelpCircle, Eye, EyeOff, Globe } from "lucide-react";
+import { Heart, ArrowRight, Sparkles, Loader2, Users, AtSign, Lock, HelpCircle, Eye, EyeOff, Globe, ChevronDown } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { InputOTP, InputOTPGroup, InputOTPSlot, InputOTPSlotMasked } from "@/components/ui/input-otp";
@@ -12,8 +12,9 @@ import { devLog } from "@/lib/validation";
 import { cn } from "@/lib/utils";
 import { RecoveryModal } from "@/components/RecoveryModal";
 import { usePreferences } from "@/contexts/PreferencesContext";
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { SupportedLocale } from "@/lib/i18n";
+import { SupportedCurrency } from "@/lib/preferences";
 
 interface LastSpace {
   shareCode: string;
@@ -30,11 +31,17 @@ const LOCALE_LABELS: Record<SupportedLocale, { label: string; flag: string }> = 
   'es-ES': { label: 'Español', flag: '🇪🇸' },
 };
 
+const CURRENCY_LABELS: Record<SupportedCurrency, { label: string; symbol: string }> = {
+  'BRL': { label: 'Real', symbol: 'R$' },
+  'USD': { label: 'Dólar', symbol: 'US$' },
+  'EUR': { label: 'Euro', symbol: '€' },
+};
+
 export default function Index() {
   const navigate = useNavigate();
   const { toast } = useToast();
   const { loading: authLoading, clearValidation, validateShareCode } = useAuthContext();
-  const { locale, setLocale, t } = usePreferences();
+  const { locale, setLocale, currency, setCurrency, t } = usePreferences();
   const [loading, setLoading] = useState(false);
   const [existingCode, setExistingCode] = useState("");
   const [lastSpace, setLastSpace] = useState<LastSpace | null>(null);
@@ -231,35 +238,72 @@ export default function Index() {
 
   return (
     <div className="min-h-screen bg-background flex flex-col items-center justify-center p-6 relative">
-      {/* Language Selector - Top Right */}
+      {/* Language & Currency Selector - Top Right */}
       <div className="absolute top-4 right-4 animate-fade-in">
-        <DropdownMenu>
-          <DropdownMenuTrigger asChild>
+        <Popover>
+          <PopoverTrigger asChild>
             <Button
-              variant="ghost"
+              variant="outline"
               size="sm"
-              className="gap-2 text-muted-foreground hover:text-foreground"
+              className="gap-2 bg-card/80 backdrop-blur-sm border-border/50 hover:bg-card shadow-sm"
             >
-              <Globe className="w-4 h-4" />
-              <span className="text-sm">{LOCALE_LABELS[locale].flag}</span>
+              <Globe className="w-4 h-4 text-primary" />
+              <span className="text-sm font-medium">{LOCALE_LABELS[locale].flag} {CURRENCY_LABELS[currency].symbol}</span>
+              <ChevronDown className="w-3 h-3 text-muted-foreground" />
             </Button>
-          </DropdownMenuTrigger>
-          <DropdownMenuContent align="end">
-            {(Object.keys(LOCALE_LABELS) as SupportedLocale[]).map((loc) => (
-              <DropdownMenuItem
-                key={loc}
-                onClick={() => setLocale(loc)}
-                className={cn(
-                  "gap-2 cursor-pointer",
-                  locale === loc && "bg-accent"
-                )}
-              >
-                <span>{LOCALE_LABELS[loc].flag}</span>
-                <span>{LOCALE_LABELS[loc].label}</span>
-              </DropdownMenuItem>
-            ))}
-          </DropdownMenuContent>
-        </DropdownMenu>
+          </PopoverTrigger>
+          <PopoverContent align="end" className="w-64 p-4">
+            <div className="space-y-4">
+              {/* Language Selection */}
+              <div className="space-y-2">
+                <label className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
+                  {t('Idioma')}
+                </label>
+                <div className="grid grid-cols-1 gap-1">
+                  {(Object.keys(LOCALE_LABELS) as SupportedLocale[]).map((loc) => (
+                    <button
+                      key={loc}
+                      onClick={() => setLocale(loc)}
+                      className={cn(
+                        "flex items-center gap-3 px-3 py-2 rounded-lg text-sm transition-colors text-left",
+                        locale === loc
+                          ? "bg-primary/10 text-primary font-medium"
+                          : "hover:bg-muted"
+                      )}
+                    >
+                      <span className="text-lg">{LOCALE_LABELS[loc].flag}</span>
+                      <span>{LOCALE_LABELS[loc].label}</span>
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {/* Currency Selection */}
+              <div className="space-y-2">
+                <label className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
+                  {t('Moeda')}
+                </label>
+                <div className="grid grid-cols-3 gap-1">
+                  {(Object.keys(CURRENCY_LABELS) as SupportedCurrency[]).map((cur) => (
+                    <button
+                      key={cur}
+                      onClick={() => setCurrency(cur)}
+                      className={cn(
+                        "flex flex-col items-center gap-1 px-3 py-2 rounded-lg text-sm transition-colors",
+                        currency === cur
+                          ? "bg-primary/10 text-primary font-medium"
+                          : "hover:bg-muted"
+                      )}
+                    >
+                      <span className="font-semibold">{CURRENCY_LABELS[cur].symbol}</span>
+                      <span className="text-xs text-muted-foreground">{CURRENCY_LABELS[cur].label}</span>
+                    </button>
+                  ))}
+                </div>
+              </div>
+            </div>
+          </PopoverContent>
+        </Popover>
       </div>
 
       <div className="w-full max-w-sm">
