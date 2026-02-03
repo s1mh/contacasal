@@ -387,7 +387,7 @@ export function OnboardingModal({ open, onClose, onComplete, profiles, shareCode
   return (
     <Dialog open={open} onOpenChange={handleOpenChange}>
       <DialogContent 
-        className="sm:max-w-md overflow-hidden" 
+        className="sm:max-w-md" 
         onPointerDownOutside={(e) => !canClose && e.preventDefault()}
       >
         <DialogHeader>
@@ -641,7 +641,11 @@ export function OnboardingModal({ open, onClose, onComplete, profiles, shareCode
                   <label className="text-sm font-medium text-muted-foreground">Idioma</label>
                   <Select value={preferredLocale} onValueChange={(value) => setPreferredLocale(value as SupportedLocale)}>
                     <SelectTrigger>
-                      <SelectValue />
+                      <SelectValue placeholder="Selecione o idioma">
+                        {preferredLocale === 'pt-BR' && '🇧🇷 Português (Brasil)'}
+                        {preferredLocale === 'en-US' && '🇺🇸 English (US)'}
+                        {preferredLocale === 'es-ES' && '🇪🇸 Español'}
+                      </SelectValue>
                     </SelectTrigger>
                     <SelectContent>
                       <SelectItem value="pt-BR">🇧🇷 Português (Brasil)</SelectItem>
@@ -655,7 +659,11 @@ export function OnboardingModal({ open, onClose, onComplete, profiles, shareCode
                   <label className="text-sm font-medium text-muted-foreground">Moeda</label>
                   <Select value={preferredCurrency} onValueChange={(value) => setPreferredCurrency(value as SupportedCurrency)}>
                     <SelectTrigger>
-                      <SelectValue />
+                      <SelectValue placeholder="Selecione a moeda">
+                        {preferredCurrency === 'BRL' && 'R$ Real Brasileiro'}
+                        {preferredCurrency === 'USD' && '$ US Dollar'}
+                        {preferredCurrency === 'EUR' && '€ Euro'}
+                      </SelectValue>
                     </SelectTrigger>
                     <SelectContent>
                       <SelectItem value="BRL">R$ Real Brasileiro</SelectItem>
