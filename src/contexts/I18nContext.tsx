@@ -1,6 +1,6 @@
 import { createContext, useContext, useState, useEffect, ReactNode } from 'react';
-import { getActivePreferences, setActivePreferences, SupportedLocale, SupportedCurrency } from '@/lib/preferences';
-import { getTranslations, interpolate, TranslationKeys } from '@/lib/i18n';
+import { getActivePreferences, setActivePreferences, SupportedCurrency } from '@/lib/preferences';
+import { SupportedLocale, getTranslations, interpolate, TranslationKeys } from '@/lib/i18n';
 
 interface I18nContextValue {
   locale: SupportedLocale;
