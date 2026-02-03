@@ -238,18 +238,18 @@ export default function Index() {
 
   return (
     <div className="min-h-screen bg-background flex flex-col items-center justify-center p-6 relative">
-      {/* Language & Currency Selector - Top Right */}
-      <div className="absolute top-4 right-4 animate-fade-in">
+      {/* Language & Currency Selector - Top Right, offset on mobile to avoid cats */}
+      <div className="absolute top-2 right-2 sm:top-4 sm:right-4 z-20 animate-fade-in">
         <Popover>
           <PopoverTrigger asChild>
             <Button
               variant="outline"
               size="sm"
-              className="gap-2 bg-card/80 backdrop-blur-sm border-border/50 hover:bg-card shadow-sm"
+              className="gap-1.5 sm:gap-2 bg-card/80 backdrop-blur-sm border-border/50 hover:bg-card shadow-sm text-xs sm:text-sm h-8 sm:h-9 px-2 sm:px-3"
             >
-              <Globe className="w-4 h-4 text-primary" />
-              <span className="text-sm font-medium">{LOCALE_LABELS[locale].flag} {CURRENCY_LABELS[currency].symbol}</span>
-              <ChevronDown className="w-3 h-3 text-muted-foreground" />
+              <Globe className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-primary" />
+              <span className="font-medium">{LOCALE_LABELS[locale].flag} {CURRENCY_LABELS[currency].symbol}</span>
+              <ChevronDown className="w-2.5 h-2.5 sm:w-3 sm:h-3 text-muted-foreground" />
             </Button>
           </PopoverTrigger>
           <PopoverContent align="end" className="w-64 p-4">

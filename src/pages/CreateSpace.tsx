@@ -4,15 +4,12 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } f
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { InputOTP, InputOTPGroup, InputOTPSlot, InputOTPSlotMasked } from '@/components/ui/input-otp';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { cn } from '@/lib/utils';
 import { CAT_AVATARS, PERSON_COLORS } from '@/lib/constants';
-import { Check, Heart, Sparkles, Lock, ArrowRight, ArrowLeft, Mail, SkipForward, AtSign, Loader2, Eye, EyeOff, Globe } from 'lucide-react';
+import { Check, Heart, Sparkles, Lock, ArrowRight, ArrowLeft, Mail, SkipForward, AtSign, Loader2, Eye, EyeOff } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { usePreferences } from '@/contexts/PreferencesContext';
-import { SupportedCurrency } from '@/lib/preferences';
 
 // Validation functions
 const isValidName = (name: string): boolean => {
@@ -58,9 +55,9 @@ const isWeakPin = (pin: string): { weak: boolean; reason?: string } => {
 export default function CreateSpace() {
   const navigate = useNavigate();
   const { toast } = useToast();
-  const { locale: prefLocale, currency, setLocale, setCurrency, t: prefT } = usePreferences();
-  
-  const [step, setStep] = useState<'profile' | 'preferences' | 'pin' | 'email'>('profile');
+  const { t: prefT } = usePreferences();
+
+  const [step, setStep] = useState<'profile' | 'pin' | 'email'>('profile');
   const [name, setName] = useState('');
   const [avatarIndex, setAvatarIndex] = useState(1);
   const [color, setColor] = useState(PERSON_COLORS[0].value);
@@ -77,9 +74,6 @@ export default function CreateSpace() {
   const [compliment, setCompliment] = useState('');
   const [showCompliment, setShowCompliment] = useState(false);
   const [creating, setCreating] = useState(false);
-  const [preferredLocale, setPreferredLocale] = useState(prefLocale);
-  const [preferredCurrency, setPreferredCurrency] = useState<SupportedCurrency>(currency);
-  const [isLocaleTransitioning, setIsLocaleTransitioning] = useState(false);
   const nameCompliments = [
     prefT('Que nome lindo! 💕'),
     prefT('Adorável! ✨'),
@@ -141,27 +135,9 @@ export default function CreateSpace() {
 
   const handleNextStep = () => {
     if (name.trim() && isValidName(name)) {
-      setStep('preferences');
+      setStep('pin');
+      generateUsername();
     }
-  };
-
-  const handleLocaleChange = (value: string) => {
-    const newLocale = value as typeof prefLocale;
-    setIsLocaleTransitioning(true);
-    setPreferredLocale(newLocale);
-    setLocale(newLocale);
-    setTimeout(() => setIsLocaleTransitioning(false), 200);
-  };
-
-  const handleCurrencyChange = (value: string) => {
-    const newCurrency = value as SupportedCurrency;
-    setPreferredCurrency(newCurrency);
-    setCurrency(newCurrency);
-  };
-
-  const handlePreferencesNext = () => {
-    setStep('pin');
-    generateUsername();
   };
 
   const handlePinChange = (value: string) => {
@@ -319,17 +295,13 @@ export default function CreateSpace() {
               <Heart className="w-5 h-5 text-primary animate-pulse" />
               {step === 'profile'
                 ? prefT('Crie seu perfil')
-                : step === 'preferences'
-                ? prefT('Escolha idioma e moeda')
                 : step === 'pin'
                 ? prefT('Crie seu código')
                 : prefT('Adicione seu e-mail')}
             </DialogTitle>
             <DialogDescription className="text-center animate-fade-in">
-              {step === 'profile' 
+              {step === 'profile'
                 ? prefT('Personalize como você aparecerá no app')
-                : step === 'preferences'
-                ? prefT('Defina como valores e datas serão exibidos')
                 : step === 'pin'
                 ? prefT('Código de 4 dígitos para entrar em outros dispositivos')
                 : prefT('Para recuperar seu código se esquecer (opcional)')
@@ -337,12 +309,7 @@ export default function CreateSpace() {
             </DialogDescription>
           </DialogHeader>
 
-          <div
-            className={cn(
-              "space-y-6 py-4 transition-opacity duration-300",
-              isLocaleTransitioning && "opacity-0"
-            )}
-          >
+          <div className="space-y-6 py-4">
             {step === 'profile' ? (
               <>
                 {/* Name Input */}
@@ -432,49 +399,6 @@ export default function CreateSpace() {
                   <ArrowRight className="w-4 h-4 ml-2" />
                 </Button>
               </>
-            ) : step === 'preferences' ? (
-              <>
-                <div className="flex flex-col gap-6 animate-fade-in">
-                  <div className="space-y-2">
-                    <label className="text-sm font-medium text-muted-foreground">{prefT('Idioma')}</label>
-                    <Select value={preferredLocale} onValueChange={handleLocaleChange}>
-                      <SelectTrigger>
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="pt-BR">{prefT('Português (Brasil)')}</SelectItem>
-                        <SelectItem value="en-US">{prefT('English (US)')}</SelectItem>
-                        <SelectItem value="es-ES">{prefT('Español')}</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
-
-                  <div className="space-y-2">
-                    <label className="text-sm font-medium text-muted-foreground">{prefT('Moeda')}</label>
-                    <Select value={preferredCurrency} onValueChange={handleCurrencyChange}>
-                      <SelectTrigger>
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="BRL">{prefT('Real (R$)')}</SelectItem>
-                        <SelectItem value="USD">{prefT('Dólar (US$)')}</SelectItem>
-                        <SelectItem value="EUR">{prefT('Euro (€)')}</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
-
-                  <div className="flex gap-2 w-full">
-                    <Button variant="ghost" onClick={() => setStep('profile')} className="flex-1">
-                      <ArrowLeft className="w-4 h-4 mr-2" />
-                      {prefT('Voltar')}
-                    </Button>
-                    <Button onClick={handlePreferencesNext} className="flex-1">
-                      {prefT('Continuar')}
-                      <ArrowRight className="w-4 h-4 ml-2" />
-                    </Button>
-                  </div>
-                </div>
-              </>
             ) : step === 'pin' ? (
               <>
                 {/* PIN Step */}
@@ -557,7 +481,7 @@ export default function CreateSpace() {
                   </div>
 
                   <div className="flex gap-2 w-full">
-                    <Button variant="ghost" onClick={() => setStep('preferences')} className="flex-1">
+                    <Button variant="ghost" onClick={() => setStep('profile')} className="flex-1">
                       <ArrowLeft className="w-4 h-4 mr-2" />
                       {prefT('Voltar')}
                     </Button>
