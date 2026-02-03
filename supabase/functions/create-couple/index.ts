@@ -63,6 +63,9 @@ Deno.serve(async (req) => {
 
     console.log('Space created:', couple.id, 'share_code:', couple.share_code)
 
+    // Verify user exists before trying to bind
+    const { data: userExists } = await supabaseAdmin.auth.admin.getUserById(userId)
+
     // Get the first profile (created by trigger) and assign admin role + user_id
     const { data: firstProfile } = await supabaseAdmin
       .from('profiles')
@@ -73,16 +76,20 @@ Deno.serve(async (req) => {
       .single()
 
     if (firstProfile) {
-      // Update profile with user_id
-      const { error: updateProfileError } = await supabaseAdmin
-        .from('profiles')
-        .update({ user_id: userId })
-        .eq('id', firstProfile.id)
+      // Only update profile with user_id if user exists
+      if (userExists?.user) {
+        const { error: updateProfileError } = await supabaseAdmin
+          .from('profiles')
+          .update({ user_id: userId })
+          .eq('id', firstProfile.id)
 
-      if (updateProfileError) {
-        console.error('Failed to set user_id on profile:', updateProfileError.message)
+        if (updateProfileError) {
+          console.error('Failed to set user_id on profile:', updateProfileError.message)
+        } else {
+          console.log('Set user_id on profile:', firstProfile.id)
+        }
       } else {
-        console.log('Set user_id on profile:', firstProfile.id)
+        console.log('User not found, skipping user_id assignment for profile:', firstProfile.id)
       }
 
       // Assign admin role to the first profile
@@ -102,20 +109,21 @@ Deno.serve(async (req) => {
       }
     }
 
-    // Bind current user to space in JWT claims via app_metadata
-    const { error: updateError } = await supabaseAdmin.auth.admin.updateUserById(userId, {
-      app_metadata: { couple_id: couple.id },
-    })
-
-    if (updateError) {
-      console.error('Failed to update user metadata:', updateError.message)
-      return new Response(JSON.stringify({ error: 'Failed to finalize space creation' }), {
-        status: 500,
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+    // Bind current user to space in JWT claims via app_metadata (only if user exists)
+    if (userExists?.user) {
+      const { error: updateError } = await supabaseAdmin.auth.admin.updateUserById(userId, {
+        app_metadata: { couple_id: couple.id },
       })
-    }
 
-    console.log('User metadata updated with couple_id')
+      if (updateError) {
+        console.error('Failed to update user metadata:', updateError.message)
+        // Don't fail the whole operation - space was created successfully
+      } else {
+        console.log('User metadata updated with couple_id')
+      }
+    } else {
+      console.log('User not found, skipping app_metadata update')
+    }
 
     return new Response(
       JSON.stringify({ success: true, couple_id: couple.id, share_code: couple.share_code }),
