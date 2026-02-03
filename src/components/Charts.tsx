@@ -4,7 +4,7 @@ import { Expense, Profile, Tag } from '@/hooks/useCouple';
 import { formatCurrency } from '@/lib/constants';
 import { isConfiguredProfile } from '@/lib/utils';
 import { format, subMonths, startOfMonth, endOfMonth, isWithinInterval } from 'date-fns';
-import { ptBR } from 'date-fns/locale';
+import { getActivePreferences, getCurrencySymbol, getDateFnsLocale } from '@/lib/preferences';
 
 interface ChartsProps {
   expenses: Expense[];
@@ -133,13 +133,18 @@ export function ExpensesByPersonChart({ expenses, profiles }: { expenses: Expens
 }
 
 export function MonthlyEvolutionChart({ expenses }: { expenses: Expense[] }) {
+  const { locale, currency } = getActivePreferences();
+  const dateLocale = getDateFnsLocale(locale);
+  const currencySymbol = getCurrencySymbol(locale, currency);
+  const compactFormatter = new Intl.NumberFormat(locale, { maximumFractionDigits: 0 });
+
   const data = useMemo(() => {
     const months: { month: Date; label: string }[] = [];
     for (let i = 5; i >= 0; i--) {
       const month = subMonths(new Date(), i);
       months.push({
         month: startOfMonth(month),
-        label: format(month, 'MMM', { locale: ptBR }),
+        label: format(month, 'MMM', { locale: dateLocale }),
       });
     }
 
@@ -153,7 +158,7 @@ export function MonthlyEvolutionChart({ expenses }: { expenses: Expense[] }) {
       const total = monthExpenses.reduce((sum, e) => sum + e.total_amount, 0);
       return { name: label, value: total };
     });
-  }, [expenses]);
+  }, [expenses, dateLocale]);
 
   if (expenses.length === 0) {
     return (
@@ -167,7 +172,11 @@ export function MonthlyEvolutionChart({ expenses }: { expenses: Expense[] }) {
     <ResponsiveContainer width="100%" height={200}>
       <LineChart data={data} margin={{ left: 0, right: 10, top: 10 }}>
         <XAxis dataKey="name" tick={{ fontSize: 12 }} />
-        <YAxis tickFormatter={(value) => `R$${(value/1000).toFixed(0)}k`} tick={{ fontSize: 10 }} width={50} />
+        <YAxis
+          tickFormatter={(value) => `${currencySymbol}${compactFormatter.format(value / 1000)}k`}
+          tick={{ fontSize: 10 }}
+          width={60}
+        />
         <Tooltip 
           formatter={(value: number) => formatCurrency(value)}
           contentStyle={{ 

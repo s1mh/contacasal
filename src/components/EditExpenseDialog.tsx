@@ -117,7 +117,6 @@ export function EditExpenseDialog({
             <CurrencyInput
               value={amount}
               onChange={setAmount}
-              placeholder="0,00"
             />
           </div>
 

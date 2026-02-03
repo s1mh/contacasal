@@ -7,7 +7,7 @@ import { AnimatedPage, AnimatedItem } from '@/components/AnimatedPage';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { BarChart3, PieChart, TrendingUp, Users } from 'lucide-react';
 import { subMonths, startOfMonth, endOfMonth, isWithinInterval, format } from 'date-fns';
-import { ptBR } from 'date-fns/locale';
+import { getActivePreferences, getDateFnsLocale } from '@/lib/preferences';
 import { formatCurrency } from '@/lib/constants';
 import { isConfiguredProfile } from '@/lib/utils';
 
@@ -17,6 +17,8 @@ export default function Statistics() {
   const { couple } = useOutletContext<{ couple: Couple }>();
   const [period, setPeriod] = useState<Period>('current');
   const [selectedTag, setSelectedTag] = useState<string>('all');
+  const { locale } = getActivePreferences();
+  const dateLocale = getDateFnsLocale(locale);
 
   const filteredExpenses = useMemo(() => {
     let expenses = couple.expenses;
@@ -77,7 +79,7 @@ export default function Statistics() {
 
   const periodLabel = useMemo(() => {
     switch (period) {
-      case 'current': return format(new Date(), 'MMMM yyyy', { locale: ptBR });
+      case 'current': return format(new Date(), 'MMMM yyyy', { locale: dateLocale });
       case 'last3': return 'Últimos 3 meses';
       case 'last6': return 'Últimos 6 meses';
       case 'year': return 'Último ano';
