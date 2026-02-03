@@ -4,7 +4,8 @@ import { Expense, Profile, Tag } from '@/hooks/useCouple';
 import { formatCurrency } from '@/lib/constants';
 import { isConfiguredProfile } from '@/lib/utils';
 import { format, subMonths, startOfMonth, endOfMonth, isWithinInterval } from 'date-fns';
-import { getActivePreferences, getCurrencySymbol, getDateFnsLocale } from '@/lib/preferences';
+import { getCurrencySymbol, getDateFnsLocale } from '@/lib/preferences';
+import { usePreferences } from '@/contexts/PreferencesContext';
 
 interface ChartsProps {
   expenses: Expense[];
@@ -13,6 +14,7 @@ interface ChartsProps {
 }
 
 export function ExpensesByTagChart({ expenses, tags }: { expenses: Expense[]; tags: Tag[] }) {
+  const { t } = usePreferences();
   const data = useMemo(() => {
     const byTag = expenses.reduce((acc, expense) => {
       const tagId = expense.tag_id || 'other';
@@ -35,7 +37,7 @@ export function ExpensesByTagChart({ expenses, tags }: { expenses: Expense[]; ta
   if (data.length === 0) {
     return (
       <div className="flex items-center justify-center h-48 text-muted-foreground">
-        Sem dados para exibir
+        {t('Sem dados para exibir')}
       </div>
     );
   }
@@ -86,6 +88,7 @@ export function ExpensesByTagChart({ expenses, tags }: { expenses: Expense[]; ta
 }
 
 export function ExpensesByPersonChart({ expenses, profiles }: { expenses: Expense[]; profiles: Profile[] }) {
+  const { t } = usePreferences();
   const data = useMemo(() => {
     const configuredProfiles = profiles.filter(isConfiguredProfile);
     
@@ -104,7 +107,7 @@ export function ExpensesByPersonChart({ expenses, profiles }: { expenses: Expens
   if (expenses.length === 0) {
     return (
       <div className="flex items-center justify-center h-48 text-muted-foreground">
-        Sem dados para exibir
+        {t('Sem dados para exibir')}
       </div>
     );
   }
@@ -133,7 +136,7 @@ export function ExpensesByPersonChart({ expenses, profiles }: { expenses: Expens
 }
 
 export function MonthlyEvolutionChart({ expenses }: { expenses: Expense[] }) {
-  const { locale, currency } = getActivePreferences();
+  const { t, locale, currency } = usePreferences();
   const dateLocale = getDateFnsLocale(locale);
   const currencySymbol = getCurrencySymbol(locale, currency);
   const compactFormatter = new Intl.NumberFormat(locale, { maximumFractionDigits: 0 });
@@ -163,7 +166,7 @@ export function MonthlyEvolutionChart({ expenses }: { expenses: Expense[] }) {
   if (expenses.length === 0) {
     return (
       <div className="flex items-center justify-center h-48 text-muted-foreground">
-        Sem dados para exibir
+        {t('Sem dados para exibir')}
       </div>
     );
   }
@@ -201,17 +204,17 @@ export function Charts({ expenses, profiles, tags }: ChartsProps) {
   return (
     <div className="space-y-8">
       <div className="space-y-3">
-        <h3 className="text-sm font-medium text-muted-foreground">Gastos por Categoria</h3>
+        <h3 className="text-sm font-medium text-muted-foreground">{t('Gastos por Categoria')}</h3>
         <ExpensesByTagChart expenses={expenses} tags={tags} />
       </div>
 
       <div className="space-y-3">
-        <h3 className="text-sm font-medium text-muted-foreground">Gastos por Pessoa</h3>
+        <h3 className="text-sm font-medium text-muted-foreground">{t('Gastos por Pessoa')}</h3>
         <ExpensesByPersonChart expenses={expenses} profiles={profiles} />
       </div>
 
       <div className="space-y-3">
-        <h3 className="text-sm font-medium text-muted-foreground">Evolução Mensal</h3>
+        <h3 className="text-sm font-medium text-muted-foreground">{t('Evolução Mensal')}</h3>
         <MonthlyEvolutionChart expenses={expenses} />
       </div>
     </div>

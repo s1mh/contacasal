@@ -5,7 +5,8 @@ import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover
 import { Button } from '@/components/ui/button';
 import { CalendarIcon } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import { getActivePreferences, getDateFnsLocale } from '@/lib/preferences';
+import { getDateFnsLocale } from '@/lib/preferences';
+import { usePreferences } from '@/contexts/PreferencesContext';
 
 interface DatePickerFieldProps {
   value: Date;
@@ -15,11 +16,10 @@ interface DatePickerFieldProps {
 
 export function DatePickerField({ value, onChange, label }: DatePickerFieldProps) {
   const [open, setOpen] = useState(false);
-  const { locale } = getActivePreferences();
+  const { locale, t } = usePreferences();
   const dateLocale = getDateFnsLocale(locale);
   const relativeFormatter = new Intl.RelativeTimeFormat(locale, { numeric: 'auto' });
-  const selectDateLabel =
-    locale === 'en-US' ? 'Select date' : locale === 'es-ES' ? 'Seleccionar fecha' : 'Selecionar data';
+  const selectDateLabel = t('Selecionar data');
 
   const getDisplayDate = (date: Date) => {
     if (isToday(date)) return relativeFormatter.format(0, 'day');

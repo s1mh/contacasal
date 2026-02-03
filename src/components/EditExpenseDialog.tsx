@@ -14,7 +14,7 @@ import { DatePickerField } from '@/components/DatePickerField';
 import { CurrencyInput } from '@/components/ui/currency-input';
 import { Slider } from '@/components/ui/slider';
 import { parseISO } from 'date-fns';
-import { useI18n } from '@/contexts/I18nContext';
+import { usePreferences } from '@/contexts/PreferencesContext';
 
 interface EditExpenseDialogProps {
   expense: Expense;
@@ -35,7 +35,7 @@ export function EditExpenseDialog({
   onOpenChange,
   onSave,
 }: EditExpenseDialogProps) {
-  const { t } = useI18n();
+  const { t } = usePreferences();
   const [amount, setAmount] = useState(expense.total_amount);
   const [description, setDescription] = useState(expense.description || '');
   const [expenseDate, setExpenseDate] = useState<Date>(parseISO(expense.expense_date));
@@ -109,13 +109,13 @@ export function EditExpenseDialog({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-md max-h-[90vh] overflow-y-auto">
         <DialogHeader>
-          <DialogTitle>{t.editExpense.title}</DialogTitle>
+          <DialogTitle>{t('Editar Gasto')}</DialogTitle>
         </DialogHeader>
         
         <div className="space-y-4 py-4">
           {/* Amount */}
           <div className="space-y-2">
-            <Label>{t.editExpense.amount}</Label>
+            <Label>{t('Valor')}</Label>
             <CurrencyInput
               value={amount}
               onChange={setAmount}
@@ -124,17 +124,17 @@ export function EditExpenseDialog({
 
           {/* Description */}
           <div className="space-y-2">
-            <Label>{t.editExpense.description}</Label>
+            <Label>{t('Descrição')}</Label>
             <Input
               value={description}
               onChange={(e) => setDescription(e.target.value)}
-              placeholder={t.editExpense.descriptionPlaceholder}
+              placeholder={t('Descrição do gasto')}
             />
           </div>
 
           {/* Date */}
           <div className="space-y-2">
-            <Label>{t.editExpense.date}</Label>
+            <Label>{t('Data')}</Label>
             <DatePickerField
               value={expenseDate}
               onChange={(date) => date && setExpenseDate(date)}
@@ -143,7 +143,7 @@ export function EditExpenseDialog({
 
           {/* Paid by */}
           <div className="space-y-2">
-            <Label>{t.editExpense.whoPaid}</Label>
+            <Label>{t('Quem pagou')}</Label>
             <Select value={paidBy.toString()} onValueChange={(v) => setPaidBy(parseInt(v))}>
               <SelectTrigger>
                 <SelectValue />
@@ -160,10 +160,10 @@ export function EditExpenseDialog({
 
           {/* Category */}
           <div className="space-y-2">
-            <Label>{t.editExpense.category}</Label>
+            <Label>{t('Categoria')}</Label>
             <Select value={tagId} onValueChange={setTagId}>
               <SelectTrigger>
-                <SelectValue placeholder={t.editExpense.selectCategory} />
+                <SelectValue placeholder={t('Selecione...')} />
               </SelectTrigger>
               <SelectContent>
                 {tags.map((tag) => (
@@ -177,15 +177,15 @@ export function EditExpenseDialog({
 
           {/* Split Type */}
           <div className="space-y-2">
-            <Label>{t.editExpense.split}</Label>
+            <Label>{t('Divisão')}</Label>
             <Select value={splitType} onValueChange={(v) => setSplitType(v as typeof splitType)}>
               <SelectTrigger>
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="equal">{t.expenses.splitEqual}</SelectItem>
-                <SelectItem value="percentage">{t.editExpense.percentage}</SelectItem>
-                <SelectItem value="full">{t.editExpense.oneHundredPercent}</SelectItem>
+                <SelectItem value="equal">50/50</SelectItem>
+                <SelectItem value="percentage">{t('Percentual')}</SelectItem>
+                <SelectItem value="full">{t('100% de um')}</SelectItem>
               </SelectContent>
             </Select>
           </div>
@@ -216,7 +216,7 @@ export function EditExpenseDialog({
             disabled={!numericAmount || isLoading} 
             className="w-full"
           >
-            {isLoading ? t.editExpense.saving : t.editExpense.saveChanges}
+            {isLoading ? t('Salvando...') : t('Salvar Alterações')}
           </Button>
         </div>
       </DialogContent>

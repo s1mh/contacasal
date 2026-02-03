@@ -13,7 +13,7 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { Expense } from '@/contexts/CoupleContext';
 import { format, parseISO } from 'date-fns';
 import { getDateFnsLocale } from '@/lib/preferences';
-import { useI18n } from '@/contexts/I18nContext';
+import { usePreferences } from '@/contexts/PreferencesContext';
 
 interface DeleteExpenseDialogProps {
   expense: Expense;
@@ -35,6 +35,7 @@ export function DeleteExpenseDialog({
   const { t, locale, formatCurrency, interpolate } = useI18n();
   const [selectedIds, setSelectedIds] = useState<string[]>([expense.id]);
   const [mode, setMode] = useState<'confirm' | 'select'>('confirm');
+  const { locale, t } = usePreferences();
   const dateLocale = getDateFnsLocale(locale);
   
   const isInstallment = expense.installments > 1;
@@ -70,18 +71,18 @@ export function DeleteExpenseDialog({
       <AlertDialog open={open} onOpenChange={onOpenChange}>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>{t.deleteExpense.title}</AlertDialogTitle>
+            <AlertDialogTitle>{t('Apagar gasto?')}</AlertDialogTitle>
             <AlertDialogDescription>
-              {interpolate(t.deleteExpense.willBeRemoved, {
-                description: expense.description || t.expenses.description,
-                amount: formatCurrency(expense.total_amount)
+              {t('{expense} de {amount} será removido.', {
+                expense: expense.description || t('Este gasto'),
+                amount: formatCurrency(expense.total_amount),
               })}
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel>{t.common.cancel}</AlertDialogCancel>
+            <AlertDialogCancel>{t('Cancelar')}</AlertDialogCancel>
             <AlertDialogAction onClick={onDeleteSingle} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
-              {t.common.delete}
+              {t('Apagar')}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
@@ -95,9 +96,9 @@ export function DeleteExpenseDialog({
       <AlertDialog open={open} onOpenChange={onOpenChange}>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>{t.deleteExpense.titleInstallment}</AlertDialogTitle>
+            <AlertDialogTitle>{t('Apagar parcelamento?')}</AlertDialogTitle>
             <AlertDialogDescription>
-              {interpolate(t.deleteExpense.hasInstallments, { count: expense.installments.toString() })}
+              {t('Este gasto tem {count} parcelas. O que deseja fazer?', { count: expense.installments })}
             </AlertDialogDescription>
           </AlertDialogHeader>
           <div className="flex flex-col gap-2 py-4">
@@ -105,23 +106,23 @@ export function DeleteExpenseDialog({
               onClick={handleDeleteAll}
               className="p-3 rounded-xl border-2 border-destructive/50 hover:bg-destructive/10 text-left transition-colors"
             >
-              <p className="font-medium text-destructive">{t.deleteExpense.deleteAll}</p>
+              <p className="font-medium text-destructive">{t('Apagar todas as parcelas')}</p>
               <p className="text-xs text-muted-foreground">
-                {interpolate(t.deleteExpense.deleteAllDesc, { count: relatedExpenses.length.toString() })}
+                {t('Remove todas as {count} parcelas encontradas', { count: relatedExpenses.length })}
               </p>
             </button>
             <button
               onClick={() => setMode('select')}
               className="p-3 rounded-xl border-2 border-border hover:border-primary/50 text-left transition-colors"
             >
-              <p className="font-medium">{t.deleteExpense.selectInstallments}</p>
+              <p className="font-medium">{t('Selecionar parcelas')}</p>
               <p className="text-xs text-muted-foreground">
-                {t.deleteExpense.selectInstallmentsDesc}
+                {t('Escolher quais meses apagar')}
               </p>
             </button>
           </div>
           <AlertDialogFooter>
-            <AlertDialogCancel>{t.common.cancel}</AlertDialogCancel>
+            <AlertDialogCancel>{t('Cancelar')}</AlertDialogCancel>
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
@@ -133,9 +134,9 @@ export function DeleteExpenseDialog({
     <AlertDialog open={open} onOpenChange={onOpenChange}>
       <AlertDialogContent className="max-h-[80vh] overflow-y-auto">
         <AlertDialogHeader>
-          <AlertDialogTitle>{t.deleteExpense.selectTitle}</AlertDialogTitle>
+          <AlertDialogTitle>{t('Selecionar parcelas')}</AlertDialogTitle>
           <AlertDialogDescription>
-            {t.deleteExpense.selectDesc}
+            {t('Marque as parcelas que deseja apagar')}
           </AlertDialogDescription>
         </AlertDialogHeader>
         <div className="space-y-2 py-4">
@@ -152,7 +153,10 @@ export function DeleteExpenseDialog({
                 />
                 <div className="flex-1">
                   <p className="font-medium text-sm">
-                    {t.deleteExpense.installment} {exp.installment_number}/{exp.installments}
+                    {t('Parcela {current}/{total}', {
+                      current: exp.installment_number,
+                      total: exp.installments,
+                    })}
                   </p>
                   <p className="text-xs text-muted-foreground">
                     {exp.billing_month 
@@ -166,13 +170,13 @@ export function DeleteExpenseDialog({
             ))}
         </div>
         <AlertDialogFooter>
-          <AlertDialogCancel onClick={() => setMode('confirm')}>{t.common.back}</AlertDialogCancel>
+          <AlertDialogCancel onClick={() => setMode('confirm')}>{t('Voltar')}</AlertDialogCancel>
           <AlertDialogAction 
             onClick={handleDeleteSelected}
             disabled={selectedIds.length === 0}
             className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
           >
-            {interpolate(t.deleteExpense.deleteCount, { count: selectedIds.length.toString() })}
+            {t('Apagar {count} parcela(s)', { count: selectedIds.length })}
           </AlertDialogAction>
         </AlertDialogFooter>
       </AlertDialogContent>
