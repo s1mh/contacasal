@@ -1,153 +1,93 @@
 
-# Plano: Seletores de Idioma/Moeda e Correção de Erro de Criação
+# Plano: Corrigir Scroll e Atualização dos Seletores no Onboarding
 
 ## Problemas Identificados
 
-### 1. Seletores de Idioma/Moeda Não Aparecem
-O componente `OnboardingModal.tsx` TEM o step `preferences` (linhas 637-683), mas a página `CreateSpace.tsx` NÃO tem esse step - vai direto de `profile` para `pin`.
+### 1. Modal não permite scroll
+O `DialogContent` no `OnboardingModal.tsx` (linha 390) tem a classe `overflow-hidden`, que bloqueia o scroll. O componente `Dialog` base já tem `overflow-y-auto`, mas está sendo sobrescrito.
 
-### 2. Erro ao Criar Novo Usuário
-Os logs mostram:
-```
-Failed to set user_id on profile: violates foreign key constraint "profiles_user_id_fkey"
-Failed to update user metadata: User not found
-```
-A constraint de chave estrangeira `profiles_user_id_fkey` referencia `auth.users(id)`, mas quando o usuário anônimo é criado e depois algum processo o deleta (ou há uma condição de corrida), o `create-couple` tenta vincular o `user_id` a um usuário que não existe mais.
-
-### 3. Excluir Todos os Usuários
-Já excluímos os dados públicos. Os usuários anônimos na tabela `auth.users` precisam ser excluídos pelo painel do Cloud.
+### 2. Seletores de idioma/moeda não atualizam
+O `SelectValue` não está mostrando o texto correspondente à opção selecionada. Precisa ter um `placeholder` ou usar renderização condicional para mostrar o valor correto.
 
 ---
 
 ## Solução
 
-### PARTE 1: Adicionar Bandeiras e Símbolos aos Seletores
+### PARTE 1: Habilitar Scroll no Modal
 
-Atualizar os `SelectItem` em ambos os arquivos com emojis de bandeira e símbolos de moeda:
+Remover `overflow-hidden` da classe do `DialogContent` no `OnboardingModal.tsx`.
 
-**Idiomas:**
-- `pt-BR` → `🇧🇷 Português (Brasil)`
-- `en-US` → `🇺🇸 English (US)`
-- `es-ES` → `🇪🇸 Español`
+**Arquivo:** `src/components/OnboardingModal.tsx` (linha 390)
 
-**Moedas:**
-- `BRL` → `R$ Real Brasileiro`
-- `USD` → `$ US Dollar`
-- `EUR` → `€ Euro`
+```tsx
+// ANTES
+<DialogContent 
+  className="sm:max-w-md overflow-hidden" 
+  ...
+>
 
-**Arquivos:**
-- `src/components/OnboardingModal.tsx` (linhas 647-651 e 661-665)
-
-### PARTE 2: Adicionar Step de Preferências no CreateSpace
-
-A página `CreateSpace.tsx` precisa do mesmo step `preferences` que existe no `OnboardingModal`.
-
-**Mudanças necessárias:**
-1. Adicionar imports de preferências
-2. Adicionar estados `preferredLocale` e `preferredCurrency`
-3. Adicionar step `'preferences'` ao tipo de step
-4. Criar função `handlePreferencesNext` para salvar e avançar
-5. Renderizar o step de preferências entre profile e pin
-
-### PARTE 3: Remover Foreign Key Constraint no user_id
-
-O campo `user_id` na tabela `profiles` é nullable, mas tem uma FK para `auth.users` que falha quando o usuário não existe. Como não podemos garantir que o usuário anônimo sempre existirá, vamos remover essa constraint.
-
-**Migração SQL:**
-```sql
-ALTER TABLE profiles DROP CONSTRAINT IF EXISTS profiles_user_id_fkey;
+// DEPOIS  
+<DialogContent 
+  className="sm:max-w-md" 
+  ...
+>
 ```
 
-### PARTE 4: Melhorar Edge Function create-couple
+### PARTE 2: Corrigir Exibição dos Seletores
 
-Adicionar verificação se o usuário existe antes de tentar vincular:
+Adicionar um `placeholder` descritivo ao `SelectValue` e garantir que o texto do item selecionado seja exibido corretamente. O Radix Select requer que o `SelectValue` tenha conteúdo explícito ou um placeholder para funcionar bem.
 
-```typescript
-// Verificar se usuário existe antes de atualizar
-const { data: userExists } = await supabaseAdmin.auth.admin.getUserById(userId);
+**Arquivo:** `src/components/OnboardingModal.tsx` (linhas 643-665)
 
-if (userExists?.user) {
-  // Atualizar profile com user_id
-  // Atualizar app_metadata
-} else {
-  console.log('User not found, skipping user_id assignment');
-}
+```tsx
+{/* Idioma */}
+<Select value={preferredLocale} onValueChange={(value) => setPreferredLocale(value as SupportedLocale)}>
+  <SelectTrigger>
+    <SelectValue placeholder="Selecione o idioma">
+      {preferredLocale === 'pt-BR' && '🇧🇷 Português (Brasil)'}
+      {preferredLocale === 'en-US' && '🇺🇸 English (US)'}
+      {preferredLocale === 'es-ES' && '🇪🇸 Español'}
+    </SelectValue>
+  </SelectTrigger>
+  <SelectContent>
+    <SelectItem value="pt-BR">🇧🇷 Português (Brasil)</SelectItem>
+    <SelectItem value="en-US">🇺🇸 English (US)</SelectItem>
+    <SelectItem value="es-ES">🇪🇸 Español</SelectItem>
+  </SelectContent>
+</Select>
+
+{/* Moeda */}
+<Select value={preferredCurrency} onValueChange={(value) => setPreferredCurrency(value as SupportedCurrency)}>
+  <SelectTrigger>
+    <SelectValue placeholder="Selecione a moeda">
+      {preferredCurrency === 'BRL' && 'R$ Real Brasileiro'}
+      {preferredCurrency === 'USD' && '$ US Dollar'}
+      {preferredCurrency === 'EUR' && '€ Euro'}
+    </SelectValue>
+  </SelectTrigger>
+  <SelectContent>
+    <SelectItem value="BRL">R$ Real Brasileiro</SelectItem>
+    <SelectItem value="USD">$ US Dollar</SelectItem>
+    <SelectItem value="EUR">€ Euro</SelectItem>
+  </SelectContent>
+</Select>
 ```
 
 ---
 
-## Resumo de Arquivos
+## Resumo de Alterações
 
-| Arquivo | Ação |
-|---------|------|
-| `src/components/OnboardingModal.tsx` | Adicionar bandeiras/símbolos aos seletores |
-| `src/pages/CreateSpace.tsx` | Adicionar step de preferências completo |
-| `supabase/functions/create-couple/index.ts` | Verificar se usuário existe antes de vincular |
-| **Migração SQL** | Remover FK constraint `profiles_user_id_fkey` |
+| Arquivo | Alteração |
+|---------|-----------|
+| `src/components/OnboardingModal.tsx` | Remover `overflow-hidden` da linha 390 |
+| `src/components/OnboardingModal.tsx` | Adicionar renderização explícita do valor selecionado no `SelectValue` para idioma e moeda |
 
 ---
 
 ## Seção Técnica
 
-### Código do Step de Preferências (para CreateSpace.tsx)
+### Por que o scroll não funciona?
+O componente `Dialog` base (em `dialog.tsx`) já tem `max-h-[calc(100vh-2rem)] overflow-y-auto`, mas quando o `OnboardingModal` adiciona `overflow-hidden`, essa propriedade tem prioridade e impede qualquer scroll.
 
-```typescript
-// Imports adicionais
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { getActivePreferences, setActivePreferences, SupportedCurrency, SupportedLocale } from '@/lib/preferences';
-
-// Estados adicionais
-const activePreferences = getActivePreferences();
-const [preferredLocale, setPreferredLocale] = useState<SupportedLocale>(activePreferences.locale);
-const [preferredCurrency, setPreferredCurrency] = useState<SupportedCurrency>(activePreferences.currency);
-
-// Step type atualizado
-type Step = 'profile' | 'preferences' | 'pin' | 'email';
-
-// Navegação
-const handleNextStep = () => {
-  if (name.trim() && isValidName(name)) {
-    setStep('preferences'); // Vai para preferences em vez de pin
-  }
-};
-
-const handlePreferencesNext = () => {
-  // Salva preferências (shareCode será definido depois, usar temporário)
-  localStorage.setItem('app_preferences', JSON.stringify({
-    locale: preferredLocale,
-    currency: preferredCurrency,
-  }));
-  setStep('pin');
-  generateUsername();
-};
-```
-
-### Seletores com Bandeiras
-
-```tsx
-{/* Idioma */}
-<SelectContent>
-  <SelectItem value="pt-BR">🇧🇷 Português (Brasil)</SelectItem>
-  <SelectItem value="en-US">🇺🇸 English (US)</SelectItem>
-  <SelectItem value="es-ES">🇪🇸 Español</SelectItem>
-</SelectContent>
-
-{/* Moeda */}
-<SelectContent>
-  <SelectItem value="BRL">R$ Real Brasileiro</SelectItem>
-  <SelectItem value="USD">$ US Dollar</SelectItem>
-  <SelectItem value="EUR">€ Euro</SelectItem>
-</SelectContent>
-```
-
----
-
-## Sobre Exclusão de Usuários
-
-Os dados públicos já foram excluídos. Para excluir os usuários de autenticação:
-
-1. Acesse **Cloud > Users** no painel do Lovable
-2. Selecione os usuários anônimos
-3. Exclua-os manualmente
-
-Ou posso criar uma migração para deletar todos os auth.users via SQL (requer permissão especial).
+### Por que os seletores não atualizam?
+O componente `SelectValue` do Radix UI pode não re-renderizar o texto corretamente em alguns casos. Ao passar o conteúdo como children do `SelectValue` baseado no estado atual, garantimos que o React force a atualização visual quando o valor muda.
