@@ -1,6 +1,6 @@
 type TranslationValues = Record<string, string | number>;
 
-const interpolate = (value: string, variables?: TranslationValues) => {
+export const interpolate = (value: string, variables?: TranslationValues) => {
   if (!variables) return value;
   return value.replace(/\{(\w+)\}/g, (_, key) => String(variables[key] ?? `{${key}}`));
 };
@@ -123,7 +123,6 @@ export const translations: Record<SupportedLocale, Record<string, string>> = {
     '6 meses': '6 meses',
     '12 meses': '12 meses',
     'Tudo': 'Tudo',
-    'Categoria': 'Categoria',
     'Todas categorias': 'Todas categorias',
     'Total gasto': 'Total gasto',
     'Média por gasto': 'Média por gasto',
@@ -167,7 +166,6 @@ export const translations: Record<SupportedLocale, Record<string, string>> = {
     'Dia do mês': 'Dia do mês',
     'Nome do acordo': 'Nome do acordo',
     'Ex: Aluguel, Internet...': 'Ex: Aluguel, Internet...',
-    'Divisão': 'Divisão',
     'Apagar gasto?': 'Apagar gasto?',
     '{expense} de {amount} será removido.': '{expense} de {amount} será removido.',
     'Este gasto': 'Este gasto',
@@ -209,7 +207,6 @@ export const translations: Record<SupportedLocale, Record<string, string>> = {
     'Escolha o gatinho': 'Escolha o gatinho',
     'Nome': 'Nome',
     'Username': 'Username',
-    'Salvar': 'Salvar',
     'Ajustes': 'Ajustes',
     'Copiado! 📋': 'Copiado! 📋',
     'Compartilhe com quem você quiser': 'Compartilhe com quem você quiser',
@@ -252,6 +249,25 @@ export const translations: Record<SupportedLocale, Record<string, string>> = {
       'Perfil não encontrado. Complete o onboarding primeiro.',
     'Vocês poderão dividir gastos, acompanhar despesas e manter tudo organizado juntos! 💕':
       'Vocês poderão dividir gastos, acompanhar despesas e manter tudo organizado juntos! 💕',
+    'Dividam gastos com clareza': 'Dividam gastos com clareza',
+    'Continuar como': 'Continuar como',
+    'Novo espaço': 'Novo espaço',
+    'Crie um espaço para até 5 pessoas': 'Crie um espaço para até 5 pessoas',
+    'Entrar em espaço': 'Entrar em espaço',
+    'Recebeu um código? Cole aqui': 'Recebeu um código? Cole aqui',
+    'Cole o código aqui': 'Cole o código aqui',
+    'Entrar com seu @username': 'Entrar com seu @username',
+    'Feito com 💕 para casais': 'Feito com 💕 para casais',
+    'Entrar com @': 'Entrar com @',
+    'Use seu username pessoal': 'Use seu username pessoal',
+    'Código pessoal': 'Código pessoal',
+    'Verificando...': 'Verificando...',
+    'tentativa restante': 'tentativa restante',
+    'tentativas restantes': 'tentativas restantes',
+    'Conta bloqueada por': 'Conta bloqueada por',
+    'Entrando...': 'Entrando...',
+    'Esqueci meu código': 'Esqueci meu código',
+    'Preparando o amor...': 'Preparando o amor...',
   },
   'en-US': {
     'Bem-vindo!': 'Welcome!',
@@ -368,7 +384,6 @@ export const translations: Record<SupportedLocale, Record<string, string>> = {
     '6 meses': '6 months',
     '12 meses': '12 months',
     'Tudo': 'All time',
-    'Categoria': 'Category',
     'Todas categorias': 'All categories',
     'Total gasto': 'Total spent',
     'Média por gasto': 'Average per expense',
@@ -495,6 +510,25 @@ export const translations: Record<SupportedLocale, Record<string, string>> = {
       'Profile not found. Complete onboarding first.',
     'Vocês poderão dividir gastos, acompanhar despesas e manter tudo organizado juntos! 💕':
       'You can split expenses, track spending, and keep everything organized together! 💕',
+    'Dividam gastos com clareza': 'Split expenses with clarity',
+    'Continuar como': 'Continue as',
+    'Novo espaço': 'New space',
+    'Crie um espaço para até 5 pessoas': 'Create a space for up to 5 people',
+    'Entrar em espaço': 'Join a space',
+    'Recebeu um código? Cole aqui': 'Got a code? Paste it here',
+    'Cole o código aqui': 'Paste the code here',
+    'Entrar com seu @username': 'Sign in with your @username',
+    'Feito com 💕 para casais': 'Made with 💕 for couples',
+    'Entrar com @': 'Sign in with @',
+    'Use seu username pessoal': 'Use your personal username',
+    'Código pessoal': 'Personal code',
+    'Verificando...': 'Verifying...',
+    'tentativa restante': 'attempt remaining',
+    'tentativas restantes': 'attempts remaining',
+    'Conta bloqueada por': 'Account locked for',
+    'Entrando...': 'Signing in...',
+    'Esqueci meu código': 'Forgot my code',
+    'Preparando o amor...': 'Preparing the love...',
   },
   'es-ES': {
     'Bem-vindo!': '¡Bienvenido!',
@@ -611,7 +645,6 @@ export const translations: Record<SupportedLocale, Record<string, string>> = {
     '6 meses': '6 meses',
     '12 meses': '12 meses',
     'Tudo': 'Todo',
-    'Categoria': 'Categoría',
     'Todas categorias': 'Todas las categorías',
     'Total gasto': 'Total gastado',
     'Média por gasto': 'Promedio por gasto',
@@ -738,6 +771,25 @@ export const translations: Record<SupportedLocale, Record<string, string>> = {
       'Perfil no encontrado. Completa el onboarding primero.',
     'Vocês poderão dividir gastos, acompanhar despesas e manter tudo organizado juntos! 💕':
       'Podrán dividir gastos, seguir los gastos y mantener todo organizado juntos! 💕',
+    'Dividam gastos com clareza': 'Dividan gastos con claridad',
+    'Continuar como': 'Continuar como',
+    'Novo espaço': 'Nuevo espacio',
+    'Crie um espaço para até 5 pessoas': 'Crea un espacio para hasta 5 personas',
+    'Entrar em espaço': 'Entrar a un espacio',
+    'Recebeu um código? Cole aqui': '¿Recibiste un código? Pégalo aquí',
+    'Cole o código aqui': 'Pega el código aquí',
+    'Entrar com seu @username': 'Entrar con tu @username',
+    'Feito com 💕 para casais': 'Hecho con 💕 para parejas',
+    'Entrar com @': 'Entrar con @',
+    'Use seu username pessoal': 'Usa tu nombre de usuario personal',
+    'Código pessoal': 'Código personal',
+    'Verificando...': 'Verificando...',
+    'tentativa restante': 'intento restante',
+    'tentativas restantes': 'intentos restantes',
+    'Conta bloqueada por': 'Cuenta bloqueada por',
+    'Entrando...': 'Entrando...',
+    'Esqueci meu código': 'Olvidé mi código',
+    'Preparando o amor...': 'Preparando el amor...',
   },
 };
 
@@ -748,4 +800,15 @@ export const translate = (
 ) => {
   const translated = translations[locale]?.[key] ?? translations['pt-BR'][key] ?? key;
   return interpolate(translated, variables);
+};
+
+// Type for translation function
+export type TranslationKeys = (key: string, variables?: TranslationValues) => string;
+
+// Get translations function for a specific locale
+export const getTranslations = (locale: SupportedLocale): TranslationKeys => {
+  return (key: string, variables?: TranslationValues) => {
+    const translated = translations[locale]?.[key] ?? translations['pt-BR'][key] ?? key;
+    return interpolate(translated, variables);
+  };
 };
