@@ -5,6 +5,7 @@ import { OnboardingModal } from '@/components/OnboardingModal';
 import { ReconnectModal } from '@/components/ReconnectModal';
 import { SyncIndicator } from '@/components/SyncIndicator';
 import { CoupleProvider, useCoupleContext, Profile } from '@/contexts/CoupleContext';
+import { I18nProvider } from '@/contexts/I18nContext';
 import { useAuthContext } from '@/contexts/AuthContext';
 import { Loader2, AlertCircle, RefreshCw, Trash2, UserX, Hand } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -503,8 +504,10 @@ export default function CoupleLayout() {
   }
 
   return (
-    <CoupleProvider shareCode={shareCode}>
-      <CoupleLayoutContent />
-    </CoupleProvider>
+    <I18nProvider shareCode={shareCode}>
+      <CoupleProvider shareCode={shareCode}>
+        <CoupleLayoutContent />
+      </CoupleProvider>
+    </I18nProvider>
   );
 }
