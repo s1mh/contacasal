@@ -5,7 +5,6 @@ import { ExpenseCard } from '@/components/ExpenseCard';
 import { TagPill } from '@/components/TagPill';
 import { AnimatedPage, AnimatedItem } from '@/components/AnimatedPage';
 import { Couple, Expense, useCoupleContext } from '@/contexts/CoupleContext';
-import { formatCurrency } from '@/lib/constants';
 import { format, startOfMonth, endOfMonth, isWithinInterval, parseISO } from 'date-fns';
 import { getDateFnsLocale } from '@/lib/preferences';
 import { usePreferences } from '@/contexts/PreferencesContext';
@@ -13,8 +12,10 @@ import { cn } from '@/lib/utils';
 import { Avatar } from '@/components/Avatar';
 import { DeleteExpenseDialog } from '@/components/DeleteExpenseDialog';
 import { EditExpenseDialog } from '@/components/EditExpenseDialog';
+import { useI18n } from '@/contexts/I18nContext';
 
 export default function History() {
+  const { t, locale, formatCurrency, interpolate } = useI18n();
   const { couple } = useOutletContext<{ couple: Couple }>();
   const { deleteExpense, deleteExpenses, updateExpense } = useCoupleContext();
   const [selectedTagId, setSelectedTagId] = useState<string | null>(null);
