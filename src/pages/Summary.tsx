@@ -9,12 +9,14 @@ import { useToast } from '@/hooks/use-toast';
 import { Button } from '@/components/ui/button';
 import { AIInsightsCard } from '@/components/AIInsightsCard';
 import { isConfiguredProfile } from '@/lib/utils';
+import { usePreferences } from '@/contexts/PreferencesContext';
 
 export default function Summary() {
   const { couple } = useOutletContext<{ couple: Couple }>();
   const { calculateBalance } = useCoupleContext();
   const { shareCode } = useParams();
   const { toast } = useToast();
+  const { t } = usePreferences();
   const balance = calculateBalance();
 
   const recentExpenses = couple.expenses.slice(0, 5);
@@ -27,8 +29,8 @@ export default function Summary() {
     if (navigator.share) {
       try {
         await navigator.share({
-          title: 'Conta de Casal',
-          text: 'Entre no nosso espaço compartilhado!',
+          title: t('Conta de Casal'),
+          text: t('Entre no nosso espaço compartilhado!'),
           url,
         });
       } catch (err) {
@@ -37,8 +39,8 @@ export default function Summary() {
     } else {
       await navigator.clipboard.writeText(url);
       toast({
-        title: 'Link copiado!',
-        description: 'Compartilhe com seu parceiro(a).',
+        title: t('Link copiado!'),
+        description: t('Compartilhe com seu parceiro(a).'),
       });
     }
   };
@@ -65,7 +67,7 @@ export default function Summary() {
             className="rounded-full gap-2"
           >
             <Share2 className="w-4 h-4" />
-            Compartilhar
+            {t('Compartilhar')}
           </Button>
         </div>
       </AnimatedItem>
@@ -86,7 +88,7 @@ export default function Summary() {
       <div className="mt-6">
         <AnimatedItem delay={200}>
           <h2 className="text-sm font-medium text-muted-foreground mb-3">
-            Últimos gastos
+            {t('Últimos gastos')}
           </h2>
         </AnimatedItem>
         
@@ -94,10 +96,10 @@ export default function Summary() {
           <AnimatedItem delay={250}>
             <div className="bg-card rounded-2xl p-6 text-center shadow-glass">
               <p className="text-muted-foreground">
-                Nenhum gasto ainda
+                {t('Nenhum gasto ainda')}
               </p>
               <p className="text-xs text-muted-foreground mt-1">
-                Toque no + para adicionar
+                {t('Toque no + para adicionar')}
               </p>
             </div>
           </AnimatedItem>

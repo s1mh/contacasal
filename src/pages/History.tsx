@@ -7,7 +7,8 @@ import { AnimatedPage, AnimatedItem } from '@/components/AnimatedPage';
 import { Couple, Expense, useCoupleContext } from '@/contexts/CoupleContext';
 import { formatCurrency } from '@/lib/constants';
 import { format, startOfMonth, endOfMonth, isWithinInterval, parseISO } from 'date-fns';
-import { ptBR } from 'date-fns/locale';
+import { getDateFnsLocale } from '@/lib/preferences';
+import { usePreferences } from '@/contexts/PreferencesContext';
 import { cn } from '@/lib/utils';
 import { Avatar } from '@/components/Avatar';
 import { DeleteExpenseDialog } from '@/components/DeleteExpenseDialog';
@@ -22,6 +23,8 @@ export default function History() {
   const [expenseToDelete, setExpenseToDelete] = useState<Expense | null>(null);
   const [editDialogOpen, setEditDialogOpen] = useState(false);
   const [expenseToEdit, setExpenseToEdit] = useState<Expense | null>(null);
+  const { locale, t } = usePreferences();
+  const dateLocale = getDateFnsLocale(locale);
 
   const monthStart = startOfMonth(selectedMonth);
   const monthEnd = endOfMonth(selectedMonth);
@@ -71,7 +74,7 @@ export default function History() {
       {/* Header */}
       <AnimatedItem delay={0}>
         <div className="flex items-center justify-between mb-6">
-          <h1 className="text-xl font-semibold">Histórico</h1>
+          <h1 className="text-xl font-semibold">{t('Histórico')}</h1>
           <div className="flex items-center gap-1 bg-muted rounded-full p-1">
             <button
               onClick={() => navigateMonth(-1)}
@@ -80,7 +83,7 @@ export default function History() {
               ←
             </button>
             <span className="px-3 text-sm font-medium min-w-[100px] text-center">
-              {format(selectedMonth, 'MMM yyyy', { locale: ptBR })}
+              {format(selectedMonth, 'MMM yyyy', { locale: dateLocale })}
             </span>
             <button
               onClick={() => navigateMonth(1)}
@@ -97,11 +100,13 @@ export default function History() {
         <div className="bg-card rounded-3xl p-4 shadow-glass mb-4">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-sm text-muted-foreground">Total do mês</p>
+              <p className="text-sm text-muted-foreground">{t('Total do mês')}</p>
               <p className="text-2xl font-bold">{formatCurrency(totalAmount)}</p>
             </div>
             <div className="text-right">
-              <p className="text-sm text-muted-foreground">{filteredExpenses.length} gastos</p>
+              <p className="text-sm text-muted-foreground">
+                {filteredExpenses.length} {t('gastos')}
+              </p>
             </div>
           </div>
         </div>
@@ -112,7 +117,7 @@ export default function History() {
         <div className="mb-4">
           <div className="flex items-center gap-2 mb-2">
             <Filter className="w-4 h-4 text-muted-foreground" />
-            <span className="text-sm text-muted-foreground">Filtrar por categoria</span>
+            <span className="text-sm text-muted-foreground">{t('Filtrar por categoria')}</span>
           </div>
           <div className="flex flex-wrap gap-2">
             <button
@@ -124,7 +129,7 @@ export default function History() {
                   : 'bg-muted text-muted-foreground hover:bg-muted/80'
               )}
             >
-              Todos
+              {t('Todos')}
             </button>
             {couple.tags.map((tag) => (
               <TagPill
@@ -146,7 +151,7 @@ export default function History() {
           <div className="mb-4">
             <div className="flex items-center gap-2 mb-2">
               <FileText className="w-4 h-4 text-muted-foreground" />
-              <span className="text-sm text-muted-foreground">Acordos recorrentes</span>
+              <span className="text-sm text-muted-foreground">{t('Acordos recorrentes')}</span>
             </div>
             <div className="bg-card rounded-2xl p-4 shadow-glass space-y-3">
               {couple.agreements.filter(a => a.is_active).map((agreement) => {
@@ -165,7 +170,7 @@ export default function History() {
                           <span className="font-medium text-sm">{agreement.name}</span>
                         </div>
                         <p className="text-xs text-muted-foreground">
-                          Dia {agreement.day_of_month} de cada mês
+                          {t('Dia {day} de cada mês', { day: agreement.day_of_month })}
                         </p>
                       </div>
                     </div>
@@ -175,7 +180,7 @@ export default function History() {
               })}
               <div className="pt-2 border-t border-border/50">
                 <div className="flex justify-between text-sm">
-                  <span className="text-muted-foreground">Total acordos</span>
+                  <span className="text-muted-foreground">{t('Total acordos')}</span>
                   <span className="font-bold">
                     {formatCurrency(
                       couple.agreements.filter(a => a.is_active).reduce((sum, a) => sum + a.amount, 0)
@@ -192,11 +197,11 @@ export default function History() {
         <AnimatedItem delay={300}>
           <div className="bg-card rounded-2xl p-8 text-center shadow-glass">
             <Calendar className="w-12 h-12 mx-auto text-muted-foreground/50 mb-3" />
-            <p className="text-muted-foreground">
-              Nenhum gasto encontrado
+              <p className="text-muted-foreground">
+              {t('Nenhum gasto encontrado')}
             </p>
             <p className="text-xs text-muted-foreground mt-1">
-              {selectedTagId ? 'Tente remover o filtro' : 'Neste período'}
+              {selectedTagId ? t('Tente remover o filtro') : t('Neste período')}
             </p>
           </div>
         </AnimatedItem>
