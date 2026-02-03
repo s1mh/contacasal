@@ -83,7 +83,6 @@ function AgreementForm({
           <CurrencyInput
             value={amount}
             onChange={onAmountChange}
-            placeholder="$ 0,00"
           />
         </div>
         <div className="space-y-2">
