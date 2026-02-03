@@ -644,9 +644,9 @@ export function OnboardingModal({ open, onClose, onComplete, profiles, shareCode
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="pt-BR">Português (Brasil)</SelectItem>
-                      <SelectItem value="en-US">English (US)</SelectItem>
-                      <SelectItem value="es-ES">Español</SelectItem>
+                      <SelectItem value="pt-BR">🇧🇷 Português (Brasil)</SelectItem>
+                      <SelectItem value="en-US">🇺🇸 English (US)</SelectItem>
+                      <SelectItem value="es-ES">🇪🇸 Español</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
@@ -658,9 +658,9 @@ export function OnboardingModal({ open, onClose, onComplete, profiles, shareCode
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="BRL">Real (R$)</SelectItem>
-                      <SelectItem value="USD">Dólar (US$)</SelectItem>
-                      <SelectItem value="EUR">Euro (€)</SelectItem>
+                      <SelectItem value="BRL">R$ Real Brasileiro</SelectItem>
+                      <SelectItem value="USD">$ US Dollar</SelectItem>
+                      <SelectItem value="EUR">€ Euro</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
