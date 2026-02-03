@@ -23,16 +23,6 @@ interface OnboardingModalProps {
   isJoining?: boolean;
 }
 
-// List of cute compliments for valid names
-const NAME_COMPLIMENTS = [
-  "Que nome lindo! 💕",
-  "Adorável! ✨",
-  "Amei esse nome! 🌟",
-  "Combina com você! 💫",
-  "Muito fofo! 🥰",
-  "Perfeito! 💝",
-];
-
 // Validate name - only letters and spaces, no special characters
 const isValidName = (name: string): boolean => {
   if (!name.trim()) return false;
@@ -58,32 +48,32 @@ const isValidEmail = (email: string): boolean => {
   return emailRegex.test(email.trim());
 };
 
-// Check if PIN is weak
-const isWeakPin = (pin: string): { weak: boolean; reason?: string } => {
+// Check if PIN is weak - returns key for translation
+const isWeakPin = (pin: string): { weak: boolean; reasonKey?: 'pinSameDigits' | 'pinCommon' | 'pinSequence' } => {
   if (pin.length !== 4) return { weak: false };
   
   // Check for repeated digits (1111, 0000, etc.)
   if (/^(\d)\1{3}$/.test(pin)) {
-    return { weak: true, reason: 'Não use 4 dígitos iguais' };
+    return { weak: true, reasonKey: 'pinSameDigits' };
   }
   
   // Check for common weak PINs
   const commonPins = ['1234', '4321', '0000', '1111', '2222', '3333', '4444', '5555', '6666', '7777', '8888', '9999', '1212', '2121', '1010', '0101', '1122', '2211'];
   if (commonPins.includes(pin)) {
-    return { weak: true, reason: 'Esse código é muito comum' };
+    return { weak: true, reasonKey: 'pinCommon' };
   }
   
   // Check for ascending sequence (1234, 2345, 3456, etc.)
   const digits = pin.split('').map(Number);
   const isAscending = digits.every((d, i) => i === 0 || d === digits[i - 1] + 1);
   if (isAscending) {
-    return { weak: true, reason: 'Evite sequências simples' };
+    return { weak: true, reasonKey: 'pinSequence' };
   }
   
   // Check for descending sequence (4321, 5432, etc.)
   const isDescending = digits.every((d, i) => i === 0 || d === digits[i - 1] - 1);
   if (isDescending) {
-    return { weak: true, reason: 'Evite sequências simples' };
+    return { weak: true, reasonKey: 'pinSequence' };
   }
   
   return { weak: false };
@@ -162,7 +152,8 @@ export function OnboardingModal({ open, onClose, onComplete, profiles, shareCode
   useEffect(() => {
     if (isValidName(name) && looksLikeName(name)) {
       const timeout = setTimeout(() => {
-        const randomCompliment = NAME_COMPLIMENTS[Math.floor(Math.random() * NAME_COMPLIMENTS.length)];
+        const compliments = t.onboarding.compliments;
+        const randomCompliment = compliments[Math.floor(Math.random() * compliments.length)];
         setCompliment(randomCompliment);
         setShowCompliment(true);
       }, 1000);
@@ -172,7 +163,7 @@ export function OnboardingModal({ open, onClose, onComplete, profiles, shareCode
     } else {
       setShowCompliment(false);
     }
-  }, [name]);
+  }, [name, t]);
 
   // Generate username when moving to PIN step
   const generateUsername = async () => {
@@ -405,7 +396,7 @@ export function OnboardingModal({ open, onClose, onComplete, profiles, shareCode
   return (
     <Dialog open={open} onOpenChange={handleOpenChange}>
       <DialogContent 
-        className="sm:max-w-md overflow-hidden" 
+        className="sm:max-w-md" 
         onPointerDownOutside={(e) => !canClose && e.preventDefault()}
       >
         <DialogHeader>
