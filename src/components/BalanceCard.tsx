@@ -1,4 +1,4 @@
-import { cn } from '@/lib/utils';
+import { cn, isConfiguredProfile } from '@/lib/utils';
 import { formatCurrency } from '@/lib/constants';
 import { Avatar } from './Avatar';
 import { Profile } from '@/hooks/useCouple';
@@ -19,12 +19,8 @@ export function BalanceCard({ profiles, balance }: BalanceCardProps) {
 
   if (!person1 || !person2) return null;
 
-  // Check if profiles are configured (not default names)
-  const isConfigured = (p: Profile) => 
-    p.name !== 'Pessoa 1' && p.name !== 'Pessoa 2' && p.name !== 'Pessoa';
-  
-  const person1Configured = isConfigured(person1);
-  const person2Configured = isConfigured(person2);
+  const person1Configured = isConfiguredProfile(person1);
+  const person2Configured = isConfiguredProfile(person2);
   const bothConfigured = person1Configured && person2Configured;
 
   const isBalanced = Math.abs(balance.balance) < 0.01;

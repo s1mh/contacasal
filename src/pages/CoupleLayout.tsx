@@ -10,6 +10,7 @@ import { Loader2, AlertCircle, RefreshCw, Trash2, UserX, Hand } from 'lucide-rea
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
 import { CAT_AVATARS } from '@/lib/constants';
+import { isConfiguredProfile } from '@/lib/utils';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 
@@ -114,9 +115,8 @@ function CoupleLayoutContent() {
   // Step 2: Check if stored profile still exists when couple data loads
   useEffect(() => {
     if (couple && shareCode && myPosition && !showOnboarding && !showReconnect) {
-      const profileExists = couple.profiles.find(p => 
-        p.position === myPosition && 
-        p.name !== 'Pessoa 1' && p.name !== 'Pessoa 2' && p.name !== 'Pessoa'
+      const profileExists = couple.profiles.find(p =>
+        p.position === myPosition && isConfiguredProfile(p)
       );
       
       if (!profileExists) {

@@ -1,12 +1,13 @@
 import { createContext, useContext, useState, useEffect, useCallback, ReactNode, useRef } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
-import { 
-  validateExpense, 
-  validateProfile, 
-  validateTag, 
-  validateCard, 
-  validateAgreement, 
+import { isConfiguredProfile } from '@/lib/utils';
+import {
+  validateExpense,
+  validateProfile,
+  validateTag,
+  validateCard,
+  validateAgreement,
   validateSettlement,
 } from '@/lib/validation';
 
@@ -159,13 +160,46 @@ export function CoupleProvider({ children, shareCode }: CoupleProviderProps) {
   const [isSyncing, setIsSyncing] = useState(false);
   const syncTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
+  // Helper to fetch and transform all couple data
+  const fetchCoupleData = useCallback(async (coupleId: string, coupleData: { id: string; share_code: string; max_members?: number }): Promise<Couple> => {
+    const [profilesRes, tagsRes, expensesRes, cardsRes, agreementsRes, settlementsRes, rolesRes] = await Promise.all([
+      supabase.from('profiles').select('id, couple_id, name, color, avatar_index, position, username, email').eq('couple_id', coupleId).order('position'),
+      supabase.from('tags').select('*').eq('couple_id', coupleId),
+      supabase.from('expenses').select('*').eq('couple_id', coupleId).order('expense_date', { ascending: false }),
+      supabase.from('cards').select('*').eq('couple_id', coupleId),
+      supabase.from('agreements').select('*').eq('couple_id', coupleId),
+      supabase.from('settlements').select('*').eq('couple_id', coupleId).order('settled_at', { ascending: false }),
+      supabase.from('space_roles').select('*').eq('space_id', coupleId),
+    ]);
+
+    return {
+      id: coupleData.id,
+      share_code: coupleData.share_code,
+      max_members: coupleData.max_members || 5,
+      profiles: profilesRes.data || [],
+      roles: (rolesRes.data || []) as SpaceRole[],
+      tags: tagsRes.data || [],
+      expenses: (expensesRes.data || []).map(e => ({
+        ...e,
+        split_value: e.split_value as { person1: number; person2: number },
+        payment_type: e.payment_type || 'debit',
+        installments: e.installments || 1,
+        installment_number: e.installment_number || 1,
+      })) as Expense[],
+      cards: (cardsRes.data || []) as Card[],
+      agreements: (agreementsRes.data || []).map(a => ({
+        ...a,
+        split_value: a.split_value as { person1: number; person2: number },
+      })) as Agreement[],
+      settlements: (settlementsRes.data || []) as Settlement[],
+    };
+  }, []);
+
   const fetchCouple = useCallback(async (code: string) => {
     try {
       setLoading(true);
       setError(null);
 
-      // RLS filtra automaticamente para o couple_id do JWT
-      // Não precisamos filtrar por share_code
       const { data: coupleData, error: coupleError } = await supabase
         .from('couples')
         .select('*')
@@ -180,44 +214,14 @@ export function CoupleProvider({ children, shareCode }: CoupleProviderProps) {
         return;
       }
 
-      const [profilesRes, tagsRes, expensesRes, cardsRes, agreementsRes, settlementsRes, rolesRes] = await Promise.all([
-        supabase.from('profiles').select('id, couple_id, name, color, avatar_index, position, username, email').eq('couple_id', coupleData.id).order('position'),
-        supabase.from('tags').select('*').eq('couple_id', coupleData.id),
-        supabase.from('expenses').select('*').eq('couple_id', coupleData.id).order('expense_date', { ascending: false }),
-        supabase.from('cards').select('*').eq('couple_id', coupleData.id),
-        supabase.from('agreements').select('*').eq('couple_id', coupleData.id),
-        supabase.from('settlements').select('*').eq('couple_id', coupleData.id).order('settled_at', { ascending: false }),
-        supabase.from('space_roles').select('*').eq('space_id', coupleData.id),
-      ]);
-
-      setCouple({
-        id: coupleData.id,
-        share_code: coupleData.share_code,
-        max_members: coupleData.max_members || 5,
-        profiles: profilesRes.data || [],
-        roles: (rolesRes.data || []) as SpaceRole[],
-        tags: tagsRes.data || [],
-        expenses: (expensesRes.data || []).map(e => ({
-          ...e,
-          split_value: e.split_value as { person1: number; person2: number },
-          payment_type: e.payment_type || 'debit',
-          installments: e.installments || 1,
-          installment_number: e.installment_number || 1,
-        })) as Expense[],
-        cards: (cardsRes.data || []) as Card[],
-        agreements: (agreementsRes.data || []).map(a => ({
-          ...a,
-          split_value: a.split_value as { person1: number; person2: number },
-        })) as Agreement[],
-        settlements: (settlementsRes.data || []) as Settlement[],
-      });
+      setCouple(await fetchCoupleData(coupleData.id, coupleData));
     } catch (err: unknown) {
       console.error('Error fetching couple:', err);
       setError('Erro ao carregar dados');
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [fetchCoupleData]);
 
   const refetch = useCallback(async () => {
     if (shareCode) {
@@ -225,15 +229,12 @@ export function CoupleProvider({ children, shareCode }: CoupleProviderProps) {
     }
   }, [shareCode, fetchCouple]);
 
-  // Silent refetch - atualiza em background sem mostrar loading
   const silentRefetch = useCallback(async () => {
     if (!shareCode || !couple) return;
-    
-    // Debounce de 100ms - só mostra indicador se demorar
+
     syncTimeoutRef.current = setTimeout(() => setIsSyncing(true), 100);
-    
+
     try {
-      // RLS filtra automaticamente para o couple_id do JWT
       const { data: coupleData } = await supabase
         .from('couples')
         .select('*')
@@ -241,37 +242,7 @@ export function CoupleProvider({ children, shareCode }: CoupleProviderProps) {
 
       if (!coupleData) return;
 
-      const [profilesRes, tagsRes, expensesRes, cardsRes, agreementsRes, settlementsRes, rolesRes] = await Promise.all([
-        supabase.from('profiles').select('id, couple_id, name, color, avatar_index, position, username, email').eq('couple_id', coupleData.id).order('position'),
-        supabase.from('tags').select('*').eq('couple_id', coupleData.id),
-        supabase.from('expenses').select('*').eq('couple_id', coupleData.id).order('expense_date', { ascending: false }),
-        supabase.from('cards').select('*').eq('couple_id', coupleData.id),
-        supabase.from('agreements').select('*').eq('couple_id', coupleData.id),
-        supabase.from('settlements').select('*').eq('couple_id', coupleData.id).order('settled_at', { ascending: false }),
-        supabase.from('space_roles').select('*').eq('space_id', coupleData.id),
-      ]);
-
-      setCouple({
-        id: coupleData.id,
-        share_code: coupleData.share_code,
-        max_members: coupleData.max_members || 5,
-        profiles: profilesRes.data || [],
-        roles: (rolesRes.data || []) as SpaceRole[],
-        tags: tagsRes.data || [],
-        expenses: (expensesRes.data || []).map(e => ({
-          ...e,
-          split_value: e.split_value as { person1: number; person2: number },
-          payment_type: e.payment_type || 'debit',
-          installments: e.installments || 1,
-          installment_number: e.installment_number || 1,
-        })) as Expense[],
-        cards: (cardsRes.data || []) as Card[],
-        agreements: (agreementsRes.data || []).map(a => ({
-          ...a,
-          split_value: a.split_value as { person1: number; person2: number },
-        })) as Agreement[],
-        settlements: (settlementsRes.data || []) as Settlement[],
-      });
+      setCouple(await fetchCoupleData(coupleData.id, coupleData));
     } catch (err: unknown) {
       console.error('[CoupleContext] Silent refetch error:', err);
     } finally {
@@ -281,7 +252,7 @@ export function CoupleProvider({ children, shareCode }: CoupleProviderProps) {
       }
       setIsSyncing(false);
     }
-  }, [shareCode, couple]);
+  }, [shareCode, couple, fetchCoupleData]);
 
   // ============ MUTATIONS with immediate local updates ============
 
@@ -943,9 +914,7 @@ export function CoupleProvider({ children, shareCode }: CoupleProviderProps) {
 
   const getConfiguredProfiles = useCallback((): Profile[] => {
     if (!couple) return [];
-    return couple.profiles.filter(p => 
-      p.name !== 'Pessoa 1' && p.name !== 'Pessoa 2' && p.name !== 'Pessoa'
-    );
+    return couple.profiles.filter(isConfiguredProfile);
   }, [couple]);
 
   // ============ Initial fetch ============
@@ -958,72 +927,27 @@ export function CoupleProvider({ children, shareCode }: CoupleProviderProps) {
   // ============ Realtime subscription ============
   useEffect(() => {
     if (!couple?.id) return;
-    
+
     const channelName = `couple-realtime-${couple.id}`;
-    console.log('[CoupleContext] Setting up realtime channel:', channelName);
-    
-    const channel = supabase
-      .channel(channelName)
-      .on(
-        'postgres_changes', 
-        { event: '*', schema: 'public', table: 'expenses', filter: `couple_id=eq.${couple.id}` }, 
-        (payload) => {
-          console.log('[CoupleContext] Realtime expenses update:', payload.eventType);
-          silentRefetch();
-        }
-      )
-      .on(
-        'postgres_changes', 
-        { event: '*', schema: 'public', table: 'profiles', filter: `couple_id=eq.${couple.id}` }, 
-        (payload) => {
-          console.log('[CoupleContext] Realtime profiles update:', payload.eventType);
-          silentRefetch();
-        }
-      )
-      .on(
-        'postgres_changes', 
-        { event: '*', schema: 'public', table: 'tags', filter: `couple_id=eq.${couple.id}` }, 
-        (payload) => {
-          console.log('[CoupleContext] Realtime tags update:', payload.eventType);
-          silentRefetch();
-        }
-      )
-      .on(
-        'postgres_changes', 
-        { event: '*', schema: 'public', table: 'cards', filter: `couple_id=eq.${couple.id}` }, 
-        (payload) => {
-          console.log('[CoupleContext] Realtime cards update:', payload.eventType);
-          silentRefetch();
-        }
-      )
-      .on(
-        'postgres_changes', 
-        { event: '*', schema: 'public', table: 'agreements', filter: `couple_id=eq.${couple.id}` }, 
-        (payload) => {
-          console.log('[CoupleContext] Realtime agreements update:', payload.eventType);
-          silentRefetch();
-        }
-      )
-      .on(
-        'postgres_changes', 
-        { event: '*', schema: 'public', table: 'settlements', filter: `couple_id=eq.${couple.id}` }, 
-        (payload) => {
-          console.log('[CoupleContext] Realtime settlements update:', payload.eventType);
-          silentRefetch();
-        }
-      )
-      .subscribe((status, err) => {
-        console.log('[CoupleContext] Realtime status:', status, err || '');
-        setRealtimeStatus(status);
-        if (status === 'CHANNEL_ERROR') {
-          console.error('[CoupleContext] Realtime channel error:', err);
-        }
-      });
-      
-    return () => { 
-      console.log('[CoupleContext] Removing realtime channel:', channelName);
-      supabase.removeChannel(channel); 
-    };
+    const tables = ['expenses', 'profiles', 'tags', 'cards', 'agreements', 'settlements'];
+
+    let channel = supabase.channel(channelName);
+    tables.forEach(table => {
+      channel = channel.on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table, filter: `couple_id=eq.${couple.id}` },
+        () => silentRefetch()
+      );
+    });
+
+    channel.subscribe((status, err) => {
+      setRealtimeStatus(status);
+      if (status === 'CHANNEL_ERROR') {
+        console.error('[CoupleContext] Realtime error:', err);
+      }
+    });
+
+    return () => { supabase.removeChannel(channel); };
   }, [couple?.id, silentRefetch]);
 
   // ============ Fallback polling on focus ============

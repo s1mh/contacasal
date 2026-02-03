@@ -6,6 +6,7 @@ interface AvatarProps {
   size?: 'sm' | 'md' | 'lg' | 'xl';
   className?: string;
   ringColor?: string;
+  animated?: boolean;
 }
 
 const sizeClasses = {
@@ -15,7 +16,7 @@ const sizeClasses = {
   xl: 'w-24 h-24',
 };
 
-export function Avatar({ avatarIndex, size = 'md', className, ringColor }: AvatarProps) {
+export function Avatar({ avatarIndex, size = 'md', className, ringColor, animated = true }: AvatarProps) {
   const avatarSrc = CAT_AVATARS[avatarIndex - 1] || CAT_AVATARS[0];
 
   return (
@@ -24,6 +25,7 @@ export function Avatar({ avatarIndex, size = 'md', className, ringColor }: Avata
         'rounded-full overflow-hidden bg-muted flex-shrink-0',
         sizeClasses[size],
         ringColor && 'ring-2 ring-offset-2 ring-offset-background',
+        animated && 'animate-cat-idle',
         className
       )}
       style={ringColor ? { '--tw-ring-color': ringColor } as React.CSSProperties : undefined}

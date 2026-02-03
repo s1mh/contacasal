@@ -11,7 +11,7 @@ import { MemberManagement } from '@/components/MemberManagement';
 import { AnimatedPage, AnimatedItem } from '@/components/AnimatedPage';
 import { Couple, useCoupleContext } from '@/contexts/CoupleContext';
 import { CAT_AVATARS, PERSON_COLORS, TAG_ICONS } from '@/lib/constants';
-import { cn } from '@/lib/utils';
+import { cn, isConfiguredProfile } from '@/lib/utils';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
@@ -457,15 +457,13 @@ export default function Settings() {
           <div className="flex items-center gap-2 mb-4">
             <Users className="w-4 h-4 text-muted-foreground" />
             <span className="text-sm font-medium text-muted-foreground">
-              Membros ({couple.profiles.filter(p => 
-                p.name !== 'Pessoa 1' && p.name !== 'Pessoa 2' && p.name !== 'Pessoa'
-              ).length}/{couple.max_members || 5})
+              Membros ({couple.profiles.filter(isConfiguredProfile).length}/{couple.max_members || 5})
             </span>
           </div>
-          
+
           <div className="space-y-3">
             {couple.profiles
-              .filter(p => p.name !== 'Pessoa 1' && p.name !== 'Pessoa 2' && p.name !== 'Pessoa')
+              .filter(isConfiguredProfile)
               .map((profile) => (
                 <div key={profile.id} className="flex items-center gap-3 p-3 bg-muted/50 rounded-2xl">
                   <Avatar avatarIndex={profile.avatar_index} size="md" ringColor={profile.color} />

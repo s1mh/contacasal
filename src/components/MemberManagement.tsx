@@ -5,7 +5,7 @@ import { Avatar } from '@/components/Avatar';
 import { Profile } from '@/contexts/CoupleContext';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
-import { cn } from '@/lib/utils';
+import { cn, isConfiguredProfile } from '@/lib/utils';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
 
 interface SpaceRole {
@@ -24,10 +24,7 @@ export function MemberManagement({ profiles, roles, myProfileId, onRefresh }: Me
   const { toast } = useToast();
   const [loading, setLoading] = useState<string | null>(null);
 
-  // Filter only configured profiles
-  const configuredProfiles = profiles.filter(p => 
-    p.name !== 'Pessoa 1' && p.name !== 'Pessoa 2' && p.name !== 'Pessoa'
-  );
+  const configuredProfiles = profiles.filter(isConfiguredProfile);
 
   const getRole = (profileId: string): 'admin' | 'member' | null => {
     const role = roles.find(r => r.profile_id === profileId);

@@ -9,6 +9,7 @@ import { BarChart3, PieChart, TrendingUp, Users } from 'lucide-react';
 import { subMonths, startOfMonth, endOfMonth, isWithinInterval, format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { formatCurrency } from '@/lib/constants';
+import { isConfiguredProfile } from '@/lib/utils';
 
 type Period = 'current' | 'last3' | 'last6' | 'year' | 'all';
 
@@ -61,12 +62,9 @@ export default function Statistics() {
   const stats = useMemo(() => {
     const total = filteredExpenses.reduce((sum, e) => sum + e.total_amount, 0);
     const avgPerExpense = filteredExpenses.length > 0 ? total / filteredExpenses.length : 0;
-    
-    // Filter only configured profiles (not "Pessoa 1", "Pessoa 2", or "Pessoa")
-    const configuredProfiles = couple.profiles.filter(p => 
-      p.name !== 'Pessoa 1' && p.name !== 'Pessoa 2' && p.name !== 'Pessoa'
-    );
-    
+
+    const configuredProfiles = couple.profiles.filter(isConfiguredProfile);
+
     const byPerson = configuredProfiles.map(p => {
       const personTotal = filteredExpenses
         .filter(e => e.paid_by === p.position)
