@@ -9,8 +9,10 @@ import { useToast } from '@/hooks/use-toast';
 import { Button } from '@/components/ui/button';
 import { AIInsightsCard } from '@/components/AIInsightsCard';
 import { isConfiguredProfile } from '@/lib/utils';
+import { useI18n } from '@/contexts/I18nContext';
 
 export default function Summary() {
+  const { t } = useI18n();
   const { couple } = useOutletContext<{ couple: Couple }>();
   const { calculateBalance } = useCoupleContext();
   const { shareCode } = useParams();
@@ -28,7 +30,7 @@ export default function Summary() {
       try {
         await navigator.share({
           title: 'Conta de Casal',
-          text: 'Entre no nosso espaço compartilhado!',
+          text: t.home.joinOurSpace,
           url,
         });
       } catch (err) {
@@ -37,8 +39,8 @@ export default function Summary() {
     } else {
       await navigator.clipboard.writeText(url);
       toast({
-        title: 'Link copiado!',
-        description: 'Compartilhe com seu parceiro(a).',
+        title: t.home.linkCopied,
+        description: t.home.shareWithPartner,
       });
     }
   };
@@ -65,7 +67,7 @@ export default function Summary() {
             className="rounded-full gap-2"
           >
             <Share2 className="w-4 h-4" />
-            Compartilhar
+            {t.common.share}
           </Button>
         </div>
       </AnimatedItem>
@@ -86,7 +88,7 @@ export default function Summary() {
       <div className="mt-6">
         <AnimatedItem delay={200}>
           <h2 className="text-sm font-medium text-muted-foreground mb-3">
-            Últimos gastos
+            {t.summary.recentExpenses}
           </h2>
         </AnimatedItem>
         
@@ -94,10 +96,10 @@ export default function Summary() {
           <AnimatedItem delay={250}>
             <div className="bg-card rounded-2xl p-6 text-center shadow-glass">
               <p className="text-muted-foreground">
-                Nenhum gasto ainda
+                {t.summary.noExpenses}
               </p>
               <p className="text-xs text-muted-foreground mt-1">
-                Toque no + para adicionar
+                {t.summary.tapToAdd}
               </p>
             </div>
           </AnimatedItem>
