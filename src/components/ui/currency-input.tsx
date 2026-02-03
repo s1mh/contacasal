@@ -12,12 +12,12 @@ interface CurrencyInputProps {
 
 // Format cents to display string (e.g., 70000 cents -> "700,00")
 const formatCentsToDisplay = (cents: number): string => {
-  if (cents === 0) return '';
   const reais = cents / 100;
-  return reais.toLocaleString('pt-BR', {
+  const formatted = reais.toLocaleString('pt-BR', {
     minimumFractionDigits: 2,
     maximumFractionDigits: 2,
   });
+  return `$ ${formatted}`;
 };
 
 // Convert value (in reais) to cents for internal use
@@ -27,7 +27,7 @@ const reaisToCents = (reais: number): number => Math.round(reais * 100);
 const centsToReais = (cents: number): number => cents / 100;
 
 export const CurrencyInput = forwardRef<HTMLInputElement, CurrencyInputProps>(
-  ({ value, onChange, className, placeholder = '0,00', disabled }, ref) => {
+  ({ value, onChange, className, placeholder = '$ 0,00', disabled }, ref) => {
     // Store value internally as cents (integer) for precise formatting
     const [cents, setCents] = useState(() => reaisToCents(value));
 
