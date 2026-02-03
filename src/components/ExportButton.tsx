@@ -5,7 +5,8 @@ import { Download, FileSpreadsheet, FileText } from 'lucide-react';
 import { Expense, Profile, Tag } from '@/hooks/useCouple';
 import { formatCurrency, formatDate } from '@/lib/constants';
 import { format } from 'date-fns';
-import { getActivePreferences, getDateFnsLocale } from '@/lib/preferences';
+import { getDateFnsLocale } from '@/lib/preferences';
+import { usePreferences } from '@/contexts/PreferencesContext';
 
 interface ExportButtonProps {
   expenses: Expense[];
@@ -16,7 +17,7 @@ interface ExportButtonProps {
 
 export function ExportButton({ expenses, profiles, tags, period }: ExportButtonProps) {
   const [isExporting, setIsExporting] = useState(false);
-  const { locale } = getActivePreferences();
+  const { locale, t } = usePreferences();
   const dateLocale = getDateFnsLocale(locale);
 
   const getProfileName = (position: number) => {
@@ -32,14 +33,22 @@ export function ExportButton({ expenses, profiles, tags, period }: ExportButtonP
     setIsExporting(true);
     
     try {
-      const headers = ['Data', 'Descrição', 'Categoria', 'Valor', 'Pago por', 'Tipo', 'Divisão'];
+      const headers = [
+        t('Data'),
+        t('Descrição'),
+        t('Categoria'),
+        t('Valor'),
+        t('Pago por'),
+        t('Tipo'),
+        t('Divisão'),
+      ];
       const rows = expenses.map(expense => [
         format(new Date(expense.expense_date), 'dd/MM/yyyy'),
         expense.description || '',
         getTagName(expense.tag_id),
         expense.total_amount.toFixed(2).replace('.', ','),
         getProfileName(expense.paid_by),
-        expense.payment_type === 'credit' ? 'Crédito' : 'Débito',
+        expense.payment_type === 'credit' ? t('Crédito') : t('Débito'),
         `${expense.split_value.person1}% / ${expense.split_value.person2}%`
       ]);
 
@@ -71,17 +80,19 @@ export function ExportButton({ expenses, profiles, tags, period }: ExportButtonP
         return acc;
       }, {} as Record<string, number>);
 
-      let content = `RELATÓRIO DE GASTOS DO CASAL\n`;
-      content += `${period ? `Período: ${period}\n` : ''}\n`;
-      content += `Gerado em: ${format(new Date(), "dd 'de' MMMM 'de' yyyy", { locale: dateLocale })}\n`;
+      let content = `${t('RELATÓRIO DE GASTOS DO CASAL')}\n`;
+      content += `${period ? `${t('Período')}: ${period}\n` : ''}\n`;
+      content += `${t('Gerado em: {date}', {
+        date: format(new Date(), "dd 'de' MMMM 'de' yyyy", { locale: dateLocale }),
+      })}\n`;
       content += `${'='.repeat(50)}\n\n`;
 
-      content += `RESUMO\n`;
+      content += `${t('RESUMO')}\n`;
       content += `-`.repeat(30) + '\n';
-      content += `Total de gastos: ${formatCurrency(totalAmount)}\n`;
-      content += `Quantidade: ${expenses.length} despesa(s)\n\n`;
+      content += `${t('Total de gastos: {total}', { total: formatCurrency(totalAmount) })}\n`;
+      content += `${t('Quantidade: {count} despesa(s)', { count: expenses.length })}\n\n`;
 
-      content += `POR CATEGORIA\n`;
+      content += `${t('POR CATEGORIA')}\n`;
       content += `-`.repeat(30) + '\n';
       Object.entries(byTag)
         .sort((a, b) => b[1] - a[1])
@@ -90,16 +101,16 @@ export function ExportButton({ expenses, profiles, tags, period }: ExportButtonP
         });
 
       content += `\n${'='.repeat(50)}\n`;
-      content += `DETALHAMENTO\n`;
+      content += `${t('DETALHAMENTO')}\n`;
       content += `${'='.repeat(50)}\n\n`;
 
       expenses.forEach((expense, index) => {
         content += `${index + 1}. ${expense.description || 'Sem descrição'}\n`;
-        content += `   Data: ${format(new Date(expense.expense_date), 'dd/MM/yyyy')}\n`;
-        content += `   Valor: ${formatCurrency(expense.total_amount)}\n`;
-        content += `   Categoria: ${getTagName(expense.tag_id)}\n`;
-        content += `   Pago por: ${getProfileName(expense.paid_by)}\n`;
-        content += `   Tipo: ${expense.payment_type === 'credit' ? 'Crédito' : 'Débito'}\n`;
+        content += `   ${t('Data')}: ${format(new Date(expense.expense_date), 'dd/MM/yyyy')}\n`;
+        content += `   ${t('Valor')}: ${formatCurrency(expense.total_amount)}\n`;
+        content += `   ${t('Categoria')}: ${getTagName(expense.tag_id)}\n`;
+        content += `   ${t('Pago por')}: ${getProfileName(expense.paid_by)}\n`;
+        content += `   ${t('Tipo')}: ${expense.payment_type === 'credit' ? t('Crédito') : t('Débito')}\n`;
         content += `\n`;
       });
 
@@ -122,17 +133,17 @@ export function ExportButton({ expenses, profiles, tags, period }: ExportButtonP
       <DropdownMenuTrigger asChild>
         <Button variant="outline" size="sm" disabled={isExporting}>
           <Download className="w-4 h-4 mr-2" />
-          Exportar
+          {t('Exportar')}
         </Button>
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end">
         <DropdownMenuItem onClick={exportToCSV}>
           <FileSpreadsheet className="w-4 h-4 mr-2" />
-          Planilha (CSV)
+          {t('Planilha (CSV)')}
         </DropdownMenuItem>
         <DropdownMenuItem onClick={exportToText}>
           <FileText className="w-4 h-4 mr-2" />
-          Relatório (TXT)
+          {t('Relatório (TXT)')}
         </DropdownMenuItem>
       </DropdownMenuContent>
     </DropdownMenu>

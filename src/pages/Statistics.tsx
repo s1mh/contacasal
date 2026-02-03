@@ -8,6 +8,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { BarChart3, PieChart, TrendingUp, Users } from 'lucide-react';
 import { subMonths, startOfMonth, endOfMonth, isWithinInterval, format } from 'date-fns';
 import { getDateFnsLocale } from '@/lib/preferences';
+import { usePreferences } from '@/contexts/PreferencesContext';
+import { formatCurrency } from '@/lib/constants';
 import { isConfiguredProfile } from '@/lib/utils';
 import { useI18n } from '@/contexts/I18nContext';
 
@@ -18,6 +20,7 @@ export default function Statistics() {
   const { couple } = useOutletContext<{ couple: Couple }>();
   const [period, setPeriod] = useState<Period>('current');
   const [selectedTag, setSelectedTag] = useState<string>('all');
+  const { locale, t } = usePreferences();
   const dateLocale = getDateFnsLocale(locale);
 
   const filteredExpenses = useMemo(() => {
@@ -80,10 +83,10 @@ export default function Statistics() {
   const periodLabel = useMemo(() => {
     switch (period) {
       case 'current': return format(new Date(), 'MMMM yyyy', { locale: dateLocale });
-      case 'last3': return t.statistics.threeMonths;
-      case 'last6': return t.statistics.sixMonths;
-      case 'year': return t.statistics.twelveMonths;
-      case 'all': return t.statistics.allTime;
+      case 'last3': return t('Últimos 3 meses');
+      case 'last6': return t('Últimos 6 meses');
+      case 'year': return t('Último ano');
+      case 'all': return t('Todo período');
     }
   }, [period, dateLocale, t]);
 
@@ -94,7 +97,7 @@ export default function Statistics() {
         <div className="flex items-center justify-between">
           <h1 className="text-2xl font-bold flex items-center gap-2">
             <BarChart3 className="w-6 h-6 text-primary" />
-            {t.statistics.title}
+            {t('Estatísticas')}
           </h1>
           <ExportButton 
             expenses={filteredExpenses} 
@@ -113,20 +116,20 @@ export default function Statistics() {
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="current">{t.statistics.currentMonth}</SelectItem>
-              <SelectItem value="last3">{t.statistics.threeMonths}</SelectItem>
-              <SelectItem value="last6">{t.statistics.sixMonths}</SelectItem>
-              <SelectItem value="year">{t.statistics.twelveMonths}</SelectItem>
-              <SelectItem value="all">{t.statistics.allTime}</SelectItem>
+              <SelectItem value="current">{t('Mês atual')}</SelectItem>
+              <SelectItem value="last3">{t('3 meses')}</SelectItem>
+              <SelectItem value="last6">{t('6 meses')}</SelectItem>
+              <SelectItem value="year">{t('12 meses')}</SelectItem>
+              <SelectItem value="all">{t('Tudo')}</SelectItem>
             </SelectContent>
           </Select>
 
           <Select value={selectedTag} onValueChange={setSelectedTag}>
             <SelectTrigger className="flex-1">
-              <SelectValue placeholder={t.expenses.category} />
+              <SelectValue placeholder={t('Categoria')} />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="all">{t.statistics.allCategories}</SelectItem>
+              <SelectItem value="all">{t('Todas categorias')}</SelectItem>
               {couple.tags.map(tag => (
                 <SelectItem key={tag.id} value={tag.id}>{tag.name}</SelectItem>
               ))}
@@ -139,14 +142,14 @@ export default function Statistics() {
       <AnimatedItem delay={200}>
         <div className="grid grid-cols-2 gap-4">
           <div className="p-4 rounded-2xl bg-card border border-border">
-            <p className="text-xs text-muted-foreground mb-1">{t.statistics.totalSpent}</p>
+            <p className="text-xs text-muted-foreground mb-1">{t('Total gasto')}</p>
             <p className="text-xl font-bold text-primary">{formatCurrency(stats.total)}</p>
             <p className="text-xs text-muted-foreground mt-1">
-              {interpolate(t.statistics.expensesCount, { count: stats.count.toString() })}
+              {t('Quantidade: {count} despesa(s)', { count: stats.count })}
             </p>
           </div>
           <div className="p-4 rounded-2xl bg-card border border-border">
-            <p className="text-xs text-muted-foreground mb-1">{t.statistics.averagePerExpense}</p>
+            <p className="text-xs text-muted-foreground mb-1">{t('Média por gasto')}</p>
             <p className="text-xl font-bold">{formatCurrency(stats.avgPerExpense)}</p>
           </div>
         </div>
@@ -159,7 +162,7 @@ export default function Statistics() {
           <div className="p-4 rounded-2xl bg-card border border-border space-y-4">
             <div className="flex items-center gap-2">
               <PieChart className="w-4 h-4 text-muted-foreground" />
-              <h3 className="font-medium">{t.statistics.byCategory}</h3>
+              <h3 className="font-medium">{t('Por Categoria')}</h3>
             </div>
             <ExpensesByTagChart expenses={filteredExpenses} tags={couple.tags} />
           </div>
@@ -170,7 +173,7 @@ export default function Statistics() {
           <div className="p-4 rounded-2xl bg-card border border-border space-y-4">
             <div className="flex items-center gap-2">
               <Users className="w-4 h-4 text-muted-foreground" />
-              <h3 className="font-medium">{t.statistics.byPerson}</h3>
+              <h3 className="font-medium">{t('Por Pessoa')}</h3>
             </div>
             <ExpensesByPersonChart expenses={filteredExpenses} profiles={couple.profiles} />
           </div>
@@ -181,7 +184,7 @@ export default function Statistics() {
           <div className="p-4 rounded-2xl bg-card border border-border space-y-4">
             <div className="flex items-center gap-2">
               <TrendingUp className="w-4 h-4 text-muted-foreground" />
-              <h3 className="font-medium">{t.statistics.monthlyEvolution}</h3>
+              <h3 className="font-medium">{t('Evolução Mensal')}</h3>
             </div>
             <MonthlyEvolutionChart expenses={couple.expenses} />
           </div>

@@ -1,6 +1,5 @@
 import { enUS, es, ptBR } from 'date-fns/locale';
-
-export type SupportedLocale = 'pt-BR' | 'en-US' | 'es-ES';
+import { SupportedLocale } from '@/lib/i18n';
 export type SupportedCurrency = 'BRL' | 'USD' | 'EUR';
 
 export const DEFAULT_PREFERENCES = {
@@ -43,6 +42,11 @@ export const getActivePreferences = () => {
 export const setActivePreferences = (shareCode: string, preferences: typeof DEFAULT_PREFERENCES) => {
   if (typeof window === 'undefined') return;
   localStorage.setItem(`couple_preferences_${shareCode}`, JSON.stringify(preferences));
+  localStorage.setItem('app_preferences', JSON.stringify(preferences));
+};
+
+export const setGlobalPreferences = (preferences: typeof DEFAULT_PREFERENCES) => {
+  if (typeof window === 'undefined') return;
   localStorage.setItem('app_preferences', JSON.stringify(preferences));
 };
 
