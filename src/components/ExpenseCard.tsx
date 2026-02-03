@@ -1,6 +1,7 @@
 import { cn } from '@/lib/utils';
 import { formatCurrency, formatDate, CAT_AVATARS } from '@/lib/constants';
 import { Expense, Profile, Tag, Card } from '@/hooks/useCouple';
+import { usePreferences } from '@/contexts/PreferencesContext';
 import { 
   Tag as TagIcon, 
   Utensils, 
@@ -47,6 +48,7 @@ const iconMap: Record<string, LucideIcon> = {
 };
 
 export function ExpenseCard({ expense, profiles, tags, cards = [], onDelete, onEdit, isNew }: ExpenseCardProps) {
+  const { t: prefT } = usePreferences();
   const paidByProfile = profiles.find(p => p.position === expense.paid_by);
   const tag = tags.find(t => t.id === expense.tag_id);
   const card = cards.find(c => c.id === expense.card_id);
@@ -94,7 +96,7 @@ export function ExpenseCard({ expense, profiles, tags, cards = [], onDelete, onE
           <div className="flex items-start justify-between gap-2">
             <div className="min-w-0">
               <p className="font-semibold text-foreground truncate">
-                {expense.description || tag?.name || 'Gasto'}
+                {expense.description || tag?.name || prefT('Gasto')}
               </p>
               <div className="flex items-center gap-2 mt-0.5">
                 <span className="text-xs text-muted-foreground flex items-center gap-1">
@@ -127,7 +129,7 @@ export function ExpenseCard({ expense, profiles, tags, cards = [], onDelete, onE
                       className="w-full h-full object-cover"
                     />
                   </div>
-                  <span className="text-xs text-muted-foreground">pagou</span>
+                  <span className="text-xs text-muted-foreground">{prefT('pagou')}</span>
                 </div>
               )}
             </div>
@@ -137,7 +139,7 @@ export function ExpenseCard({ expense, profiles, tags, cards = [], onDelete, onE
               {expense.payment_type === 'credit' && (
                 <div className="flex items-center gap-1 text-xs px-2 py-0.5 rounded-full bg-muted">
                   <CreditCard className="w-3 h-3" />
-                  <span>{card?.name || 'Crédito'}</span>
+                  <span>{card?.name || prefT('Crédito')}</span>
                   {isInstallment && (
                     <span className="font-medium">
                       {expense.installment_number}/{expense.installments}

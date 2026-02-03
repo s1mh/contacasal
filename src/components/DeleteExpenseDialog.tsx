@@ -13,7 +13,8 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { Expense } from '@/contexts/CoupleContext';
 import { formatCurrency } from '@/lib/constants';
 import { format, parseISO } from 'date-fns';
-import { ptBR } from 'date-fns/locale';
+import { getDateFnsLocale } from '@/lib/preferences';
+import { usePreferences } from '@/contexts/PreferencesContext';
 
 interface DeleteExpenseDialogProps {
   expense: Expense;
@@ -34,6 +35,8 @@ export function DeleteExpenseDialog({
 }: DeleteExpenseDialogProps) {
   const [selectedIds, setSelectedIds] = useState<string[]>([expense.id]);
   const [mode, setMode] = useState<'confirm' | 'select'>('confirm');
+  const { locale: prefLocale, t: prefT } = usePreferences();
+  const dateLocale = getDateFnsLocale(prefLocale);
   
   const isInstallment = expense.installments > 1;
   const hasMultipleInstallments = relatedExpenses.length > 1;
@@ -68,15 +71,18 @@ export function DeleteExpenseDialog({
       <AlertDialog open={open} onOpenChange={onOpenChange}>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>Apagar gasto?</AlertDialogTitle>
+            <AlertDialogTitle>{prefT('Apagar gasto?')}</AlertDialogTitle>
             <AlertDialogDescription>
-              {expense.description || 'Este gasto'} de {formatCurrency(expense.total_amount)} será removido.
+              {prefT('{expense} de {amount} será removido.', {
+                expense: expense.description || prefT('Este gasto'),
+                amount: formatCurrency(expense.total_amount),
+              })}
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel>Cancelar</AlertDialogCancel>
+            <AlertDialogCancel>{prefT('Cancelar')}</AlertDialogCancel>
             <AlertDialogAction onClick={onDeleteSingle} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
-              Apagar
+              {prefT('Apagar')}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
@@ -90,9 +96,9 @@ export function DeleteExpenseDialog({
       <AlertDialog open={open} onOpenChange={onOpenChange}>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>Apagar parcelamento?</AlertDialogTitle>
+            <AlertDialogTitle>{prefT('Apagar parcelamento?')}</AlertDialogTitle>
             <AlertDialogDescription>
-              Este gasto tem {expense.installments} parcelas. O que deseja fazer?
+              {prefT('Este gasto tem {count} parcelas. O que deseja fazer?', { count: expense.installments })}
             </AlertDialogDescription>
           </AlertDialogHeader>
           <div className="flex flex-col gap-2 py-4">
@@ -100,23 +106,23 @@ export function DeleteExpenseDialog({
               onClick={handleDeleteAll}
               className="p-3 rounded-xl border-2 border-destructive/50 hover:bg-destructive/10 text-left transition-colors"
             >
-              <p className="font-medium text-destructive">Apagar todas as parcelas</p>
+              <p className="font-medium text-destructive">{prefT('Apagar todas as parcelas')}</p>
               <p className="text-xs text-muted-foreground">
-                Remove todas as {relatedExpenses.length} parcelas encontradas
+                {prefT('Remove todas as {count} parcelas encontradas', { count: relatedExpenses.length })}
               </p>
             </button>
             <button
               onClick={() => setMode('select')}
               className="p-3 rounded-xl border-2 border-border hover:border-primary/50 text-left transition-colors"
             >
-              <p className="font-medium">Selecionar parcelas</p>
+              <p className="font-medium">{prefT('Selecionar parcelas')}</p>
               <p className="text-xs text-muted-foreground">
-                Escolher quais meses apagar
+                {prefT('Escolher quais meses apagar')}
               </p>
             </button>
           </div>
           <AlertDialogFooter>
-            <AlertDialogCancel>Cancelar</AlertDialogCancel>
+            <AlertDialogCancel>{prefT('Cancelar')}</AlertDialogCancel>
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
@@ -128,9 +134,9 @@ export function DeleteExpenseDialog({
     <AlertDialog open={open} onOpenChange={onOpenChange}>
       <AlertDialogContent className="max-h-[80vh] overflow-y-auto">
         <AlertDialogHeader>
-          <AlertDialogTitle>Selecionar parcelas</AlertDialogTitle>
+          <AlertDialogTitle>{prefT('Selecionar parcelas')}</AlertDialogTitle>
           <AlertDialogDescription>
-            Marque as parcelas que deseja apagar
+            {prefT('Marque as parcelas que deseja apagar')}
           </AlertDialogDescription>
         </AlertDialogHeader>
         <div className="space-y-2 py-4">
@@ -147,12 +153,15 @@ export function DeleteExpenseDialog({
                 />
                 <div className="flex-1">
                   <p className="font-medium text-sm">
-                    Parcela {exp.installment_number}/{exp.installments}
+                    {prefT('Parcela {current}/{total}', {
+                      current: exp.installment_number,
+                      total: exp.installments,
+                    })}
                   </p>
                   <p className="text-xs text-muted-foreground">
                     {exp.billing_month 
-                      ? format(parseISO(exp.billing_month), 'MMMM yyyy', { locale: ptBR })
-                      : format(parseISO(exp.expense_date), 'MMMM yyyy', { locale: ptBR })
+                      ? format(parseISO(exp.billing_month), 'MMMM yyyy', { locale: dateLocale })
+                      : format(parseISO(exp.expense_date), 'MMMM yyyy', { locale: dateLocale })
                     }
                   </p>
                 </div>
@@ -161,13 +170,13 @@ export function DeleteExpenseDialog({
             ))}
         </div>
         <AlertDialogFooter>
-          <AlertDialogCancel onClick={() => setMode('confirm')}>Voltar</AlertDialogCancel>
+          <AlertDialogCancel onClick={() => setMode('confirm')}>{prefT('Voltar')}</AlertDialogCancel>
           <AlertDialogAction 
             onClick={handleDeleteSelected}
             disabled={selectedIds.length === 0}
             className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
           >
-            Apagar {selectedIds.length} parcela{selectedIds.length > 1 ? 's' : ''}
+            {prefT('Apagar {count} parcela(s)', { count: selectedIds.length })}
           </AlertDialogAction>
         </AlertDialogFooter>
       </AlertDialogContent>
