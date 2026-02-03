@@ -1,0 +1,213 @@
+export const ptBR = {
+  // Navigation
+  nav: {
+    summary: 'Resumo',
+    history: 'Histórico',
+    stats: 'Stats',
+    settings: 'Ajustes',
+  },
+  
+  // Common
+  common: {
+    continue: 'Continuar',
+    back: 'Voltar',
+    save: 'Salvar',
+    cancel: 'Cancelar',
+    delete: 'Excluir',
+    edit: 'Editar',
+    add: 'Adicionar',
+    share: 'Compartilhar',
+    copy: 'Copiar',
+    loading: 'Carregando...',
+    error: 'Erro',
+    success: 'Sucesso',
+    you: 'você',
+    or: 'ou',
+    skip: 'Pular',
+    confirm: 'Confirmar',
+  },
+
+  // Onboarding
+  onboarding: {
+    welcome: 'Bem-vindo!',
+    invitedBy: '{name} convidou você para compartilhar despesas',
+    createProfile: 'Criar meu perfil',
+    profileTitle: 'Olá! Crie seu perfil',
+    profileDesc: 'Personalize como você aparecerá no app',
+    preferencesTitle: 'Escolha idioma e moeda',
+    preferencesDesc: 'Defina como valores e datas serão exibidos',
+    pinTitle: 'Crie seu código',
+    pinDesc: 'Código de 4 dígitos para entrar em outros dispositivos',
+    emailTitle: 'Adicione seu e-mail',
+    emailDesc: 'Para recuperar seu código se esquecer (opcional)',
+    yourName: 'Seu nome',
+    namePlaceholder: 'Como você quer ser chamado(a)?',
+    chooseAvatar: 'Escolha seu avatar',
+    chooseColor: 'Sua cor',
+    language: 'Idioma',
+    currency: 'Moeda',
+    createPin: 'Crie um código pessoal',
+    pinWeak: 'Código muito fraco',
+    pinCommon: 'Esse código é muito comum',
+    pinSequence: 'Evite sequências simples',
+    pinSameDigits: 'Não use 4 dígitos iguais',
+    email: 'E-mail',
+    emailPlaceholder: 'seu@email.com',
+    emailOptional: 'opcional',
+    emailInvalid: 'E-mail inválido',
+    emailExists: 'Este e-mail já está cadastrado',
+    skipEmail: 'Pular',
+    finalize: 'Finalizar',
+    shareExpenses: 'Vocês poderão dividir gastos, acompanhar despesas e manter tudo organizado juntos! 💕',
+    generatingUsername: 'Gerando seu @...',
+    compliments: [
+      "Que nome lindo! 💕",
+      "Adorável! ✨",
+      "Amei esse nome! 🌟",
+      "Combina com você! 💫",
+      "Muito fofo! 🥰",
+      "Perfeito! 💝",
+    ],
+  },
+
+  // Summary page
+  summary: {
+    currentBalance: 'Equilíbrio atual',
+    allBalanced: 'Tudo equilibrado!',
+    youAreEven: 'Vocês estão em dia',
+    keepRegistering: 'Continue registrando para manter o equilíbrio 💕',
+    owes: '{name} deve',
+    to: 'para',
+    recentExpenses: 'Últimos gastos',
+    noExpenses: 'Nenhum gasto ainda',
+    tapToAdd: 'Toque no + para adicionar',
+    settle: 'Acertar',
+  },
+
+  // Expenses
+  expenses: {
+    newExpense: 'Novo gasto',
+    editExpense: 'Editar gasto',
+    description: 'Descrição',
+    amount: 'Valor',
+    date: 'Data',
+    paidBy: 'Pago por',
+    splitType: 'Divisão',
+    splitEqual: '50/50',
+    splitCustom: 'Personalizado',
+    splitFull: 'Só um paga',
+    category: 'Categoria',
+    paymentMethod: 'Forma de pagamento',
+    installments: 'Parcelas',
+    inCash: 'À vista',
+    delete: 'Excluir gasto',
+    deleteConfirm: 'Tem certeza que deseja excluir este gasto?',
+    history: 'Histórico',
+    noHistory: 'Nenhum gasto registrado',
+    filter: 'Filtrar',
+    export: 'Exportar',
+  },
+
+  // Statistics
+  stats: {
+    title: 'Estatísticas',
+    period: 'Período',
+    thisMonth: 'Este mês',
+    lastMonth: 'Mês passado',
+    last3Months: 'Últimos 3 meses',
+    thisYear: 'Este ano',
+    total: 'Total',
+    average: 'Média',
+    byCategory: 'Por categoria',
+    byPerson: 'Por pessoa',
+    trend: 'Tendência',
+  },
+
+  // Settings
+  settings: {
+    title: 'Meu Perfil',
+    myData: 'Meus dados',
+    chooseAvatar: 'Escolha o gatinho',
+    name: 'Nome',
+    username: 'Seu @',
+    tapToEdit: 'toque para editar',
+    color: 'Cor',
+    preferences: 'Preferências',
+    language: 'Idioma',
+    currency: 'Moeda',
+    categories: 'Categorias',
+    categoryName: 'Nome da categoria',
+    icon: 'Ícone',
+    addCategory: 'Adicionar categoria',
+    members: 'Membros',
+    shareCode: 'Código de convite',
+    regenerateCode: 'Regenerar código',
+    logout: 'Sair',
+    logoutConfirm: 'Sair do espaço',
+    logoutDesc: 'Você poderá voltar a qualquer momento usando seu código e PIN.',
+    deleteProfile: 'Excluir meu perfil',
+    deleteProfileConfirm: 'Excluir perfil permanentemente?',
+    deleteProfileDesc: 'Esta ação não pode ser desfeita. Todos os seus dados serão removidos.',
+    admin: 'Admin',
+    member: 'Membro',
+    manageMember: 'Gerenciar membro',
+    removeFromSpace: 'Remover do espaço',
+    makeAdmin: 'Tornar admin',
+    removeAdmin: 'Remover admin',
+  },
+
+  // AI Insights
+  ai: {
+    title: 'Ainda estou aprendendo...',
+    needMoreData: 'Preciso de mais alguns dias para entender seus padrões e dar dicas úteis.',
+    daysWithExpenses: 'Dias com gastos',
+    registeredExpenses: 'Gastos registrados',
+  },
+
+  // Toasts
+  toast: {
+    copied: 'Copiado! 📋',
+    shareWithAnyone: 'Compartilhe com quem você quiser',
+    codeRegenerated: 'Código regenerado! 🔄',
+    newCodeGenerated: 'Novo código de compartilhamento gerado',
+    goodbye: 'Até logo! 👋',
+    comeBackAnytime: 'Volte quando quiser com seu código',
+    somethingWrong: 'Ops! Algo deu errado 😕',
+    noPermission: 'Sem permissão',
+    onlyAdmins: 'Apenas administradores podem fazer isso',
+    preferencesUpdated: 'Preferências atualizadas! ✨',
+  },
+
+  // Languages
+  languages: {
+    'pt-BR': '🇧🇷 Português (Brasil)',
+    'en-US': '🇺🇸 English (US)',
+    'es-ES': '🇪🇸 Español',
+  },
+
+  // Currencies
+  currencies: {
+    BRL: 'R$ Real Brasileiro',
+    USD: '$ US Dollar',
+    EUR: '€ Euro',
+  },
+
+  // Create Space
+  createSpace: {
+    title: 'Criar novo espaço',
+    subtitle: 'Um lugar para você e quem você quiser',
+    spaceName: 'Nome do espaço',
+    spaceNamePlaceholder: 'Ex: Casa, Viagem, etc.',
+  },
+
+  // Index/Home
+  home: {
+    welcome: 'Bem-vindo ao ContaCasal',
+    subtitle: 'Divida despesas de forma simples e justa',
+    createNewSpace: 'Criar novo espaço',
+    orEnterCode: 'ou digite o código de convite',
+    enterCode: 'Digite o código',
+    join: 'Entrar',
+    invalidCode: 'Código inválido',
+  },
+};
