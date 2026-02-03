@@ -11,10 +11,12 @@ import { getDateFnsLocale } from '@/lib/preferences';
 import { usePreferences } from '@/contexts/PreferencesContext';
 import { formatCurrency } from '@/lib/constants';
 import { isConfiguredProfile } from '@/lib/utils';
+import { useI18n } from '@/contexts/I18nContext';
 
 type Period = 'current' | 'last3' | 'last6' | 'year' | 'all';
 
 export default function Statistics() {
+  const { t, locale, formatCurrency, interpolate } = useI18n();
   const { couple } = useOutletContext<{ couple: Couple }>();
   const [period, setPeriod] = useState<Period>('current');
   const [selectedTag, setSelectedTag] = useState<string>('all');
@@ -86,7 +88,7 @@ export default function Statistics() {
       case 'year': return prefT('Último ano');
       case 'all': return prefT('Todo período');
     }
-  }, [period]);
+  }, [period, dateLocale, t]);
 
   return (
     <AnimatedPage className="p-6 space-y-6">
