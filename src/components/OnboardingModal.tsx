@@ -10,6 +10,7 @@ import { Check, Heart, Sparkles, Lock, ArrowRight, ArrowLeft, Mail, SkipForward,
 import { supabase } from '@/integrations/supabase/client';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { getActivePreferences, setActivePreferences, SupportedCurrency, SupportedLocale } from '@/lib/preferences';
+import { useI18n } from '@/contexts/I18nContext';
 
 interface OnboardingModalProps {
   open: boolean;
@@ -21,16 +22,6 @@ interface OnboardingModalProps {
   hostName?: string | null;
   isJoining?: boolean;
 }
-
-// List of cute compliments for valid names
-const NAME_COMPLIMENTS = [
-  "Que nome lindo! 💕",
-  "Adorável! ✨",
-  "Amei esse nome! 🌟",
-  "Combina com você! 💫",
-  "Muito fofo! 🥰",
-  "Perfeito! 💝",
-];
 
 // Validate name - only letters and spaces, no special characters
 const isValidName = (name: string): boolean => {
@@ -57,38 +48,39 @@ const isValidEmail = (email: string): boolean => {
   return emailRegex.test(email.trim());
 };
 
-// Check if PIN is weak
-const isWeakPin = (pin: string): { weak: boolean; reason?: string } => {
+// Check if PIN is weak - returns key for translation
+const isWeakPin = (pin: string): { weak: boolean; reasonKey?: 'pinSameDigits' | 'pinCommon' | 'pinSequence' } => {
   if (pin.length !== 4) return { weak: false };
   
   // Check for repeated digits (1111, 0000, etc.)
   if (/^(\d)\1{3}$/.test(pin)) {
-    return { weak: true, reason: 'Não use 4 dígitos iguais' };
+    return { weak: true, reasonKey: 'pinSameDigits' };
   }
   
   // Check for common weak PINs
   const commonPins = ['1234', '4321', '0000', '1111', '2222', '3333', '4444', '5555', '6666', '7777', '8888', '9999', '1212', '2121', '1010', '0101', '1122', '2211'];
   if (commonPins.includes(pin)) {
-    return { weak: true, reason: 'Esse código é muito comum' };
+    return { weak: true, reasonKey: 'pinCommon' };
   }
   
   // Check for ascending sequence (1234, 2345, 3456, etc.)
   const digits = pin.split('').map(Number);
   const isAscending = digits.every((d, i) => i === 0 || d === digits[i - 1] + 1);
   if (isAscending) {
-    return { weak: true, reason: 'Evite sequências simples' };
+    return { weak: true, reasonKey: 'pinSequence' };
   }
   
   // Check for descending sequence (4321, 5432, etc.)
   const isDescending = digits.every((d, i) => i === 0 || d === digits[i - 1] - 1);
   if (isDescending) {
-    return { weak: true, reason: 'Evite sequências simples' };
+    return { weak: true, reasonKey: 'pinSequence' };
   }
   
   return { weak: false };
 };
 
 export function OnboardingModal({ open, onClose, onComplete, profiles, shareCode, isNewMember = false, hostName, isJoining = false }: OnboardingModalProps) {
+  const { t, interpolate } = useI18n();
   const [step, setStep] = useState<'welcome' | 'profile' | 'preferences' | 'pin' | 'email'>(isNewMember ? 'welcome' : 'profile');
   const [name, setName] = useState('');
   const [avatarIndex, setAvatarIndex] = useState(1);
@@ -160,7 +152,8 @@ export function OnboardingModal({ open, onClose, onComplete, profiles, shareCode
   useEffect(() => {
     if (isValidName(name) && looksLikeName(name)) {
       const timeout = setTimeout(() => {
-        const randomCompliment = NAME_COMPLIMENTS[Math.floor(Math.random() * NAME_COMPLIMENTS.length)];
+        const compliments = t.onboarding.compliments;
+        const randomCompliment = compliments[Math.floor(Math.random() * compliments.length)];
         setCompliment(randomCompliment);
         setShowCompliment(true);
       }, 1000);
@@ -170,7 +163,7 @@ export function OnboardingModal({ open, onClose, onComplete, profiles, shareCode
     } else {
       setShowCompliment(false);
     }
-  }, [name]);
+  }, [name, t]);
 
   // Generate username when moving to PIN step
   const generateUsername = async () => {
@@ -219,8 +212,8 @@ export function OnboardingModal({ open, onClose, onComplete, profiles, shareCode
     // Check for weak PIN when complete
     if (value.length === 4) {
       const weakCheck = isWeakPin(value);
-      if (weakCheck.weak) {
-        setPinError(weakCheck.reason || 'Código muito fraco');
+      if (weakCheck.weak && weakCheck.reasonKey) {
+        setPinError(t.onboarding[weakCheck.reasonKey]);
       }
     }
   };
@@ -228,8 +221,8 @@ export function OnboardingModal({ open, onClose, onComplete, profiles, shareCode
   const handlePinComplete = () => {
     if (pinCode.length === 4) {
       const weakCheck = isWeakPin(pinCode);
-      if (weakCheck.weak) {
-        setPinError(weakCheck.reason || 'Código muito fraco');
+      if (weakCheck.weak && weakCheck.reasonKey) {
+        setPinError(t.onboarding[weakCheck.reasonKey]);
         return;
       }
       setStep('email');
@@ -398,25 +391,25 @@ export function OnboardingModal({ open, onClose, onComplete, profiles, shareCode
               <Heart className="w-5 h-5 text-primary animate-pulse" />
             )}
             {step === 'welcome' 
-              ? 'Bem-vindo!' 
+              ? t.onboarding.welcome 
               : step === 'profile' 
-              ? 'Olá! Crie seu perfil' 
+              ? t.onboarding.profileTitle 
               : step === 'preferences'
-              ? 'Escolha idioma e moeda'
+              ? t.onboarding.preferencesTitle
               : step === 'pin' 
-              ? 'Crie seu código' 
-              : 'Adicione seu e-mail'}
+              ? t.onboarding.pinTitle 
+              : t.onboarding.emailTitle}
           </DialogTitle>
           <DialogDescription className="text-center animate-fade-in">
             {step === 'welcome'
-              ? `${displayHostName || 'Alguém'} convidou você para compartilhar despesas`
+              ? interpolate(t.onboarding.invitedBy, { name: displayHostName || 'Someone' })
               : step === 'profile'
-              ? 'Personalize como você aparecerá no app'
+              ? t.onboarding.profileDesc
               : step === 'preferences'
-              ? 'Defina como valores e datas serão exibidos'
+              ? t.onboarding.preferencesDesc
               : step === 'pin'
-              ? 'Código de 4 dígitos para entrar em outros dispositivos'
-              : 'Para recuperar seu código se esquecer (opcional)'
+              ? t.onboarding.pinDesc
+              : t.onboarding.emailDesc
             }
           </DialogDescription>
         </DialogHeader>
@@ -456,7 +449,7 @@ export function OnboardingModal({ open, onClose, onComplete, profiles, shareCode
 
                 <div className="text-center px-4">
                   <p className="text-muted-foreground">
-                    Vocês poderão dividir gastos, acompanhar despesas e manter tudo organizado juntos! 💕
+                    {t.onboarding.shareExpenses}
                   </p>
                 </div>
 
@@ -466,7 +459,7 @@ export function OnboardingModal({ open, onClose, onComplete, profiles, shareCode
                   size="lg"
                 >
                   <Sparkles className="w-4 h-4 mr-2" />
-                  Criar meu perfil
+                  {t.onboarding.createProfile}
                   <ArrowRight className="w-4 h-4 ml-2" />
                 </Button>
               </div>
@@ -475,11 +468,11 @@ export function OnboardingModal({ open, onClose, onComplete, profiles, shareCode
             <>
               {/* Name Input */}
               <div className="space-y-2 animate-fade-in" style={{ animationDelay: '100ms' }}>
-                <label className="text-sm font-medium text-muted-foreground">Seu nome</label>
+                <label className="text-sm font-medium text-muted-foreground">{t.onboarding.yourName}</label>
                 <Input
                   value={name}
                   onChange={(e) => handleNameChange(e.target.value)}
-                  placeholder="Como você quer ser chamado(a)?"
+                  placeholder={t.onboarding.namePlaceholder}
                   className="text-center text-lg transition-all duration-300 focus:ring-2 focus:ring-primary/50"
                   autoFocus
                   maxLength={20}
@@ -498,27 +491,24 @@ export function OnboardingModal({ open, onClose, onComplete, profiles, shareCode
               <div className="space-y-2 animate-fade-in" style={{ animationDelay: '150ms' }}>
                 <label className="text-sm font-medium text-muted-foreground flex items-center gap-2">
                   <AtSign className="w-4 h-4" />
-                  Seu @ <span className="text-xs font-normal">(você pode personalizar)</span>
+                  {t.settings.username}
                 </label>
                 <div className="flex items-center gap-2 bg-muted/30 rounded-xl p-3 border-2 border-dashed border-border/50 hover:border-primary/30 transition-colors">
                   <span className="text-muted-foreground">@</span>
                   <Input
                     value={username}
                     onChange={(e) => setUsername(e.target.value.replace(/[@\s]/g, '').toLowerCase())}
-                    placeholder={generatingUsername ? "gerando..." : "seu_username"}
+                    placeholder={generatingUsername ? "..." : "your_username"}
                     className="border-0 bg-transparent p-0 focus-visible:ring-0 h-auto"
                     maxLength={20}
                   />
                   {generatingUsername && <Loader2 className="w-4 h-4 animate-spin text-muted-foreground" />}
                 </div>
-                <p className="text-xs text-muted-foreground">
-                  Use para fazer login de qualquer dispositivo
-                </p>
               </div>
 
               {/* Avatar Selection */}
               <div className="space-y-2 animate-fade-in" style={{ animationDelay: '200ms' }}>
-                <label className="text-sm font-medium text-muted-foreground">Escolha seu gatinho</label>
+                <label className="text-sm font-medium text-muted-foreground">{t.onboarding.chooseAvatar}</label>
                 <div className="grid grid-cols-4 gap-3">
                   {CAT_AVATARS.map((avatar, index) => {
                     const isSelected = avatarIndex === index + 1;
@@ -559,7 +549,7 @@ export function OnboardingModal({ open, onClose, onComplete, profiles, shareCode
 
               {/* Color Selection */}
               <div className="space-y-2 animate-fade-in" style={{ animationDelay: '300ms' }}>
-                <label className="text-sm font-medium text-muted-foreground">Sua cor</label>
+                <label className="text-sm font-medium text-muted-foreground">{t.onboarding.chooseColor}</label>
                 <div className="flex gap-2 justify-center flex-wrap">
                   {PERSON_COLORS.map((c, index) => (
                     <button
@@ -604,11 +594,8 @@ export function OnboardingModal({ open, onClose, onComplete, profiles, shareCode
                 </div>
                 <div className="text-left">
                   <span className="font-semibold text-lg block transition-all duration-300">
-                    {name.trim() || 'Seu nome'}
+                    {name.trim() || t.onboarding.yourName}
                   </span>
-                  {showCompliment && (
-                    <span className="text-xs text-primary animate-fade-in">Pronto para dividir! 💕</span>
-                  )}
                 </div>
               </div>
 
@@ -624,11 +611,11 @@ export function OnboardingModal({ open, onClose, onComplete, profiles, shareCode
                 {isTransitioning ? (
                   <>
                     <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                    Carregando...
+                    {t.common.loading}
                   </>
                 ) : (
                   <>
-                    Continuar
+                    {t.common.continue}
                     <ArrowRight className="w-4 h-4 ml-2" />
                   </>
                 )}
@@ -638,37 +625,33 @@ export function OnboardingModal({ open, onClose, onComplete, profiles, shareCode
             <>
               <div className="flex flex-col gap-6 animate-fade-in">
                 <div className="space-y-2">
-                  <label className="text-sm font-medium text-muted-foreground">Idioma</label>
+                  <label className="text-sm font-medium text-muted-foreground">{t.onboarding.language}</label>
                   <Select value={preferredLocale} onValueChange={(value) => setPreferredLocale(value as SupportedLocale)}>
                     <SelectTrigger>
-                      <SelectValue placeholder="Selecione o idioma">
-                        {preferredLocale === 'pt-BR' && '🇧🇷 Português (Brasil)'}
-                        {preferredLocale === 'en-US' && '🇺🇸 English (US)'}
-                        {preferredLocale === 'es-ES' && '🇪🇸 Español'}
+                      <SelectValue>
+                        {t.languages[preferredLocale]}
                       </SelectValue>
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="pt-BR">🇧🇷 Português (Brasil)</SelectItem>
-                      <SelectItem value="en-US">🇺🇸 English (US)</SelectItem>
-                      <SelectItem value="es-ES">🇪🇸 Español</SelectItem>
+                      <SelectItem value="pt-BR">{t.languages['pt-BR']}</SelectItem>
+                      <SelectItem value="en-US">{t.languages['en-US']}</SelectItem>
+                      <SelectItem value="es-ES">{t.languages['es-ES']}</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
 
                 <div className="space-y-2">
-                  <label className="text-sm font-medium text-muted-foreground">Moeda</label>
+                  <label className="text-sm font-medium text-muted-foreground">{t.onboarding.currency}</label>
                   <Select value={preferredCurrency} onValueChange={(value) => setPreferredCurrency(value as SupportedCurrency)}>
                     <SelectTrigger>
-                      <SelectValue placeholder="Selecione a moeda">
-                        {preferredCurrency === 'BRL' && 'R$ Real Brasileiro'}
-                        {preferredCurrency === 'USD' && '$ US Dollar'}
-                        {preferredCurrency === 'EUR' && '€ Euro'}
+                      <SelectValue>
+                        {t.currencies[preferredCurrency]}
                       </SelectValue>
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="BRL">R$ Real Brasileiro</SelectItem>
-                      <SelectItem value="USD">$ US Dollar</SelectItem>
-                      <SelectItem value="EUR">€ Euro</SelectItem>
+                      <SelectItem value="BRL">{t.currencies.BRL}</SelectItem>
+                      <SelectItem value="USD">{t.currencies.USD}</SelectItem>
+                      <SelectItem value="EUR">{t.currencies.EUR}</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
@@ -680,10 +663,10 @@ export function OnboardingModal({ open, onClose, onComplete, profiles, shareCode
                     className="flex-1"
                   >
                     <ArrowLeft className="w-4 h-4 mr-2" />
-                    Voltar
+                    {t.common.back}
                   </Button>
                   <Button onClick={handlePreferencesNext} className="flex-1">
-                    Continuar
+                    {t.common.continue}
                     <ArrowRight className="w-4 h-4 ml-2" />
                   </Button>
                 </div>
@@ -715,7 +698,7 @@ export function OnboardingModal({ open, onClose, onComplete, profiles, shareCode
                   {generatingUsername && (
                     <span className="text-xs text-muted-foreground flex items-center justify-center gap-1">
                       <Loader2 className="w-3 h-3 animate-spin" />
-                      Gerando seu @...
+                      {t.onboarding.generatingUsername}
                     </span>
                   )}
                 </div>
@@ -724,7 +707,7 @@ export function OnboardingModal({ open, onClose, onComplete, profiles, shareCode
                 <div className="flex flex-col items-center gap-2">
                   <div className="flex items-center gap-2 text-sm text-muted-foreground mb-2">
                     <Lock className="w-4 h-4" />
-                    <span>Crie um código pessoal</span>
+                    <span>{t.onboarding.createPin}</span>
                   </div>
                   
                   <div className="flex items-center gap-2">
@@ -775,14 +758,14 @@ export function OnboardingModal({ open, onClose, onComplete, profiles, shareCode
                     className="flex-1"
                   >
                     <ArrowLeft className="w-4 h-4 mr-2" />
-                    Voltar
+                    {t.common.back}
                   </Button>
                   <Button 
                     onClick={handlePinComplete} 
                     disabled={pinCode.length !== 4 || !!pinError} 
                     className="flex-1"
                   >
-                    Continuar
+                    {t.common.continue}
                     <ArrowRight className="w-4 h-4 ml-2" />
                   </Button>
                 </div>
@@ -817,7 +800,7 @@ export function OnboardingModal({ open, onClose, onComplete, profiles, shareCode
                 <div className="flex flex-col items-center gap-2 w-full">
                   <div className="flex items-center gap-2 text-sm text-muted-foreground mb-2">
                     <Mail className="w-4 h-4" />
-                    <span>E-mail para recuperação</span>
+                    <span>{t.onboarding.email} <span className="text-xs">({t.onboarding.emailOptional})</span></span>
                   </div>
                   
                   <div className="relative w-full">
@@ -826,7 +809,7 @@ export function OnboardingModal({ open, onClose, onComplete, profiles, shareCode
                       value={email}
                       onChange={(e) => handleEmailChange(e.target.value)}
                       onBlur={handleEmailBlur}
-                      placeholder="seu@email.com"
+                      placeholder={t.onboarding.emailPlaceholder}
                       className={cn(
                         "text-center",
                         emailExists && "border-destructive"
@@ -850,22 +833,7 @@ export function OnboardingModal({ open, onClose, onComplete, profiles, shareCode
                       <p className="text-sm text-destructive mb-2">
                         {emailError}
                       </p>
-                      <Button 
-                        variant="link" 
-                        size="sm"
-                        onClick={handleSendRecoveryLink}
-                        className="text-primary"
-                      >
-                        <Mail className="w-3 h-3 mr-1" />
-                        Enviar link de recuperação
-                      </Button>
                     </div>
-                  )}
-                  
-                  {!emailExists && !emailError && (
-                    <p className="text-xs text-muted-foreground text-center mt-1">
-                      Se esquecer seu código, enviaremos um link de recuperação
-                    </p>
                   )}
                 </div>
 
@@ -883,7 +851,7 @@ export function OnboardingModal({ open, onClose, onComplete, profiles, shareCode
                     className="flex-1"
                   >
                     <ArrowLeft className="w-4 h-4 mr-2" />
-                    Voltar
+                    {t.common.back}
                   </Button>
                   <Button 
                     onClick={handleComplete} 
@@ -895,7 +863,7 @@ export function OnboardingModal({ open, onClose, onComplete, profiles, shareCode
                     ) : (
                       <Heart className="w-4 h-4 mr-2" />
                     )}
-                    {isJoining ? 'Criando...' : 'Criar perfil'}
+                    {isJoining ? t.common.loading : t.onboarding.finalize}
                   </Button>
                 </div>
 
@@ -906,7 +874,7 @@ export function OnboardingModal({ open, onClose, onComplete, profiles, shareCode
                   disabled={emailExists || isJoining}
                 >
                   <SkipForward className="w-4 h-4 mr-2" />
-                  Pular esta etapa
+                  {t.onboarding.skipEmail}
                 </Button>
               </div>
             </>

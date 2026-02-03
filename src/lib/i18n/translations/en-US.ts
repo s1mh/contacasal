@@ -1,0 +1,213 @@
+export const enUS = {
+  // Navigation
+  nav: {
+    summary: 'Summary',
+    history: 'History',
+    stats: 'Stats',
+    settings: 'Settings',
+  },
+  
+  // Common
+  common: {
+    continue: 'Continue',
+    back: 'Back',
+    save: 'Save',
+    cancel: 'Cancel',
+    delete: 'Delete',
+    edit: 'Edit',
+    add: 'Add',
+    share: 'Share',
+    copy: 'Copy',
+    loading: 'Loading...',
+    error: 'Error',
+    success: 'Success',
+    you: 'you',
+    or: 'or',
+    skip: 'Skip',
+    confirm: 'Confirm',
+  },
+
+  // Onboarding
+  onboarding: {
+    welcome: 'Welcome!',
+    invitedBy: '{name} invited you to share expenses',
+    createProfile: 'Create my profile',
+    profileTitle: 'Hi! Create your profile',
+    profileDesc: 'Customize how you appear in the app',
+    preferencesTitle: 'Choose language and currency',
+    preferencesDesc: 'Set how values and dates are displayed',
+    pinTitle: 'Create your code',
+    pinDesc: '4-digit code to log in on other devices',
+    emailTitle: 'Add your email',
+    emailDesc: 'To recover your code if you forget (optional)',
+    yourName: 'Your name',
+    namePlaceholder: 'What should we call you?',
+    chooseAvatar: 'Choose your avatar',
+    chooseColor: 'Your color',
+    language: 'Language',
+    currency: 'Currency',
+    createPin: 'Create a personal code',
+    pinWeak: 'Code too weak',
+    pinCommon: 'This code is too common',
+    pinSequence: 'Avoid simple sequences',
+    pinSameDigits: "Don't use 4 identical digits",
+    email: 'Email',
+    emailPlaceholder: 'your@email.com',
+    emailOptional: 'optional',
+    emailInvalid: 'Invalid email',
+    emailExists: 'This email is already registered',
+    skipEmail: 'Skip',
+    finalize: 'Finalize',
+    shareExpenses: "You'll be able to split expenses, track spending, and keep everything organized together! 💕",
+    generatingUsername: 'Generating your @...',
+    compliments: [
+      "What a lovely name! 💕",
+      "Adorable! ✨",
+      "Love that name! 🌟",
+      "Suits you! 💫",
+      "So cute! 🥰",
+      "Perfect! 💝",
+    ],
+  },
+
+  // Summary page
+  summary: {
+    currentBalance: 'Current balance',
+    allBalanced: 'All balanced!',
+    youAreEven: "You're even",
+    keepRegistering: 'Keep registering to maintain balance 💕',
+    owes: '{name} owes',
+    to: 'to',
+    recentExpenses: 'Recent expenses',
+    noExpenses: 'No expenses yet',
+    tapToAdd: 'Tap + to add',
+    settle: 'Settle',
+  },
+
+  // Expenses
+  expenses: {
+    newExpense: 'New expense',
+    editExpense: 'Edit expense',
+    description: 'Description',
+    amount: 'Amount',
+    date: 'Date',
+    paidBy: 'Paid by',
+    splitType: 'Split',
+    splitEqual: '50/50',
+    splitCustom: 'Custom',
+    splitFull: 'One pays all',
+    category: 'Category',
+    paymentMethod: 'Payment method',
+    installments: 'Installments',
+    inCash: 'Cash',
+    delete: 'Delete expense',
+    deleteConfirm: 'Are you sure you want to delete this expense?',
+    history: 'History',
+    noHistory: 'No expenses recorded',
+    filter: 'Filter',
+    export: 'Export',
+  },
+
+  // Statistics
+  stats: {
+    title: 'Statistics',
+    period: 'Period',
+    thisMonth: 'This month',
+    lastMonth: 'Last month',
+    last3Months: 'Last 3 months',
+    thisYear: 'This year',
+    total: 'Total',
+    average: 'Average',
+    byCategory: 'By category',
+    byPerson: 'By person',
+    trend: 'Trend',
+  },
+
+  // Settings
+  settings: {
+    title: 'My Profile',
+    myData: 'My data',
+    chooseAvatar: 'Choose your kitty',
+    name: 'Name',
+    username: 'Your @',
+    tapToEdit: 'tap to edit',
+    color: 'Color',
+    preferences: 'Preferences',
+    language: 'Language',
+    currency: 'Currency',
+    categories: 'Categories',
+    categoryName: 'Category name',
+    icon: 'Icon',
+    addCategory: 'Add category',
+    members: 'Members',
+    shareCode: 'Invite code',
+    regenerateCode: 'Regenerate code',
+    logout: 'Log out',
+    logoutConfirm: 'Leave space',
+    logoutDesc: 'You can come back anytime using your code and PIN.',
+    deleteProfile: 'Delete my profile',
+    deleteProfileConfirm: 'Delete profile permanently?',
+    deleteProfileDesc: 'This action cannot be undone. All your data will be removed.',
+    admin: 'Admin',
+    member: 'Member',
+    manageMember: 'Manage member',
+    removeFromSpace: 'Remove from space',
+    makeAdmin: 'Make admin',
+    removeAdmin: 'Remove admin',
+  },
+
+  // AI Insights
+  ai: {
+    title: "I'm still learning...",
+    needMoreData: 'I need a few more days to understand your patterns and give useful tips.',
+    daysWithExpenses: 'Days with expenses',
+    registeredExpenses: 'Registered expenses',
+  },
+
+  // Toasts
+  toast: {
+    copied: 'Copied! 📋',
+    shareWithAnyone: 'Share with whoever you want',
+    codeRegenerated: 'Code regenerated! 🔄',
+    newCodeGenerated: 'New sharing code generated',
+    goodbye: 'Goodbye! 👋',
+    comeBackAnytime: 'Come back anytime with your code',
+    somethingWrong: 'Oops! Something went wrong 😕',
+    noPermission: 'No permission',
+    onlyAdmins: 'Only administrators can do this',
+    preferencesUpdated: 'Preferences updated! ✨',
+  },
+
+  // Languages
+  languages: {
+    'pt-BR': '🇧🇷 Português (Brasil)',
+    'en-US': '🇺🇸 English (US)',
+    'es-ES': '🇪🇸 Español',
+  },
+
+  // Currencies
+  currencies: {
+    BRL: 'R$ Brazilian Real',
+    USD: '$ US Dollar',
+    EUR: '€ Euro',
+  },
+
+  // Create Space
+  createSpace: {
+    title: 'Create new space',
+    subtitle: 'A place for you and whoever you want',
+    spaceName: 'Space name',
+    spaceNamePlaceholder: 'E.g.: Home, Trip, etc.',
+  },
+
+  // Index/Home
+  home: {
+    welcome: 'Welcome to ContaCasal',
+    subtitle: 'Split expenses simply and fairly',
+    createNewSpace: 'Create new space',
+    orEnterCode: 'or enter the invite code',
+    enterCode: 'Enter code',
+    join: 'Join',
+    invalidCode: 'Invalid code',
+  },
+};
