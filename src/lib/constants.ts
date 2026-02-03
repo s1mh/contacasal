@@ -56,6 +56,7 @@ export const formatCurrency = (value: number): string => {
     style: 'currency',
     currency,
   }).format(value);
+  return `$ ${formatted}`;
 };
 
 export const formatDate = (date: string | Date): string => {
