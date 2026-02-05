@@ -1,7 +1,8 @@
 import { cn } from '@/lib/utils';
-import { formatCurrency, formatDate, CAT_AVATARS } from '@/lib/constants';
+import { formatCurrency as formatCurrencyConst, formatDate, CAT_AVATARS } from '@/lib/constants';
 import { Expense, Profile, Tag, Card } from '@/hooks/useCouple';
 import { usePreferences } from '@/contexts/PreferencesContext';
+import { useI18n } from '@/contexts/I18nContext';
 import { 
   Tag as TagIcon, 
   Utensils, 
@@ -48,7 +49,8 @@ const iconMap: Record<string, LucideIcon> = {
 };
 
 export function ExpenseCard({ expense, profiles, tags, cards = [], onDelete, onEdit, isNew }: ExpenseCardProps) {
-  const { t: prefT } = usePreferences();
+  const { t: prefT, valuesHidden } = usePreferences();
+  const { formatCurrency } = useI18n();
   const paidByProfile = profiles.find(p => p.position === expense.paid_by);
   const tag = tags.find(t => t.id === expense.tag_id);
   const card = cards.find(c => c.id === expense.card_id);
@@ -62,7 +64,7 @@ export function ExpenseCard({ expense, profiles, tags, cards = [], onDelete, onE
       case 'percentage':
         return `${expense.split_value.person1}% / ${expense.split_value.person2}%`;
       case 'fixed':
-        return `${formatCurrency(expense.split_value.person1)} / ${formatCurrency(expense.split_value.person2)}`;
+        return `${formatCurrencyConst(expense.split_value.person1)} / ${formatCurrencyConst(expense.split_value.person2)}`;
       case 'full':
         return expense.split_value.person1 === 100 ? `100% ${profiles[0]?.name}` : `100% ${profiles[1]?.name}`;
       default:
@@ -109,7 +111,10 @@ export function ExpenseCard({ expense, profiles, tags, cards = [], onDelete, onE
                 </span>
               </div>
             </div>
-            <p className="text-lg font-bold text-primary whitespace-nowrap">
+            <p className={cn(
+              "text-lg font-bold text-primary whitespace-nowrap transition-all duration-300",
+              valuesHidden && "blur-md select-none"
+            )}>
               {formatCurrency(expense.total_amount)}
             </p>
           </div>

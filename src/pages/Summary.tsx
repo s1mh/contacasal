@@ -1,5 +1,5 @@
 import { useOutletContext, useParams } from 'react-router-dom';
-import { Share2 } from 'lucide-react';
+import { Share2, Eye, EyeOff } from 'lucide-react';
 import { BalanceCard } from '@/components/BalanceCard';
 import { ExpenseCard } from '@/components/ExpenseCard';
 import { Avatar } from '@/components/Avatar';
@@ -8,6 +8,8 @@ import { Couple, useCoupleContext } from '@/contexts/CoupleContext';
 import { useToast } from '@/hooks/use-toast';
 import { Button } from '@/components/ui/button';
 import { AIInsightsCard } from '@/components/AIInsightsCard';
+import { MonthComparisonCard } from '@/components/MonthComparisonCard';
+import { TopCategoriesCard } from '@/components/TopCategoriesCard';
 import { isConfiguredProfile } from '@/lib/utils';
 import { usePreferences } from '@/contexts/PreferencesContext';
 
@@ -16,7 +18,7 @@ export default function Summary() {
   const { calculateBalance } = useCoupleContext();
   const { shareCode } = useParams();
   const { toast } = useToast();
-  const { t: prefT } = usePreferences();
+  const { t: prefT, valuesHidden, setValuesHidden } = usePreferences();
   const balance = calculateBalance();
 
   const recentExpenses = couple.expenses.slice(0, 5);
@@ -60,15 +62,29 @@ export default function Summary() {
               />
             ))}
           </div>
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={handleShare}
-            className="rounded-full gap-2"
-          >
-            <Share2 className="w-4 h-4" />
-            {prefT('Compartilhar')}
-          </Button>
+          <div className="flex items-center gap-2">
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={() => setValuesHidden(!valuesHidden)}
+              className="rounded-full h-9 w-9"
+            >
+              {valuesHidden ? (
+                <EyeOff className="w-4 h-4 text-muted-foreground" />
+              ) : (
+                <Eye className="w-4 h-4 text-muted-foreground" />
+              )}
+            </Button>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={handleShare}
+              className="rounded-full gap-2"
+            >
+              <Share2 className="w-4 h-4" />
+              {prefT('Compartilhar')}
+            </Button>
+          </div>
         </div>
       </AnimatedItem>
 
@@ -84,9 +100,29 @@ export default function Summary() {
         </div>
       </AnimatedItem>
 
+      {/* Month Comparison */}
+      <AnimatedItem delay={175}>
+        <div className="mt-4">
+          <MonthComparisonCard 
+            expenses={couple.expenses} 
+            agreements={couple.agreements} 
+          />
+        </div>
+      </AnimatedItem>
+
+      {/* Top Categories */}
+      <AnimatedItem delay={200}>
+        <div className="mt-4">
+          <TopCategoriesCard 
+            expenses={couple.expenses} 
+            tags={couple.tags} 
+          />
+        </div>
+      </AnimatedItem>
+
       {/* Recent Expenses */}
       <div className="mt-6">
-        <AnimatedItem delay={200}>
+        <AnimatedItem delay={225}>
           <h2 className="text-sm font-medium text-muted-foreground mb-3">
             {prefT('Últimos gastos')}
           </h2>
@@ -106,7 +142,7 @@ export default function Summary() {
         ) : (
           <div className="space-y-3">
             {recentExpenses.map((expense, index) => (
-              <AnimatedItem key={expense.id} delay={250 + index * 50}>
+              <AnimatedItem key={expense.id} delay={275 + index * 50}>
                 <ExpenseCard
                   expense={expense}
                   profiles={couple.profiles}

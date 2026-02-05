@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Sparkles, Brain, TrendingUp, AlertTriangle, PartyPopper, RefreshCw } from 'lucide-react';
+import { Sparkles, Brain, TrendingUp, AlertTriangle, PartyPopper, RefreshCw, Lightbulb } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { cn } from '@/lib/utils';
 import { usePreferences } from '@/contexts/PreferencesContext';
@@ -117,39 +117,43 @@ export function AIInsightsCard({ coupleId }: AIInsightsCardProps) {
   if (learning && progress) {
     const daysProgress = Math.min((progress.days / progress.minDays) * 100, 100);
     const expensesProgress = Math.min((progress.expenses / progress.minExpenses) * 100, 100);
+    const overallProgress = Math.round((daysProgress + expensesProgress) / 2);
+    
+    // Frases de incentivo baseadas no percentual
+    const getIncentivePhrase = () => {
+      if (overallProgress <= 25) return { emoji: '👀', text: t('Estou começando a te conhecer!') };
+      if (overallProgress <= 50) return { emoji: '📝', text: t('Adicione mais alguns gastos!') };
+      if (overallProgress <= 75) return { emoji: '🔥', text: t('Tá quase lá! Continue assim!') };
+      return { emoji: '🎉', text: t('Falta pouquinho!') };
+    };
+    
+    const incentive = getIncentivePhrase();
     
     return (
       <div className="bg-gradient-to-br from-primary/5 to-primary/10 rounded-3xl p-4 shadow-glass">
         <div className="flex items-center gap-2 mb-3">
           <Brain className="w-5 h-5 text-primary" />
-          <span className="font-semibold text-sm">{t('Aprendendo...')}</span>
+          <span className="font-semibold text-sm">{t('Ainda estou aprendendo...')}</span>
         </div>
         
-        <p className="text-xs text-muted-foreground mb-3">
-          {t('Preciso de mais dados para gerar insights personalizados')}
-        </p>
-        
-        <div className="space-y-2">
-          <div className="flex items-center justify-between text-xs">
-            <span className="text-muted-foreground">{t('Dias com gastos')}</span>
-            <span className="font-medium">{progress.days}/{progress.minDays}</span>
-          </div>
-          <div className="h-1.5 bg-muted rounded-full overflow-hidden">
-            <div 
-              className="h-full bg-primary rounded-full transition-all duration-500"
-              style={{ width: `${daysProgress}%` }}
-            />
+        <div className="space-y-3">
+          {/* Barra de progresso única */}
+          <div className="space-y-1.5">
+            <div className="h-2.5 bg-muted rounded-full overflow-hidden">
+              <div 
+                className="h-full bg-gradient-to-r from-primary to-primary/70 rounded-full transition-all duration-700 ease-out"
+                style={{ width: `${overallProgress}%` }}
+              />
+            </div>
+            <div className="flex justify-end">
+              <span className="text-xs font-medium text-muted-foreground">{overallProgress}%</span>
+            </div>
           </div>
           
-          <div className="flex items-center justify-between text-xs mt-2">
-            <span className="text-muted-foreground">{t('Gastos registrados')}</span>
-            <span className="font-medium">{progress.expenses}/{progress.minExpenses}</span>
-          </div>
-          <div className="h-1.5 bg-muted rounded-full overflow-hidden">
-            <div 
-              className="h-full bg-primary rounded-full transition-all duration-500"
-              style={{ width: `${expensesProgress}%` }}
-            />
+          {/* Frase de incentivo */}
+          <div className="flex items-center gap-2 p-3 bg-background/50 rounded-2xl">
+            <span className="text-xl">{incentive.emoji}</span>
+            <p className="text-sm text-muted-foreground">{incentive.text}</p>
           </div>
         </div>
       </div>
