@@ -1,284 +1,146 @@
 
-# Plano: Corrigir Erro 404 no Vercel + Completar Internacionalização
+# Plano: Corrigir Erros de Build do Sistema i18n
 
-## Problema 1: Erro 404 no Vercel
+## Diagnóstico do Problema
 
-O Vercel não sabe como rotear uma SPA (Single Page Application). Quando alguém acessa diretamente `/c/1f162d13c5431b28`, o Vercel procura um arquivo físico nesse caminho e retorna 404.
+A tela branca é causada por **erros de TypeScript em tempo de build** que impedem a aplicação de funcionar. O problema principal é uma **inconsistência entre dois sistemas de tradução**:
 
-### Solução: Criar `vercel.json`
+### Sistema Original (`src/lib/i18n.ts`)
+- `t` é uma **função**: `t('chave')` → retorna string traduzida
+- Exemplo: `t('Novo gasto')` → "New expense"
 
-```json
-{
-  "rewrites": [
-    { "source": "/(.*)", "destination": "/" }
-  ]
-}
-```
+### Sistema Tentado nos Componentes
+- `t` como **objeto aninhado**: `t.nav.summary` → retorna string
+- Exemplo: `t.nav.summary` → "Resumo"
 
-Este arquivo instrui o Vercel a redirecionar todas as rotas para `index.html`, permitindo que o React Router gerencie as rotas.
+Esta inconsistência causa todos os erros de build.
 
 ---
 
-## Problema 2: Traduções Incompletas
+## Erros Identificados por Arquivo
 
-O sistema i18n foi criado, mas muitas strings ainda estão hardcoded em português. A lista completa de arquivos e strings que precisam ser traduzidas:
+| Arquivo | Problema |
+|---------|----------|
+| `Settings.tsx` | Falta import de `useI18n`, `Select`, `SelectTrigger`, etc. Usa `t.settings.preferences` mas `t` é função |
+| `BalanceCard.tsx` | Usa `formatCurrency` sem importar do contexto |
+| `BottomNav.tsx` | Usa `t.nav.summary` mas `t` é função |
+| `OnboardingModal.tsx` | Usa `t` sem declarar, e `reason` inexistente no tipo |
+| `AIInsightsCard.tsx` | Usa `t.ai.insights` mas `t.ai` não existe |
+| `SettlementModal.tsx` | Usa `t.settlement` e `t.common` que não existem |
+| `DeleteExpenseDialog.tsx` | Import duplicado de `useI18n`, desestruturação errada |
 
-### Arquivos a Atualizar
+---
 
-| Arquivo | Strings Hardcoded |
-|---------|-------------------|
-| `src/pages/Index.tsx` | ~30 strings |
-| `src/pages/Summary.tsx` | ~8 strings |
-| `src/pages/History.tsx` | ~15 strings |
-| `src/pages/Statistics.tsx` | ~12 strings |
-| `src/pages/NewExpense.tsx` | ~25 strings |
-| `src/pages/CreateSpace.tsx` | ~20 strings |
-| `src/components/BalanceCard.tsx` | ~8 strings |
-| `src/components/AIInsightsCard.tsx` | ~6 strings |
-| `src/components/SettlementModal.tsx` | ~10 strings |
-| `src/components/EditExpenseDialog.tsx` | ~10 strings |
-| `src/components/DeleteExpenseDialog.tsx` | ~10 strings |
-| `src/components/OnboardingModal.tsx` | ~5 strings restantes |
-| `src/pages/Settings.tsx` | ~8 strings restantes |
+## Solução
 
-### Novas Traduções a Adicionar
+### Estratégia: Manter o sistema original de função `t('key')`
 
-Expandir os arquivos de tradução com:
+O sistema de **função** é mais simples e já tem ~300 traduções. Vamos corrigir os componentes para usarem a sintaxe correta.
+
+### Alterações Necessárias
+
+#### 1. `src/pages/Settings.tsx`
+- Adicionar imports: `useI18n`, `Select`, `SelectTrigger`, `SelectValue`, `SelectContent`, `SelectItem`
+- Adicionar import de tipos: `SupportedLocale`, `SupportedCurrency`
+- Obter `t`, `locale`, `currency`, `setLocale`, `setCurrency` do `useI18n()`
+- Substituir `t.settings.preferences` por `t('Preferências')`
+- Substituir `t.settings.language` por `t('Idioma')`
+- Substituir `t.languages[locale]` por texto literal baseado no locale
+- Substituir `t.settings.currency` por `t('Moeda')`
+- Substituir `t.currencies[currency]` por texto literal baseado na currency
+
+#### 2. `src/components/BalanceCard.tsx`
+- Importar `useI18n` e obter `formatCurrency` dele
+- Já usa `prefT('string')` corretamente para textos
+
+#### 3. `src/components/BottomNav.tsx`
+- Substituir `t.nav.summary` por `t('Resumo')`
+- Substituir `t.nav.newExpense` por `t('Novo gasto')`
+- Substituir `t.nav.history` por `t('Histórico')`
+- Substituir `t.nav.settings` por `t('Ajustes')`
+
+#### 4. `src/components/OnboardingModal.tsx`
+- Verificar se `t` está declarado corretamente
+- Corrigir acesso a `reason` → usar `reasonKey`
+- Garantir que todas as referências a `t` usem a sintaxe de função
+
+#### 5. `src/components/AIInsightsCard.tsx`
+- Substituir `t.ai.insights` por `t('Insights')`
+- Substituir `t.ai.stillLearning` por `t('Ainda estou aprendendo...')`
+- Substituir `t.ai.needMoreDays` por `t('Preciso de mais alguns dias...')`
+- E todas as outras referências `t.ai.*`
+
+#### 6. `src/components/SettlementModal.tsx`
+- Substituir `t.settlement.title` por `t('Acertar as Contas')`
+- Substituir `t.settlement.description` por `t('Registre o pagamento...')`
+- Substituir `t.common.cancel` por `t('Cancelar')`
+- E todas as outras referências `t.settlement.*` e `t.common.*`
+
+#### 7. `src/components/DeleteExpenseDialog.tsx`
+- Remover import duplicado/incorreto
+- Usar apenas `usePreferences` para `t` (função)
+
+---
+
+## Padrão de Uso Correto
 
 ```typescript
-// Em pt-BR.ts, en-US.ts, es-ES.ts
-{
-  // Balance Card
-  balance: {
-    waitingPartner: 'Aguardando parceiro(a) 💕',
-    shareToStart: 'Compartilhe o link para começarem juntos',
-    useShareButton: 'Use o botão "Compartilhar" para convidar',
-  },
+// ✅ CORRETO - Sistema atual
+import { usePreferences } from '@/contexts/PreferencesContext';
+import { useI18n } from '@/contexts/I18nContext';
 
-  // Settlement
-  settlement: {
-    title: 'Acertar as Contas',
-    description: 'Registre o pagamento para zerar o saldo atual',
-    allBalanced: 'Tudo equilibrado!',
-    youAreEven: 'Vocês estão quites. Não há saldo a acertar.',
-    settlementRecorded: 'Acerto registrado!',
-    balanceZeroed: 'O saldo foi zerado. Comecem um novo período!',
-    noteOptional: 'Observação (opcional)',
-    notePlaceholder: 'Ex: Pix enviado, dinheiro vivo...',
-    confirmSettle: 'Confirmar Acerto',
-    registering: 'Registrando...',
-  },
-
-  // Delete Expense
-  deleteExpense: {
-    title: 'Apagar gasto?',
-    titleInstallment: 'Apagar parcelamento?',
-    willBeRemoved: '{description} de {amount} será removido.',
-    hasInstallments: 'Este gasto tem {count} parcelas. O que deseja fazer?',
-    deleteAll: 'Apagar todas as parcelas',
-    deleteAllDesc: 'Remove todas as {count} parcelas encontradas',
-    selectInstallments: 'Selecionar parcelas',
-    selectInstallmentsDesc: 'Escolher quais meses apagar',
-    selectTitle: 'Selecionar parcelas',
-    selectDesc: 'Marque as parcelas que deseja apagar',
-    installment: 'Parcela',
-    deleteCount: 'Apagar {count} parcela(s)',
-  },
-
-  // Edit Expense
-  editExpense: {
-    title: 'Editar Gasto',
-    amount: 'Valor',
-    description: 'Descrição',
-    descriptionPlaceholder: 'Descrição do gasto',
-    date: 'Data',
-    whoPaid: 'Quem pagou',
-    category: 'Categoria',
-    selectCategory: 'Selecione...',
-    split: 'Divisão',
-    percentage: 'Percentual',
-    oneHundredPercent: '100% de um',
-    saving: 'Salvando...',
-    saveChanges: 'Salvar Alterações',
-  },
-
-  // Index/Home
-  home: {
-    preparingLove: 'Preparando o amor...',
-    sharedAccount: 'Conta Compartilhada',
-    splitWithClarity: 'Dividam gastos com clareza',
-    continueAs: 'Continuar como',
-    loginWithAt: 'Entrar com @',
-    useYourUsername: 'Use seu username pessoal',
-    personalCode: 'Código pessoal',
-    verifying: 'Verificando...',
-    invalidCredentials: 'Credenciais inválidas',
-    attemptsRemaining: '{count} tentativa(s) restante(s)',
-    accountLocked: 'Conta bloqueada por {time}',
-    enter: 'Entrar',
-    entering: 'Entrando...',
-    forgotCode: 'Esqueci meu código',
-    newSpace: 'Novo espaço',
-    createSpaceFor5: 'Crie um espaço para até 5 pessoas',
-    createSpace: 'Criar espaço',
-    creating: 'Criando...',
-    joinExistingSpace: 'Entrar em espaço existente',
-    haveInviteCode: 'Tem um código de convite?',
-    enterInviteCode: 'Digite o código',
-    joinSpace: 'Entrar no espaço',
-    orLoginWith: 'ou entre com seu @',
-    welcomeBack: 'Bem-vindo de volta, {name}! 🎉',
-    niceToSeeYou: 'Bom te ver novamente',
-    loginError: 'Erro ao fazer login. Tente novamente.',
-    joinOurSpace: 'Entre no nosso espaço compartilhado!',
-    linkCopied: 'Link copiado!',
-    shareWithPartner: 'Compartilhe com seu parceiro(a).',
-  },
-
-  // New Expense
-  newExpense: {
-    title: 'Novo gasto',
-    totalAmount: 'Valor total',
-    descriptionOptional: 'Descrição (opcional)',
-    purchaseDate: 'Data da compra',
-    paymentMethod: 'Forma de pagamento',
-    debit: 'Débito',
-    credit: 'Crédito',
-    noCardRegistered: 'Nenhum cartão de crédito cadastrado para {name}.',
-    registerInSettings: 'Cadastre em Ajustes → Cartões',
-    selectCard: 'Selecione o cartão',
-    installments: 'Parcelas',
-    willEnterBill: 'Entrará na fatura de {month}',
-    closingDay: 'Fechamento dia {day} • Vencimento dia {due}',
-    lastInstallment: 'Última parcela: {date}',
-    whoPaid: 'Quem pagou?',
-    configureProfileFirst: 'Configure seu perfil em Ajustes primeiro',
-    split: 'Divisão',
-    paysRest: '{name} paga o resto: {amount}',
-    selectCategory: 'Selecione uma categoria',
-    reviewExpense: 'Revisar gasto',
-    total: 'Total',
-    splitBetween: 'Dividido entre',
-    addExpense: 'Adicionar gasto',
-    adding: 'Adicionando...',
-  },
-
-  // History
-  history: {
-    title: 'Histórico',
-    monthTotal: 'Total do mês',
-    expensesCount: '{count} gastos',
-    filterByCategory: 'Filtrar por categoria',
-    all: 'Todos',
-    recurringAgreements: 'Acordos recorrentes',
-    dayOfMonth: 'Dia {day} de cada mês',
-    totalAgreements: 'Total acordos',
-    noExpensesFound: 'Nenhum gasto encontrado',
-    tryRemoveFilter: 'Tente remover o filtro',
-    inThisPeriod: 'Neste período',
-  },
-
-  // Statistics
-  statistics: {
-    title: 'Estatísticas',
-    currentMonth: 'Mês atual',
-    threeMonths: '3 meses',
-    sixMonths: '6 meses',
-    twelveMonths: '12 meses',
-    allTime: 'Tudo',
-    allCategories: 'Todas categorias',
-    totalSpent: 'Total gasto',
-    expensesCount: '{count} despesa(s)',
-    averagePerExpense: 'Média por gasto',
-    byCategory: 'Por Categoria',
-    byPerson: 'Por Pessoa',
-    monthlyEvolution: 'Evolução Mensal',
-  },
-
-  // AI Insights
-  aiInsights: {
-    insights: 'Insights',
-    stillLearning: 'Ainda estou aprendendo...',
-    needMoreDays: 'Preciso de mais alguns dias para entender seus padrões e dar dicas úteis.',
-    daysWithExpenses: 'Dias com gastos',
-    registeredExpenses: 'Gastos registrados',
-    noInsightsAvailable: 'Nenhum insight disponível no momento',
-    couldNotGenerate: 'Não foi possível gerar insights',
-    connectionError: 'Erro ao conectar',
-  },
-
-  // Create Space
-  createSpace: {
-    createProfile: 'Crie seu perfil',
-    customizeAppearance: 'Personalize como você aparecerá no app',
-    yourName: 'Seu nome',
-    namePlaceholder: 'Como você quer ser chamado(a)?',
-    chooseKitty: 'Escolha seu gatinho',
-    yourColor: 'Sua cor',
-    createCode: 'Crie seu código',
-    codeFor4Digits: 'Código de 4 dígitos para entrar em outros dispositivos',
-    addEmail: 'Adicione seu e-mail',
-    emailRecovery: 'Para recuperar seu código se esquecer (opcional)',
-    spaceCreated: 'Espaço criado! 🎉',
-    yourAtIs: 'Seu @ é @{username}',
-    yourCornerReady: 'Seu cantinho está pronto',
-    errorCreating: 'Erro ao criar espaço',
-    tryAgain: 'Tente novamente',
-  },
+export function Component() {
+  const { t: prefT } = usePreferences();  // Função de tradução
+  const { formatCurrency } = useI18n();    // Formatação de moeda
+  
+  return (
+    <div>
+      <h1>{prefT('Novo gasto')}</h1>
+      <span>{formatCurrency(100)}</span>
+    </div>
+  );
 }
+
+// ❌ ERRADO - O que foi implementado incorretamente
+const { t } = useI18n();
+return <h1>{t.nav.summary}</h1>; // t não é objeto!
 ```
 
 ---
 
-## Resumo de Alterações
+## Resumo de Arquivos a Corrigir
 
 | Arquivo | Ação |
 |---------|------|
-| `vercel.json` (novo) | Criar com rewrites para SPA |
-| `src/lib/i18n/translations/pt-BR.ts` | Adicionar ~80 novas traduções |
-| `src/lib/i18n/translations/en-US.ts` | Adicionar ~80 novas traduções |
-| `src/lib/i18n/translations/es-ES.ts` | Adicionar ~80 novas traduções |
-| `src/pages/Index.tsx` | Integrar i18n com `useI18n()` |
-| `src/pages/Summary.tsx` | Integrar i18n |
-| `src/pages/History.tsx` | Integrar i18n |
-| `src/pages/Statistics.tsx` | Integrar i18n |
-| `src/pages/NewExpense.tsx` | Integrar i18n |
-| `src/pages/CreateSpace.tsx` | Integrar i18n |
-| `src/components/BalanceCard.tsx` | Integrar i18n |
-| `src/components/AIInsightsCard.tsx` | Integrar i18n |
-| `src/components/SettlementModal.tsx` | Integrar i18n |
-| `src/components/EditExpenseDialog.tsx` | Integrar i18n |
-| `src/components/DeleteExpenseDialog.tsx` | Integrar i18n |
+| `src/pages/Settings.tsx` | Adicionar imports faltantes + corrigir uso de `t` |
+| `src/components/BalanceCard.tsx` | Importar `formatCurrency` de `useI18n` |
+| `src/components/BottomNav.tsx` | Mudar `t.nav.*` para `t('string')` |
+| `src/components/OnboardingModal.tsx` | Corrigir declaração de `t` e `reasonKey` |
+| `src/components/AIInsightsCard.tsx` | Mudar `t.ai.*` para `t('string')` |
+| `src/components/SettlementModal.tsx` | Mudar `t.settlement.*` e `t.common.*` para `t('string')` |
+| `src/components/DeleteExpenseDialog.tsx` | Remover import duplicado |
 
 ---
 
 ## Seção Técnica
 
-### Padrão de Integração i18n
+### Por que a tela fica branca?
 
-Em cada componente, adicionar:
+Quando há erros de TypeScript, o Vite (bundler) falha ao compilar o código. O navegador recebe um bundle JavaScript incompleto ou com erros, causando:
+1. Crash no carregamento do React
+2. Tela branca sem mensagem de erro visível
+3. Erros no console do desenvolvedor
+
+### Tipo `TranslationKeys` atual
 
 ```typescript
-import { useI18n } from '@/contexts/I18nContext';
-
-export function ComponentName() {
-  const { t, interpolate, formatCurrency } = useI18n();
-  
-  // Usar t.section.key para strings estáticas
-  // Usar interpolate(t.section.key, { var: value }) para strings com variáveis
-}
+// src/lib/i18n.ts
+export type TranslationKeys = (key: string, variables?: TranslationValues) => string;
 ```
 
-### Componentes fora do CoupleLayout
+Este tipo define `t` como **função**, não objeto. Para usar objetos aninhados seria necessário:
+- Reescrever completamente o sistema i18n
+- Criar interfaces TypeScript para cada seção
+- Migrar ~300 traduções para o novo formato
 
-Os componentes `Index.tsx` e `CreateSpace.tsx` estão fora do `CoupleLayout` onde o `I18nProvider` é montado. Precisam de tratamento especial:
-
-**Opção 1:** Mover o `I18nProvider` para o `App.tsx` (recomendado)
-**Opção 2:** Usar `getTranslations()` diretamente sem contexto
-
-### Ordem de Implementação Sugerida
-
-1. Criar `vercel.json` (resolve o 404 imediatamente)
-2. Mover `I18nProvider` para `App.tsx`
-3. Expandir arquivos de tradução
-4. Atualizar componentes um a um, começando pelos mais usados
+A solução mais rápida e segura é **manter o sistema de função** e corrigir os componentes.
