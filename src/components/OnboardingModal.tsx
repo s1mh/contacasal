@@ -165,7 +165,7 @@ export function OnboardingModal({ open, onClose, onComplete, profiles, shareCode
     } else {
       setShowCompliment(false);
     }
-  }, [name, t]);
+  }, [name, prefT]);
 
   // Generate username when moving to PIN step
   const generateUsername = async () => {
@@ -205,7 +205,7 @@ export function OnboardingModal({ open, onClose, onComplete, profiles, shareCode
     if (value.length === 4) {
       const weakCheck = isWeakPin(value);
       if (weakCheck.weak) {
-        setPinError(weakCheck.reason ? prefT(weakCheck.reason) : prefT('Código muito fraco'));
+        setPinError(weakCheck.reasonKey ? prefT(weakCheck.reasonKey) : prefT('Código muito fraco'));
       }
     }
   };
@@ -214,7 +214,7 @@ export function OnboardingModal({ open, onClose, onComplete, profiles, shareCode
     if (pinCode.length === 4) {
       const weakCheck = isWeakPin(pinCode);
       if (weakCheck.weak) {
-        setPinError(weakCheck.reason ? prefT(weakCheck.reason) : prefT('Código muito fraco'));
+        setPinError(weakCheck.reasonKey ? prefT(weakCheck.reasonKey) : prefT('Código muito fraco'));
         return;
       }
       setStep('email');
