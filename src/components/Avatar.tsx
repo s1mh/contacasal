@@ -1,3 +1,4 @@
+import { useState, useEffect } from 'react';
 import { cn } from '@/lib/utils';
 import { CAT_AVATARS, CAT_BG_COLORS } from '@/lib/constants';
 import { CatAnimationType } from './CatAnimation';
@@ -9,6 +10,7 @@ interface AvatarProps {
   ringColor?: string;
   animated?: boolean; // Force animation always on
   animateOnHover?: boolean; // Only animate when hovered
+  animateOnce?: boolean; // Animate once for 2 seconds then stop
   selected?: boolean; // Is this avatar selected (for selection screens)
   showBackground?: boolean;
   animation?: CatAnimationType;
@@ -53,17 +55,30 @@ export function Avatar({
   ringColor,
   animated = false,
   animateOnHover = false,
+  animateOnce = false,
   selected = false,
   showBackground = true,
   animation = 'idle',
   onClick,
 }: AvatarProps) {
+  const [isAnimating, setIsAnimating] = useState(animateOnce);
   const avatarSrc = CAT_AVATARS[avatarIndex - 1] || CAT_AVATARS[0];
   const bgColor = CAT_BG_COLORS[avatarIndex] || CAT_BG_COLORS[1];
 
+  // Handle animateOnce - stop animation after 2 seconds
+  useEffect(() => {
+    if (animateOnce) {
+      setIsAnimating(true);
+      const timer = setTimeout(() => {
+        setIsAnimating(false);
+      }, 2000);
+      return () => clearTimeout(timer);
+    }
+  }, [animateOnce, avatarIndex]); // Re-trigger when avatar changes
+
   // Determine animation class based on props
   const getAnimationClass = () => {
-    if (animated || selected) {
+    if (animated || selected || isAnimating) {
       return CSS_ANIMATIONS[animation];
     }
     if (animateOnHover) {

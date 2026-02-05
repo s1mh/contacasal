@@ -227,7 +227,7 @@ export default function Settings() {
 
           {/* Avatar Selection */}
           <div className="flex items-center gap-4 mb-4">
-            <Avatar avatarIndex={myProfile.avatar_index} size="xl" ringColor={myProfile.color} animated animation="playing" />
+            <Avatar avatarIndex={myProfile.avatar_index} size="xl" ringColor={myProfile.color} animateOnce animation="playing" />
             <div className="flex-1">
               <p className="text-sm text-muted-foreground mb-2">{prefT('Escolha o gatinho')}</p>
               <div className="flex gap-2 flex-wrap">
@@ -243,9 +243,6 @@ export default function Settings() {
                     <Avatar
                       avatarIndex={idx + 1}
                       size="sm"
-                      selected={myProfile.avatar_index === idx + 1}
-                      animateOnHover={myProfile.avatar_index !== idx + 1}
-                      animation="rolling"
                     />
                   </button>
                 ))}
