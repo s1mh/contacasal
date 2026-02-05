@@ -322,7 +322,7 @@ export default function NewExpense() {
         ) : configuredProfiles.length === 1 ? (
           <div className="flex gap-3">
             <div className="flex-1 flex items-center gap-3 p-3 rounded-2xl border-2 border-primary bg-primary/5">
-              <Avatar avatarIndex={configuredProfiles[0].avatar_index} size="md" ringColor={configuredProfiles[0].color} />
+              <Avatar avatarIndex={configuredProfiles[0].avatar_index} size="md" ringColor={configuredProfiles[0].color} animated animation="purring" />
               <span className="font-medium">{configuredProfiles[0].name}</span>
             </div>
           </div>
@@ -339,7 +339,14 @@ export default function NewExpense() {
                     : 'border-border hover:border-primary/30'
                 )}
               >
-                <Avatar avatarIndex={person.avatar_index} size="md" ringColor={person.color} />
+                <Avatar
+                  avatarIndex={person.avatar_index}
+                  size="md"
+                  ringColor={person.color}
+                  selected={paidBy === person.position}
+                  animateOnHover={paidBy !== person.position}
+                  animation="playing"
+                />
                 <span className="font-medium">{person.name}</span>
               </button>
             ))}
@@ -472,7 +479,7 @@ export default function NewExpense() {
             {[person1, person2].map((person) => person && (
               <div key={person.position} className="flex justify-between items-center">
                 <div className="flex items-center gap-2">
-                  <Avatar avatarIndex={person.avatar_index} size="sm" />
+                  <Avatar avatarIndex={person.avatar_index} size="sm" animateOnHover animation="idle" />
                   <span className="text-sm">{person.name}</span>
                 </div>
                 <span className="font-medium" style={{ color: person.color }}>
