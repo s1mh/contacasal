@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { Sparkles, Brain, TrendingUp, AlertTriangle, PartyPopper, RefreshCw } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { cn } from '@/lib/utils';
-import { useI18n } from '@/contexts/I18nContext';
+import { usePreferences } from '@/contexts/PreferencesContext';
 
 interface AIInsight {
   type: 'tip' | 'alert' | 'celebration';
@@ -24,7 +24,7 @@ interface AIInsightsCardProps {
 }
 
 export function AIInsightsCard({ coupleId }: AIInsightsCardProps) {
-  const { t } = useI18n();
+  const { t } = usePreferences();
   const [insights, setInsights] = useState<AIInsight[]>([]);
   const [learning, setLearning] = useState(true);
   const [progress, setProgress] = useState<LearningProgress | null>(null);
@@ -40,7 +40,7 @@ export function AIInsightsCard({ coupleId }: AIInsightsCardProps) {
       
       if (fnError) {
         console.error('Error fetching insights:', fnError);
-        setError(t.ai.couldNotGenerate);
+        setError(t('Não foi possível gerar insights'));
         return;
       }
 
@@ -54,7 +54,7 @@ export function AIInsightsCard({ coupleId }: AIInsightsCardProps) {
       }
     } catch (err) {
       console.error('Error:', err);
-      setError(t.ai.connectionError);
+      setError(t('Erro ao conectar'));
     } finally {
       setLoading(false);
     }
@@ -93,7 +93,7 @@ export function AIInsightsCard({ coupleId }: AIInsightsCardProps) {
       <div className="bg-gradient-to-br from-primary/5 to-primary/10 rounded-3xl p-4 shadow-glass">
         <div className="flex items-center gap-2 mb-3">
           <Sparkles className="w-5 h-5 text-primary animate-pulse" />
-          <span className="font-semibold text-sm">{t.ai.insights}</span>
+          <span className="font-semibold text-sm">{t('Insights')}</span>
         </div>
         <div className="flex items-center justify-center py-4">
           <RefreshCw className="w-5 h-5 text-primary animate-spin" />
@@ -107,7 +107,7 @@ export function AIInsightsCard({ coupleId }: AIInsightsCardProps) {
       <div className="bg-gradient-to-br from-muted/50 to-muted rounded-3xl p-4 shadow-glass">
         <div className="flex items-center gap-2 mb-3">
           <Sparkles className="w-5 h-5 text-muted-foreground" />
-          <span className="font-semibold text-sm text-muted-foreground">{t.ai.insights}</span>
+          <span className="font-semibold text-sm text-muted-foreground">{t('Insights')}</span>
         </div>
         <p className="text-xs text-muted-foreground text-center py-2">{error}</p>
       </div>
@@ -122,16 +122,16 @@ export function AIInsightsCard({ coupleId }: AIInsightsCardProps) {
       <div className="bg-gradient-to-br from-primary/5 to-primary/10 rounded-3xl p-4 shadow-glass">
         <div className="flex items-center gap-2 mb-3">
           <Brain className="w-5 h-5 text-primary" />
-          <span className="font-semibold text-sm">{t.ai.title}</span>
+          <span className="font-semibold text-sm">{t('Aprendendo...')}</span>
         </div>
         
         <p className="text-xs text-muted-foreground mb-3">
-          {t.ai.needMoreData}
+          {t('Preciso de mais dados para gerar insights personalizados')}
         </p>
         
         <div className="space-y-2">
           <div className="flex items-center justify-between text-xs">
-            <span className="text-muted-foreground">{t.ai.daysWithExpenses}</span>
+            <span className="text-muted-foreground">{t('Dias com gastos')}</span>
             <span className="font-medium">{progress.days}/{progress.minDays}</span>
           </div>
           <div className="h-1.5 bg-muted rounded-full overflow-hidden">
@@ -142,7 +142,7 @@ export function AIInsightsCard({ coupleId }: AIInsightsCardProps) {
           </div>
           
           <div className="flex items-center justify-between text-xs mt-2">
-            <span className="text-muted-foreground">{t.ai.registeredExpenses}</span>
+            <span className="text-muted-foreground">{t('Gastos registrados')}</span>
             <span className="font-medium">{progress.expenses}/{progress.minExpenses}</span>
           </div>
           <div className="h-1.5 bg-muted rounded-full overflow-hidden">
@@ -161,7 +161,7 @@ export function AIInsightsCard({ coupleId }: AIInsightsCardProps) {
       <div className="flex items-center justify-between mb-3">
         <div className="flex items-center gap-2">
           <Sparkles className="w-5 h-5 text-primary" />
-          <span className="font-semibold text-sm">{t.ai.insights}</span>
+          <span className="font-semibold text-sm">{t('Insights')}</span>
         </div>
         <button 
           onClick={fetchInsights}
@@ -174,7 +174,7 @@ export function AIInsightsCard({ coupleId }: AIInsightsCardProps) {
 
       {insights.length === 0 ? (
         <p className="text-xs text-muted-foreground text-center py-2">
-          {t.ai.noInsightsAvailable}
+          {t('Nenhum insight disponível no momento')}
         </p>
       ) : (
         <div className="space-y-2">

@@ -5,6 +5,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Profile, Settlement } from '@/hooks/useCouple';
 import { CAT_AVATARS } from '@/lib/constants';
 import { ArrowRight, Check, PartyPopper } from 'lucide-react';
+import { usePreferences } from '@/contexts/PreferencesContext';
 import { useI18n } from '@/contexts/I18nContext';
 
 interface SettlementModalProps {
@@ -17,7 +18,8 @@ interface SettlementModalProps {
 }
 
 export function SettlementModal({ open, onClose, balance, profiles, onSettle, coupleId }: SettlementModalProps) {
-  const { t, formatCurrency } = useI18n();
+  const { t } = usePreferences();
+  const { formatCurrency } = useI18n();
   const [note, setNote] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [isComplete, setIsComplete] = useState(false);
@@ -59,12 +61,12 @@ export function SettlementModal({ open, onClose, balance, profiles, onSettle, co
         <DialogContent className="sm:max-w-md">
           <div className="flex flex-col items-center justify-center py-8 text-center">
             <PartyPopper className="w-16 h-16 text-primary mb-4" />
-            <h2 className="text-xl font-bold mb-2">{t.settlement.allBalanced}</h2>
+            <h2 className="text-xl font-bold mb-2">{t('Tudo equilibrado!')}</h2>
             <p className="text-muted-foreground">
-              {t.settlement.youAreEven}
+              {t('Vocês estão quites. Não há saldo a acertar.')}
             </p>
             <Button onClick={handleClose} className="mt-6">
-              {t.common.close}
+              {t('Fechar')}
             </Button>
           </div>
         </DialogContent>
@@ -80,12 +82,12 @@ export function SettlementModal({ open, onClose, balance, profiles, onSettle, co
             <div className="w-16 h-16 rounded-full bg-green-500/20 flex items-center justify-center mb-4">
               <Check className="w-8 h-8 text-green-500" />
             </div>
-            <h2 className="text-xl font-bold mb-2">{t.settlement.settlementRecorded}</h2>
+            <h2 className="text-xl font-bold mb-2">{t('Acerto registrado!')}</h2>
             <p className="text-muted-foreground">
-              {t.settlement.balanceZeroed}
+              {t('O saldo foi zerado. Comecem um novo período!')}
             </p>
             <Button onClick={handleClose} className="mt-6">
-              {t.common.continue}
+              {t('Continuar')}
             </Button>
           </div>
         </DialogContent>
@@ -97,9 +99,9 @@ export function SettlementModal({ open, onClose, balance, profiles, onSettle, co
     <Dialog open={open} onOpenChange={handleClose}>
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
-          <DialogTitle>{t.settlement.title}</DialogTitle>
+          <DialogTitle>{t('Acertar as Contas')}</DialogTitle>
           <DialogDescription>
-            {t.settlement.description}
+            {t('Registre o pagamento para zerar o saldo atual')}
           </DialogDescription>
         </DialogHeader>
 
@@ -144,11 +146,11 @@ export function SettlementModal({ open, onClose, balance, profiles, onSettle, co
 
           {/* Note */}
           <div className="space-y-2">
-            <label className="text-sm text-muted-foreground">{t.settlement.noteOptional}</label>
+            <label className="text-sm text-muted-foreground">{t('Observação (opcional)')}</label>
             <Textarea
               value={note}
               onChange={(e) => setNote(e.target.value)}
-              placeholder={t.settlement.notePlaceholder}
+              placeholder={t('Ex: Pix enviado, dinheiro vivo...')}
               rows={2}
             />
           </div>
@@ -156,10 +158,10 @@ export function SettlementModal({ open, onClose, balance, profiles, onSettle, co
 
         <div className="flex gap-3">
           <Button variant="outline" onClick={handleClose} className="flex-1">
-            {t.common.cancel}
+            {t('Cancelar')}
           </Button>
           <Button onClick={handleSettle} disabled={isLoading} className="flex-1">
-            {isLoading ? t.settlement.registering : t.settlement.confirmSettle}
+            {isLoading ? t('Registrando...') : t('Confirmar Acerto')}
           </Button>
         </div>
       </DialogContent>
