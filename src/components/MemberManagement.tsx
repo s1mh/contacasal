@@ -108,7 +108,7 @@ export function MemberManagement({ profiles, roles, myProfileId, onRefresh }: Me
               )}
             >
               <div className="flex items-center gap-3">
-                <Avatar avatarIndex={profile.avatar_index} size="md" ringColor={profile.color} />
+                <Avatar avatarIndex={profile.avatar_index} size="md" ringColor={profile.color} animateOnHover animation="licking" />
                 <div>
                   <div className="flex items-center gap-2">
                     <span className="font-medium">{profile.name}</span>

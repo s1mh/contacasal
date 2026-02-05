@@ -54,11 +54,13 @@ export default function Summary() {
         <div className="flex items-center justify-between mb-6">
           <div className="flex items-center gap-3">
             {configuredProfiles.map(profile => (
-              <Avatar 
-                key={profile.id} 
-                avatarIndex={profile.avatar_index} 
-                size="md" 
-                ringColor={profile.color} 
+              <Avatar
+                key={profile.id}
+                avatarIndex={profile.avatar_index}
+                size="md"
+                ringColor={profile.color}
+                animateOnHover
+                animation="playing"
               />
             ))}
           </div>

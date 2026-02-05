@@ -227,7 +227,7 @@ export default function Settings() {
 
           {/* Avatar Selection */}
           <div className="flex items-center gap-4 mb-4">
-            <Avatar avatarIndex={myProfile.avatar_index} size="xl" ringColor={myProfile.color} />
+            <Avatar avatarIndex={myProfile.avatar_index} size="xl" ringColor={myProfile.color} animated animation="playing" />
             <div className="flex-1">
               <p className="text-sm text-muted-foreground mb-2">{prefT('Escolha o gatinho')}</p>
               <div className="flex gap-2 flex-wrap">
@@ -240,7 +240,13 @@ export default function Settings() {
                       myProfile.avatar_index === idx + 1 && 'ring-2 ring-primary ring-offset-2'
                     )}
                   >
-                    <Avatar avatarIndex={idx + 1} size="sm" />
+                    <Avatar
+                      avatarIndex={idx + 1}
+                      size="sm"
+                      selected={myProfile.avatar_index === idx + 1}
+                      animateOnHover={myProfile.avatar_index !== idx + 1}
+                      animation="rolling"
+                    />
                   </button>
                 ))}
               </div>
@@ -537,7 +543,7 @@ export default function Settings() {
               .filter(isConfiguredProfile)
               .map((profile) => (
                 <div key={profile.id} className="flex items-center gap-3 p-3 bg-muted/50 rounded-2xl">
-                  <Avatar avatarIndex={profile.avatar_index} size="md" ringColor={profile.color} />
+                  <Avatar avatarIndex={profile.avatar_index} size="md" ringColor={profile.color} animateOnHover animation="licking" />
                   <div className="flex-1">
                     <div className="flex items-center gap-2">
                       <span className="font-medium">{profile.name}</span>

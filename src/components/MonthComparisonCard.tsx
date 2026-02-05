@@ -1,5 +1,5 @@
  import { useMemo } from 'react';
- import { TrendingUp, TrendingDown, Minus } from 'lucide-react';
+ import { TrendingUp, TrendingDown, Minus, Eye, EyeOff } from 'lucide-react';
  import { startOfMonth, endOfMonth, subMonths, parseISO, isWithinInterval } from 'date-fns';
  import { usePreferences } from '@/contexts/PreferencesContext';
  import { useI18n } from '@/contexts/I18nContext';
@@ -12,7 +12,7 @@
  }
  
  export function MonthComparisonCard({ expenses, agreements }: MonthComparisonCardProps) {
-   const { t: prefT, valuesHidden } = usePreferences();
+   const { t: prefT, valuesHidden, setValuesHidden } = usePreferences();
    const { formatCurrency } = useI18n();
    
    const { currentTotal, previousTotal, percentChange, trend } = useMemo(() => {
@@ -109,6 +109,17 @@
              <span className="font-medium transition-all duration-300">
                {valuesHidden ? maskCurrencyValue(formatCurrency(currentTotal)) : formatCurrency(currentTotal)}
              </span>
+             <button
+               onClick={() => setValuesHidden(!valuesHidden)}
+               className="p-1 rounded-full hover:bg-muted/80 transition-colors ml-1"
+               aria-label={valuesHidden ? prefT('Mostrar valores') : prefT('Ocultar valores')}
+             >
+               {valuesHidden ? (
+                 <EyeOff className="w-4 h-4 text-muted-foreground" />
+               ) : (
+                 <Eye className="w-4 h-4 text-muted-foreground" />
+               )}
+             </button>
            </div>
          </div>
        )}
