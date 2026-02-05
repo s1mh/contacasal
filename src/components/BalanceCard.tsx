@@ -3,6 +3,7 @@ import { Avatar } from './Avatar';
 import { Profile } from '@/hooks/useCouple';
 import { ArrowRight } from 'lucide-react';
 import { usePreferences } from '@/contexts/PreferencesContext';
+import { useI18n } from '@/contexts/I18nContext';
 
 interface BalanceCardProps {
   profiles: Profile[];
@@ -15,6 +16,7 @@ interface BalanceCardProps {
 
 export function BalanceCard({ profiles, balance }: BalanceCardProps) {
   const { t: prefT } = usePreferences();
+  const { formatCurrency } = useI18n();
   const person1 = profiles.find(p => p.position === 1);
   const person2 = profiles.find(p => p.position === 2);
 
