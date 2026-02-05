@@ -686,84 +686,137 @@
     animation: cat-purring 0.5s linear infinite;
   }
 
-  /* AI Insights breathing blob animation */
-  @keyframes ai-blob-1 {
-    0%, 100% {
-      transform: translate(0, 0) scale(1);
-      opacity: 0.6;
-    }
-    25% {
-      transform: translate(10px, -10px) scale(1.1);
-      opacity: 0.7;
+  /* AI Insights - Animated gradient background */
+  @keyframes ai-gradient {
+    0% {
+      background-position: 0% 50%;
     }
     50% {
-      transform: translate(5px, 5px) scale(0.95);
-      opacity: 0.5;
+      background-position: 100% 50%;
     }
-    75% {
-      transform: translate(-5px, -5px) scale(1.05);
-      opacity: 0.65;
+    100% {
+      background-position: 0% 50%;
+    }
+  }
+
+  @keyframes ai-gradient-fast {
+    0% {
+      background-position: 0% 50%;
+    }
+    50% {
+      background-position: 100% 50%;
+    }
+    100% {
+      background-position: 0% 50%;
+    }
+  }
+
+  .animate-ai-gradient {
+    animation: ai-gradient 8s ease infinite;
+  }
+
+  .animate-ai-gradient-fast {
+    animation: ai-gradient-fast 3s ease infinite;
+  }
+
+  /* AI Insights - Blob animations */
+  @keyframes ai-blob-1 {
+    0%, 100% {
+      transform: translate(0, 0) rotate(0deg);
+    }
+    33% {
+      transform: translate(30px, -20px) rotate(120deg);
+    }
+    66% {
+      transform: translate(-20px, 20px) rotate(240deg);
     }
   }
 
   @keyframes ai-blob-2 {
     0%, 100% {
-      transform: translate(0, 0) scale(1);
-      opacity: 0.5;
+      transform: translate(0, 0) rotate(0deg);
     }
-    25% {
-      transform: translate(-15px, 5px) scale(1.05);
-      opacity: 0.6;
+    33% {
+      transform: translate(-25px, 15px) rotate(-120deg);
     }
-    50% {
-      transform: translate(-5px, -10px) scale(1.1);
-      opacity: 0.55;
-    }
-    75% {
-      transform: translate(10px, 10px) scale(0.95);
-      opacity: 0.5;
+    66% {
+      transform: translate(15px, -25px) rotate(-240deg);
     }
   }
 
-  @keyframes ai-blob-3 {
+  /* Fast blob animations for thinking state */
+  @keyframes ai-blob-fast-1 {
+    0%, 100% {
+      transform: translate(0, 0) rotate(0deg) scale(1);
+    }
+    25% {
+      transform: translate(20px, -15px) rotate(90deg) scale(1.1);
+    }
+    50% {
+      transform: translate(-10px, 10px) rotate(180deg) scale(0.95);
+    }
+    75% {
+      transform: translate(15px, 20px) rotate(270deg) scale(1.05);
+    }
+  }
+
+  @keyframes ai-blob-fast-2 {
+    0%, 100% {
+      transform: translate(0, 0) rotate(0deg) scale(1);
+    }
+    25% {
+      transform: translate(-15px, 20px) rotate(-90deg) scale(1.05);
+    }
+    50% {
+      transform: translate(20px, -10px) rotate(-180deg) scale(1.1);
+    }
+    75% {
+      transform: translate(-20px, -15px) rotate(-270deg) scale(0.95);
+    }
+  }
+
+  @keyframes ai-blob-fast-3 {
     0%, 100% {
       transform: translate(0, 0) scale(1);
       opacity: 0.4;
     }
-    33% {
-      transform: translate(5px, 15px) scale(1.08);
-      opacity: 0.5;
-    }
-    66% {
-      transform: translate(-10px, -5px) scale(0.92);
-      opacity: 0.45;
+    50% {
+      transform: translate(10px, -10px) scale(1.2);
+      opacity: 0.6;
     }
   }
 
-  @keyframes ai-breathe {
-    0%, 100% {
-      transform: scale(1);
-      filter: blur(30px);
+  /* Shimmer effect for thinking state */
+  @keyframes ai-shimmer {
+    0% {
+      background-position: -200% 0;
     }
-    50% {
-      transform: scale(1.02);
-      filter: blur(35px);
+    100% {
+      background-position: 200% 0;
     }
   }
 
   .animate-ai-blob-1 {
-    animation: ai-blob-1 8s ease-in-out infinite;
+    animation: ai-blob-1 15s ease-in-out infinite;
   }
 
   .animate-ai-blob-2 {
-    animation: ai-blob-2 10s ease-in-out infinite;
+    animation: ai-blob-2 18s ease-in-out infinite;
   }
 
-  .animate-ai-blob-3 {
-    animation: ai-blob-3 12s ease-in-out infinite;
+  .animate-ai-blob-fast-1 {
+    animation: ai-blob-fast-1 4s ease-in-out infinite;
   }
 
-  .animate-ai-breathe {
-    animation: ai-breathe 4s ease-in-out infinite;
+  .animate-ai-blob-fast-2 {
+    animation: ai-blob-fast-2 5s ease-in-out infinite;
+  }
+
+  .animate-ai-blob-fast-3 {
+    animation: ai-blob-fast-3 2s ease-in-out infinite;
+  }
+
+  .animate-ai-shimmer {
+    animation: ai-shimmer 2s ease-in-out infinite;
   }
 }
