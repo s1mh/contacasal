@@ -65,3 +65,15 @@ export const formatDate = (date: string | Date): string => {
     month: 'short',
   }).format(new Date(date));
 };
+
+// Cores de fundo para cada avatar de gatinho
+export const CAT_BG_COLORS: Record<number, string> = {
+  1: '#FFE4EC', // Rosa claro (Malhado)
+  2: '#E4F0FF', // Azul claro (Siamês)
+  3: '#FFF4E4', // Laranja claro (Tigrado)
+  4: '#F0E4FF', // Roxo claro (Preto)
+  5: '#FFE8D9', // Pêssego (Laranja)
+  6: '#E4FFE8', // Verde claro (Cinza)
+  7: '#FFFBE4', // Amarelo claro (Branco)
+  8: '#E4FFF0', // Menta (Rajado)
+};
