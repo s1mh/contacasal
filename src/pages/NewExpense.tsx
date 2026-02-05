@@ -149,11 +149,6 @@ export default function NewExpense() {
     setSplitValue({ person1: value[0], person2: 100 - value[0] });
   };
 
-  const handleFixedChange = (value: string) => {
-    const fixedAmount = parseFloat(value.replace(',', '.')) || 0;
-    setSplitValue({ person1: Math.min(fixedAmount, numericAmount), person2: numericAmount - fixedAmount });
-  };
-
   // Reset card when changing payer
   const handlePayerChange = (position: number) => {
     setPaidBy(position);
@@ -401,13 +396,10 @@ export default function NewExpense() {
           <div className="space-y-3 pt-2">
             <div className="flex items-center gap-2">
               <span className="text-sm" style={{ color: person1?.color }}>{person1?.name}:</span>
-              <Input
-                type="text"
-                inputMode="decimal"
-                value={splitValue.person1.toString()}
-                onChange={(e) => handleFixedChange(e.target.value)}
-                className="w-24 rounded-xl"
-                placeholder="0,00"
+              <CurrencyInput
+                value={splitValue.person1}
+                onChange={(value) => setSplitValue({ person1: Math.min(value, numericAmount), person2: numericAmount - Math.min(value, numericAmount) })}
+                className="w-28 rounded-xl"
               />
             </div>
             <p className="text-sm text-muted-foreground">
