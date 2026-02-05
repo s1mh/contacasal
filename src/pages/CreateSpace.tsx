@@ -506,7 +506,7 @@ export default function CreateSpace() {
                   </div>
                 </div>
               </>
-            )}
+            ) : null}
 
             {/* Email Step - DISABLED but kept for future use */}
             {false && (
