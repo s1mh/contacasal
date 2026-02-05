@@ -245,41 +245,46 @@ serve(async (req) => {
       ? ((totalMonth - totalPreviousMonth) / totalPreviousMonth * 100).toFixed(0)
       : 'N/A';
 
-    const prompt = `Você é um assistente financeiro simpático para um app de divisão de contas entre pessoas que moram juntas (pode ser casal, amigos, família).
+    const prompt = `Você é um assistente financeiro simpático para um app de divisão de contas entre pessoas que moram juntas.
 
-CONTEXTO IMPORTANTE SOBRE O APP:
-- As despesas são divididas entre as pessoas (geralmente 50/50, mas pode variar)
-- ${equalSplitPercentage}% das despesas deste mês são divididas igualmente (50/50 ou proporcionalmente)
-- ${fullPayCount} despesas são pagas 100% por uma pessoa (sem divisão)
-- Quem "paga" a despesa está apenas adiantando o valor - depois as partes devidas são calculadas automaticamente
-- NÃO sugira que uma pessoa "pague" uma categoria específica, pois as despesas são compartilhadas
-- Foque em padrões de gastos, economia, e celebrações - NÃO em quem deve pagar o quê
+REGRAS CRÍTICAS - LEIA COM ATENÇÃO:
+1. TODAS as despesas são DIVIDIDAS automaticamente pelo app (50/50 ou outra proporção)
+2. O app já calcula quem deve quanto a quem - NÃO mencione isso
+3. NUNCA sugira que alguém "pague a próxima" ou "pague X para equilibrar" - isso não faz sentido!
+4. NUNCA diga frases como:
+   - "Que tal X pagar a próxima saída"
+   - "X pagou mais, Y pode pagar a próxima"
+   - "Para equilibrar, Y pode pagar..."
+   - Qualquer sugestão de quem deve pagar o quê
+5. Foque APENAS em: tendências de gastos, economia, parabéns por metas, alertas de categorias altas
 
 Dados deste mês:
 - Total gasto: R$ ${totalMonth.toFixed(2)}
 - Total mês anterior: R$ ${totalPreviousMonth.toFixed(2)}
-- Tendência: ${trend === 'N/A' ? 'Primeiro mês completo' : trend + '%'}
+- Tendência: ${trend === 'N/A' ? 'Primeiro mês com dados' : trend + '%'}
 - Categorias mais usadas: ${topCategories.map(c => `${c.name} (R$ ${c.amount.toFixed(2)})`).join(', ')}
-- Total de ${thisMonthPurchases.length} compras este mês
+- ${thisMonthPurchases.length} compras este mês
 
-Participantes e seus gastos:
-${profileSummary.map(p => `- ${p.name}: adiantou R$ ${p.totalPaid.toFixed(2)}, parte devida R$ ${p.shouldHavePaid.toFixed(2)}${p.balance > 0 ? ` (tem R$ ${p.balance.toFixed(2)} a receber)` : p.balance < 0 ? ` (deve R$ ${Math.abs(p.balance).toFixed(2)})` : ' (equilibrado)'}`).join('\n')}
+Gere 2-3 insights curtos (máx 70 caracteres cada) em português brasileiro.
 
-Gere 2-3 insights curtos (máx 80 caracteres cada) em português brasileiro.
-- Seja amigável e positivo, use emojis ocasionalmente
-- Foque em: tendências de gastos, economia, categorias maiores, celebrações de metas
-- NUNCA sugira que uma pessoa pague uma categoria inteira - tudo é dividido!
-- NUNCA diga "X pagou o lazer" ou "que tal você pagar X" - isso não faz sentido no app
-- Se alguém adiantou mais, apenas celebre a contribuição, não sugira mudanças
-- Personalize com os nomes quando apropriado
+EXEMPLOS DE INSIGHTS BOM:
+- "Alimentação subiu 15% - hora de cozinhar mais em casa?"
+- "Vocês gastaram menos que no mês passado! Parabéns!"
+- "Lazer está em alta - aproveitem com moderação!"
+- "Meta de economia atingida este mês!"
 
-Responda APENAS em JSON válido neste formato:
+EXEMPLOS DE INSIGHTS PROIBIDOS (NUNCA USE):
+- "Que tal o Juan pagar a próxima saída?"
+- "Samuel adiantou mais, Juan pode pagar a próxima"
+- "Para equilibrar, X pode pagar..."
+
+Responda APENAS em JSON válido:
 [
   { "type": "celebration", "message": "...", "priority": 8 },
   { "type": "tip", "message": "...", "priority": 5 }
 ]
 
-Tipos: "celebration" (positivo/meta atingida), "tip" (dica financeira), "alert" (atenção a gastos altos)`;
+Tipos: "celebration" (positivo), "tip" (dica de economia), "alert" (gasto alto)`;
 
     const aiResponse = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
       method: "POST",
@@ -290,7 +295,7 @@ Tipos: "celebration" (positivo/meta atingida), "tip" (dica financeira), "alert" 
       body: JSON.stringify({
         model: "google/gemini-3-flash-preview",
         messages: [
-          { role: "system", content: "Você gera insights financeiros em JSON. Responda APENAS com o array JSON, sem markdown. Nunca sugira que uma pessoa pague sozinha uma categoria - todas as despesas são divididas automaticamente." },
+          { role: "system", content: "Você gera insights financeiros em JSON. Responda APENAS com o array JSON, sem markdown. REGRA ABSOLUTA: NUNCA sugira que uma pessoa pague a próxima conta, saída, ou qualquer coisa para equilibrar. O app divide tudo automaticamente. Foque em tendências de gastos e economia, nunca em quem deve pagar o quê." },
           { role: "user", content: prompt },
         ],
       }),
