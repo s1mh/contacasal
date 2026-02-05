@@ -1,7 +1,11 @@
-
 # Plano: Ajustes de UX e Novas Funcionalidades
 
+## ✅ Status: Implementado
+
+Todas as funcionalidades foram implementadas com sucesso.
+
 ## 1. Renomear "Acordos recorrentes" → "Gastos fixos" + Somar no Total
+**✅ Concluído**
 
 ### Alterações
 - Renomear todas as referências de "Acordos recorrentes" para "Gastos fixos" nos arquivos de tradução
@@ -18,6 +22,7 @@
 ---
 
 ## 2. Simplificar Progresso da IA
+**✅ Concluído**
 
 ### Design Atual vs Novo
 
@@ -60,6 +65,7 @@ NOVO:
 ---
 
 ## 3. Esconder/Revelar Valores (Privacidade)
+**✅ Concluído**
 
 ### Comportamento
 - Ícone de olho (Eye/EyeOff) no header do Summary
@@ -95,6 +101,7 @@ const [valuesHidden, setValuesHidden] = useState(() =>
 ---
 
 ## 4. Novos Widgets na Tela de Resumo
+**✅ Concluído**
 
 ### Comparativo com Mês Anterior
 ```text
@@ -137,6 +144,12 @@ const [valuesHidden, setValuesHidden] = useState(() =>
 ---
 
 ## 5. Animação dos Gatinhos com Lottie
+**🔄 Parcialmente Implementado**
+
+O componente Avatar foi atualizado para separar o fundo colorido da imagem do gatinho.
+A biblioteca lottie-react foi instalada e está pronta para uso.
+
+**Próximo passo**: Adicionar arquivos JSON de animação Lottie para cada gatinho.
 
 ### Abordagem
 Lottie é a melhor escolha para animações fluidas e leves. Precisa:

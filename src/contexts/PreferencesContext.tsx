@@ -14,6 +14,8 @@ interface PreferencesContextValue {
   setLocale: (locale: SupportedLocale) => void;
   setCurrency: (currency: SupportedCurrency) => void;
   t: (key: string, variables?: Record<string, string | number>) => string;
+  valuesHidden: boolean;
+  setValuesHidden: (hidden: boolean) => void;
 }
 
 const PreferencesContext = createContext<PreferencesContextValue | null>(null);
@@ -22,6 +24,14 @@ export function PreferencesProvider({ children, shareCode }: { children: ReactNo
   const initial = getActivePreferences();
   const [locale, setLocaleState] = useState<SupportedLocale>(initial.locale);
   const [currency, setCurrencyState] = useState<SupportedCurrency>(initial.currency);
+  const [valuesHidden, setValuesHiddenState] = useState<boolean>(() => 
+    localStorage.getItem('values_hidden') === 'true'
+  );
+
+  const setValuesHidden = (hidden: boolean) => {
+    setValuesHiddenState(hidden);
+    localStorage.setItem('values_hidden', String(hidden));
+  };
 
   useEffect(() => {
     if (shareCode) {
@@ -39,8 +49,10 @@ export function PreferencesProvider({ children, shareCode }: { children: ReactNo
       setCurrency: setCurrencyState,
       t: (key: string, variables?: Record<string, string | number>) =>
         translate(locale, key, variables),
+      valuesHidden,
+      setValuesHidden,
     }),
-    [locale, currency]
+    [locale, currency, valuesHidden]
   );
 
   return (
@@ -59,6 +71,8 @@ export function usePreferences() {
       setLocale: () => undefined,
       setCurrency: () => undefined,
       t: (key: string) => key,
+      valuesHidden: false,
+      setValuesHidden: () => undefined,
     };
   }
   return context;
