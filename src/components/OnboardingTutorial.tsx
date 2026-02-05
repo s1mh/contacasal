@@ -7,7 +7,6 @@ import { usePreferences } from '@/contexts/PreferencesContext';
 import {
   Heart,
   Users,
-  PiggyBank,
   Sparkles,
   ArrowRight,
   ArrowLeft,
@@ -17,8 +16,15 @@ import {
   Plus,
   BarChart3,
   Scale,
-  Wallet,
+  Home,
+  Settings,
+  Clock,
   ChevronRight,
+  Wallet,
+  PieChart,
+  Lightbulb,
+  CreditCard,
+  Split,
 } from 'lucide-react';
 
 interface TutorialStep {
@@ -26,7 +32,7 @@ interface TutorialStep {
   title: string;
   description: string;
   icon: React.ReactNode;
-  illustration?: 'cats' | 'share' | 'expense' | 'balance' | 'stats';
+  illustration?: 'cats' | 'share' | 'expense' | 'balance' | 'stats' | 'tabs' | 'split' | 'history';
   highlight?: string;
 }
 
@@ -34,15 +40,24 @@ interface OnboardingTutorialProps {
   open: boolean;
   onClose: () => void;
   onComplete: () => void;
-  context: 'welcome' | 'after-profile' | 'after-join';
+  context: 'welcome' | 'after-profile' | 'after-join' | 'full-tour';
 }
 
 const TUTORIAL_STORAGE_KEY = 'contacasal_tutorial_completed';
+const FULL_TOUR_STORAGE_KEY = 'contacasal_full_tour_completed';
 
 export function OnboardingTutorial({ open, onClose, onComplete, context }: OnboardingTutorialProps) {
   const { t } = usePreferences();
   const [currentStep, setCurrentStep] = useState(0);
   const [isExiting, setIsExiting] = useState(false);
+
+  // Reset step when opening
+  useEffect(() => {
+    if (open) {
+      setCurrentStep(0);
+      setIsExiting(false);
+    }
+  }, [open]);
 
   // Define steps based on context
   const getSteps = (): TutorialStep[] => {
@@ -85,49 +100,188 @@ export function OnboardingTutorial({ open, onClose, onComplete, context }: Onboa
         {
           id: 'profile-done',
           title: t('Perfil criado com sucesso!'),
-          description: t('Agora você pode compartilhar o link com as pessoas que vão dividir despesas com você.'),
+          description: t('Seu gatinho está pronto! Agora vou te mostrar como usar o app.'),
           icon: <Check className="w-8 h-8 text-emerald-500" />,
           illustration: 'cats',
         },
         {
-          id: 'how-share',
-          title: t('Como compartilhar'),
-          description: t('Use o botão "Compartilhar" no topo da tela para enviar o link. Quem receber pode criar o próprio perfil!'),
-          icon: <Share2 className="w-8 h-8 text-blue-500" />,
-          illustration: 'share',
+          id: 'home-tab',
+          title: t('Tela inicial'),
+          description: t('Aqui você vê o resumo: quem deve quanto a quem, gastos recentes e dicas da IA sobre suas finanças.'),
+          icon: <Home className="w-8 h-8 text-blue-500" />,
+          illustration: 'balance',
         },
         {
           id: 'add-expense',
-          title: t('Adicione seu primeiro gasto'),
-          description: t('Toque no botão + para registrar uma despesa. Você pode dividir 50/50 ou personalizar a divisão!'),
+          title: t('Adicionar gasto'),
+          description: t('Toque no botão + para registrar uma despesa. Escolha quem pagou, o valor, e como dividir!'),
           icon: <Plus className="w-8 h-8 text-primary" />,
           illustration: 'expense',
+        },
+        {
+          id: 'split-options',
+          title: t('Opções de divisão'),
+          description: t('Divida 50/50, por porcentagem, valor fixo, ou 100% para um. Você decide como funciona!'),
+          icon: <Split className="w-8 h-8 text-purple-500" />,
+          illustration: 'split',
+        },
+        {
+          id: 'history-tab',
+          title: t('Histórico'),
+          description: t('Veja todos os gastos registrados, filtre por mês ou categoria, e edite se precisar.'),
+          icon: <Clock className="w-8 h-8 text-orange-500" />,
+          illustration: 'history',
+        },
+        {
+          id: 'stats-tab',
+          title: t('Estatísticas'),
+          description: t('Acompanhe para onde vai seu dinheiro com gráficos bonitos e insights úteis.'),
+          icon: <PieChart className="w-8 h-8 text-cyan-500" />,
+          illustration: 'stats',
+        },
+        {
+          id: 'settings-tab',
+          title: t('Ajustes'),
+          description: t('Personalize seu perfil, gerencie cartões, categorias e acordos recorrentes.'),
+          icon: <Settings className="w-8 h-8 text-gray-500" />,
+          illustration: 'tabs',
+        },
+        {
+          id: 'share-invite',
+          title: t('Convide alguém!'),
+          description: t('Use o botão "Compartilhar" no topo para enviar o link. A pessoa cria o perfil dela e vocês já podem começar!'),
+          icon: <Share2 className="w-8 h-8 text-pink-500" />,
+          illustration: 'share',
+        },
+        {
+          id: 'ready',
+          title: t('Tudo pronto!'),
+          description: t('Agora é só registrar os gastos e deixar o app fazer a mágica. Bora dividir!'),
+          icon: <Sparkles className="w-8 h-8 text-amber-500" />,
+          illustration: 'cats',
         },
       ];
     }
 
-    // after-join
+    if (context === 'after-join') {
+      return [
+        {
+          id: 'joined',
+          title: t('Você entrou no espaço!'),
+          description: t('Agora você faz parte deste espaço compartilhado. Deixa eu te mostrar como funciona!'),
+          icon: <Check className="w-8 h-8 text-emerald-500" />,
+          illustration: 'cats',
+        },
+        {
+          id: 'home-explained',
+          title: t('Tela de resumo'),
+          description: t('Aqui você vê o equilíbrio entre todos. Quem deve quanto a quem aparece automaticamente!'),
+          icon: <Home className="w-8 h-8 text-blue-500" />,
+          illustration: 'balance',
+        },
+        {
+          id: 'add-expense',
+          title: t('Registre gastos'),
+          description: t('Toque no + para adicionar. Escolha quem pagou e como dividir - o resto é automático!'),
+          icon: <Plus className="w-8 h-8 text-primary" />,
+          illustration: 'expense',
+        },
+        {
+          id: 'split-explained',
+          title: t('Divisão inteligente'),
+          description: t('Cada gasto pode ser dividido diferente: 50/50, porcentagem, ou um paga tudo. Você escolhe!'),
+          icon: <Split className="w-8 h-8 text-purple-500" />,
+          illustration: 'split',
+        },
+        {
+          id: 'navigation',
+          title: t('Navegação'),
+          description: t('Use as abas: Resumo (casa), Histórico (relógio), Estatísticas (gráfico) e Ajustes (engrenagem).'),
+          icon: <BarChart3 className="w-8 h-8 text-cyan-500" />,
+          illustration: 'tabs',
+        },
+        {
+          id: 'ready',
+          title: t('Bora começar!'),
+          description: t('Registre seu primeiro gasto e veja a mágica acontecer!'),
+          icon: <Sparkles className="w-8 h-8 text-amber-500" />,
+          illustration: 'cats',
+        },
+      ];
+    }
+
+    // full-tour - complete walkthrough
     return [
       {
-        id: 'joined',
-        title: t('Você entrou no espaço!'),
-        description: t('Agora você faz parte deste espaço compartilhado. Vamos ver como funciona!'),
-        icon: <Check className="w-8 h-8 text-emerald-500" />,
+        id: 'tour-start',
+        title: t('Tour completo do app'),
+        description: t('Vou te mostrar todas as funcionalidades do Conta de Casal!'),
+        icon: <Lightbulb className="w-8 h-8 text-amber-500" />,
         illustration: 'cats',
       },
       {
-        id: 'balance-explained',
-        title: t('O equilíbrio é automático'),
-        description: t('O app calcula quem deve quanto a quem. Basta registrar os gastos e a mágica acontece!'),
+        id: 'balance-concept',
+        title: t('Como funciona o equilíbrio'),
+        description: t('Quando você paga algo dividido, a outra pessoa fica te devendo. O app calcula tudo automaticamente!'),
         icon: <Scale className="w-8 h-8 text-emerald-500" />,
+        illustration: 'balance',
+        highlight: t('Ex: Você paga R$100 dividido 50/50 = a pessoa te deve R$50'),
+      },
+      {
+        id: 'add-expense-detail',
+        title: t('Adicionar um gasto'),
+        description: t('Toque em + > Digite o valor > Escolha quem pagou > Selecione a divisão > Adicione categoria > Pronto!'),
+        icon: <Plus className="w-8 h-8 text-primary" />,
+        illustration: 'expense',
+      },
+      {
+        id: 'split-types',
+        title: t('Tipos de divisão'),
+        description: t('50/50: divide igual | Porcentagem: você define % de cada | Fixo: valores específicos | 100%: sem divisão'),
+        icon: <Split className="w-8 h-8 text-purple-500" />,
+        illustration: 'split',
+      },
+      {
+        id: 'cards-feature',
+        title: t('Cartões de crédito'),
+        description: t('Cadastre seus cartões! O app calcula a fatura considerando a data de fechamento.'),
+        icon: <CreditCard className="w-8 h-8 text-blue-500" />,
+        illustration: 'expense',
+      },
+      {
+        id: 'history-feature',
+        title: t('Histórico de gastos'),
+        description: t('Veja tudo que foi registrado, edite ou exclua. Filtre por mês, categoria ou pessoa.'),
+        icon: <Clock className="w-8 h-8 text-orange-500" />,
+        illustration: 'history',
+      },
+      {
+        id: 'stats-feature',
+        title: t('Estatísticas'),
+        description: t('Gráficos mostram para onde vai seu dinheiro. Descubra em que categoria vocês mais gastam!'),
+        icon: <PieChart className="w-8 h-8 text-cyan-500" />,
+        illustration: 'stats',
+      },
+      {
+        id: 'ai-feature',
+        title: t('Assistente IA'),
+        description: t('O app aprende seus padrões e dá dicas personalizadas sobre economia e tendências de gastos.'),
+        icon: <Sparkles className="w-8 h-8 text-pink-500" />,
+        illustration: 'cats',
+      },
+      {
+        id: 'settlement',
+        title: t('Acertar as contas'),
+        description: t('Quando quiser zerar o saldo, vá em Ajustes > Acertar contas. Registre o pagamento e pronto!'),
+        icon: <Wallet className="w-8 h-8 text-emerald-500" />,
         illustration: 'balance',
       },
       {
-        id: 'stats',
-        title: t('Acompanhe seus gastos'),
-        description: t('Veja relatórios, gráficos e insights sobre como vocês estão gastando juntos.'),
-        icon: <BarChart3 className="w-8 h-8 text-purple-500" />,
-        illustration: 'stats',
+        id: 'tour-end',
+        title: t('Você é um expert!'),
+        description: t('Agora você sabe tudo! Qualquer dúvida, explore o app - é intuitivo e feito com carinho.'),
+        icon: <Heart className="w-8 h-8 text-pink-500" />,
+        illustration: 'cats',
       },
     ];
   };
@@ -154,6 +308,9 @@ export function OnboardingTutorial({ open, onClose, onComplete, context }: Onboa
     setIsExiting(true);
     setTimeout(() => {
       localStorage.setItem(TUTORIAL_STORAGE_KEY, 'true');
+      if (context === 'full-tour') {
+        localStorage.setItem(FULL_TOUR_STORAGE_KEY, 'true');
+      }
       onClose();
     }, 200);
   };
@@ -162,6 +319,9 @@ export function OnboardingTutorial({ open, onClose, onComplete, context }: Onboa
     setIsExiting(true);
     setTimeout(() => {
       localStorage.setItem(TUTORIAL_STORAGE_KEY, 'true');
+      if (context === 'full-tour') {
+        localStorage.setItem(FULL_TOUR_STORAGE_KEY, 'true');
+      }
       onComplete();
     }, 200);
   };
@@ -274,6 +434,85 @@ export function OnboardingTutorial({ open, onClose, onComplete, context }: Onboa
           </div>
         );
 
+      case 'tabs':
+        return (
+          <div className="flex justify-center py-6">
+            <div className="bg-card border rounded-2xl p-4 shadow-lg">
+              <div className="flex gap-6">
+                <div className="flex flex-col items-center gap-1">
+                  <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center">
+                    <Home className="w-5 h-5 text-primary" />
+                  </div>
+                  <span className="text-[10px] text-muted-foreground">Resumo</span>
+                </div>
+                <div className="flex flex-col items-center gap-1">
+                  <div className="w-10 h-10 rounded-full bg-muted flex items-center justify-center">
+                    <Clock className="w-5 h-5 text-muted-foreground" />
+                  </div>
+                  <span className="text-[10px] text-muted-foreground">Histórico</span>
+                </div>
+                <div className="flex flex-col items-center gap-1">
+                  <div className="w-10 h-10 rounded-full bg-muted flex items-center justify-center">
+                    <PieChart className="w-5 h-5 text-muted-foreground" />
+                  </div>
+                  <span className="text-[10px] text-muted-foreground">Stats</span>
+                </div>
+                <div className="flex flex-col items-center gap-1">
+                  <div className="w-10 h-10 rounded-full bg-muted flex items-center justify-center">
+                    <Settings className="w-5 h-5 text-muted-foreground" />
+                  </div>
+                  <span className="text-[10px] text-muted-foreground">Ajustes</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        );
+
+      case 'split':
+        return (
+          <div className="flex justify-center py-6">
+            <div className="grid grid-cols-2 gap-3 w-64">
+              <div className="bg-emerald-50 border border-emerald-200 rounded-xl p-3 text-center">
+                <span className="text-lg font-bold text-emerald-600">50/50</span>
+                <p className="text-[10px] text-emerald-600/70 mt-1">Divide igual</p>
+              </div>
+              <div className="bg-blue-50 border border-blue-200 rounded-xl p-3 text-center">
+                <span className="text-lg font-bold text-blue-600">70/30</span>
+                <p className="text-[10px] text-blue-600/70 mt-1">Porcentagem</p>
+              </div>
+              <div className="bg-purple-50 border border-purple-200 rounded-xl p-3 text-center">
+                <span className="text-lg font-bold text-purple-600">R$ 80</span>
+                <p className="text-[10px] text-purple-600/70 mt-1">Valor fixo</p>
+              </div>
+              <div className="bg-amber-50 border border-amber-200 rounded-xl p-3 text-center">
+                <span className="text-lg font-bold text-amber-600">100%</span>
+                <p className="text-[10px] text-amber-600/70 mt-1">Sem divisão</p>
+              </div>
+            </div>
+          </div>
+        );
+
+      case 'history':
+        return (
+          <div className="flex justify-center py-6">
+            <div className="bg-card border rounded-2xl p-3 shadow-lg w-64 space-y-2">
+              {[
+                { name: 'Mercado', value: 'R$ 150', color: 'bg-orange-100' },
+                { name: 'Restaurante', value: 'R$ 80', color: 'bg-pink-100' },
+                { name: 'Luz', value: 'R$ 120', color: 'bg-yellow-100' },
+              ].map((item, i) => (
+                <div key={i} className="flex items-center justify-between p-2 rounded-lg bg-muted/30">
+                  <div className="flex items-center gap-2">
+                    <div className={cn("w-8 h-8 rounded-full", item.color)} />
+                    <span className="text-sm font-medium">{item.name}</span>
+                  </div>
+                  <span className="text-sm font-semibold">{item.value}</span>
+                </div>
+              ))}
+            </div>
+          </div>
+        );
+
       default:
         return null;
     }
@@ -301,21 +540,26 @@ export function OnboardingTutorial({ open, onClose, onComplete, context }: Onboa
         {/* Content */}
         <div className="px-6 pt-8 pb-6">
           {/* Progress indicators */}
-          <div className="flex justify-center gap-2 mb-6">
+          <div className="flex justify-center gap-1.5 mb-6">
             {steps.map((_, index) => (
               <div
                 key={index}
                 className={cn(
                   "h-1.5 rounded-full transition-all duration-300",
                   index === currentStep
-                    ? "w-8 bg-primary"
+                    ? "w-6 bg-primary"
                     : index < currentStep
-                    ? "w-4 bg-primary/50"
-                    : "w-4 bg-muted"
+                    ? "w-3 bg-primary/50"
+                    : "w-3 bg-muted"
                 )}
               />
             ))}
           </div>
+
+          {/* Step counter */}
+          <p className="text-center text-xs text-muted-foreground mb-4">
+            {currentStep + 1} / {steps.length}
+          </p>
 
           {/* Step content with animation */}
           <div
@@ -401,10 +645,13 @@ export function OnboardingTutorial({ open, onClose, onComplete, context }: Onboa
 // Hook to check if tutorial should be shown
 export function useTutorialState() {
   const [hasSeenTutorial, setHasSeenTutorial] = useState(true);
+  const [hasSeenFullTour, setHasSeenFullTour] = useState(true);
 
   useEffect(() => {
-    const seen = localStorage.getItem(TUTORIAL_STORAGE_KEY) === 'true';
-    setHasSeenTutorial(seen);
+    const seenTutorial = localStorage.getItem(TUTORIAL_STORAGE_KEY) === 'true';
+    const seenFullTour = localStorage.getItem(FULL_TOUR_STORAGE_KEY) === 'true';
+    setHasSeenTutorial(seenTutorial);
+    setHasSeenFullTour(seenFullTour);
   }, []);
 
   const markAsSeen = () => {
@@ -412,10 +659,17 @@ export function useTutorialState() {
     setHasSeenTutorial(true);
   };
 
-  const reset = () => {
-    localStorage.removeItem(TUTORIAL_STORAGE_KEY);
-    setHasSeenTutorial(false);
+  const markFullTourAsSeen = () => {
+    localStorage.setItem(FULL_TOUR_STORAGE_KEY, 'true');
+    setHasSeenFullTour(true);
   };
 
-  return { hasSeenTutorial, markAsSeen, reset };
+  const reset = () => {
+    localStorage.removeItem(TUTORIAL_STORAGE_KEY);
+    localStorage.removeItem(FULL_TOUR_STORAGE_KEY);
+    setHasSeenTutorial(false);
+    setHasSeenFullTour(false);
+  };
+
+  return { hasSeenTutorial, hasSeenFullTour, markAsSeen, markFullTourAsSeen, reset };
 }
