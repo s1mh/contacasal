@@ -50,22 +50,20 @@ export function MonthlyBalanceCard({ profiles, expenses, agreements, settlements
       return settlementDate >= startOfMonth;
     });
 
-    // Initialize balances for all configured profiles
+    // Balance tracking: positive = owes money, negative = is owed money (creditor)
     const balances: Map<string, number> = new Map();
     configuredProfiles.forEach(p => {
       balances.set(p.id, 0);
     });
 
-    // Helper to calculate shares
-    const calculateShares = (
+    // Helper to process an expense and update balances
+    const processExpense = (
       totalAmount: number,
       splitType: string,
       splitValue: { person1: number; person2: number } | Record<string, number>,
       paidByPosition: number,
       paidByProfileId?: string | null
     ) => {
-      const shares: Map<string, number> = new Map();
-
       // Get the payer profile
       let payerProfile: Profile | undefined;
       if (paidByProfileId) {
@@ -75,89 +73,81 @@ export function MonthlyBalanceCard({ profiles, expenses, agreements, settlements
         payerProfile = configuredProfiles.find(p => p.position === paidByPosition);
       }
 
-      if (!payerProfile) return shares;
+      if (!payerProfile) return;
 
-      // Calculate how much each person should pay based on split type
       const numPeople = configuredProfiles.length;
 
+      // Calculate each person's share
+      const shares: Map<string, number> = new Map();
+
       if (splitType === 'equal') {
-        // Split equally among all configured profiles
         const sharePerPerson = totalAmount / numPeople;
         configuredProfiles.forEach(p => {
-          if (p.id !== payerProfile!.id) {
-            shares.set(p.id, sharePerPerson);
-          }
+          shares.set(p.id, sharePerPerson);
         });
       } else if (splitType === 'percentage') {
-        // For percentage, use the existing split_value structure
-        // This supports both old (person1/person2) and new (dynamic) formats
         const sv = splitValue as Record<string, number>;
         configuredProfiles.forEach(p => {
-          if (p.id !== payerProfile!.id) {
-            const key = `person${p.position}`;
-            const percentage = sv[key] || (100 / numPeople);
-            shares.set(p.id, (totalAmount * percentage) / 100);
-          }
+          const key = `person${p.position}`;
+          const percentage = sv[key] ?? (100 / numPeople);
+          shares.set(p.id, (totalAmount * percentage) / 100);
         });
       } else if (splitType === 'fixed') {
         const sv = splitValue as Record<string, number>;
         configuredProfiles.forEach(p => {
-          if (p.id !== payerProfile!.id) {
-            const key = `person${p.position}`;
-            shares.set(p.id, sv[key] || 0);
-          }
+          const key = `person${p.position}`;
+          shares.set(p.id, sv[key] ?? 0);
         });
       } else if (splitType === 'full') {
-        // One person pays everything - others owe nothing
-        // The split_value indicates who should pay 100%
+        // One person pays 100% - they owe the full amount, others owe nothing
         const sv = splitValue as Record<string, number>;
         configuredProfiles.forEach(p => {
-          if (p.id !== payerProfile!.id) {
-            const key = `person${p.position}`;
-            if (sv[key] !== 100) {
-              // This person didn't pay but should have, so they owe
-              shares.set(p.id, totalAmount);
-            }
+          const key = `person${p.position}`;
+          if (sv[key] === 100) {
+            shares.set(p.id, totalAmount);
+          } else {
+            shares.set(p.id, 0);
           }
         });
       }
 
-      return shares;
+      // The payer paid the full amount (becomes creditor for what they advanced)
+      balances.set(payerProfile.id, (balances.get(payerProfile.id) || 0) - totalAmount);
+
+      // Each person owes their share
+      configuredProfiles.forEach(p => {
+        const share = shares.get(p.id) || 0;
+        balances.set(p.id, (balances.get(p.id) || 0) + share);
+      });
     };
 
     // Process monthly expenses
     monthExpenses.forEach(expense => {
-      const shares = calculateShares(
+      processExpense(
         expense.total_amount,
         expense.split_type,
         expense.split_value,
         expense.paid_by,
         expense.paid_by_profile_id
       );
-
-      shares.forEach((amount, profileId) => {
-        balances.set(profileId, (balances.get(profileId) || 0) + amount);
-      });
     });
 
     // Process active agreements (recurring payments)
     agreements.filter(a => a.is_active).forEach(agreement => {
-      const shares = calculateShares(
+      processExpense(
         agreement.amount,
         agreement.split_type,
         agreement.split_value,
         agreement.paid_by,
         agreement.paid_by_profile_id
       );
-
-      shares.forEach((amount, profileId) => {
-        balances.set(profileId, (balances.get(profileId) || 0) + amount);
-      });
     });
 
-    // Process monthly settlements (reduce debts)
+    // Process monthly settlements (when someone pays back)
     monthSettlements.forEach(s => {
       let payerProfile: Profile | undefined;
+      let receiverProfile: Profile | undefined;
+
       if (s.paid_by_profile_id) {
         payerProfile = configuredProfiles.find(p => p.id === s.paid_by_profile_id);
       }
@@ -165,8 +155,15 @@ export function MonthlyBalanceCard({ profiles, expenses, agreements, settlements
         payerProfile = configuredProfiles.find(p => p.position === s.paid_by);
       }
 
+      if (s.received_by_profile_id) {
+        receiverProfile = configuredProfiles.find(p => p.id === s.received_by_profile_id);
+      }
+
       if (payerProfile) {
         balances.set(payerProfile.id, (balances.get(payerProfile.id) || 0) - s.amount);
+      }
+      if (receiverProfile) {
+        balances.set(receiverProfile.id, (balances.get(receiverProfile.id) || 0) + s.amount);
       }
     });
 
