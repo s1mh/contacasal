@@ -15,7 +15,7 @@ interface BalanceCardProps {
 }
 
 export function BalanceCard({ profiles, balance }: BalanceCardProps) {
-  const { t: prefT } = usePreferences();
+  const { t: prefT, valuesHidden } = usePreferences();
   const { formatCurrency } = useI18n();
   const person1 = profiles.find(p => p.position === 1);
   const person2 = profiles.find(p => p.position === 2);
@@ -80,7 +80,10 @@ export function BalanceCard({ profiles, balance }: BalanceCardProps) {
             <div className="flex items-center gap-2 text-muted-foreground">
               <ArrowRight className="w-5 h-5" />
             </div>
-            <p className="text-2xl font-bold text-foreground mt-1">
+            <p className={cn(
+              "text-2xl font-bold text-foreground mt-1 transition-all duration-300",
+              valuesHidden && "blur-md select-none"
+            )}>
               {formatCurrency(amount)}
             </p>
           </div>

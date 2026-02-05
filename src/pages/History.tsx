@@ -24,7 +24,7 @@ export default function History() {
   const [expenseToDelete, setExpenseToDelete] = useState<Expense | null>(null);
   const [editDialogOpen, setEditDialogOpen] = useState(false);
   const [expenseToEdit, setExpenseToEdit] = useState<Expense | null>(null);
-  const { locale: prefLocale, t: prefT } = usePreferences();
+  const { locale: prefLocale, t: prefT, valuesHidden } = usePreferences();
   const dateLocale = getDateFnsLocale(prefLocale);
 
   const monthStart = startOfMonth(selectedMonth);
@@ -44,8 +44,12 @@ export default function History() {
   }, [couple.expenses, monthStart, monthEnd, selectedTagId]);
 
   const totalAmount = useMemo(() => {
-    return filteredExpenses.reduce((sum, e) => sum + e.total_amount, 0);
-  }, [filteredExpenses]);
+    const expensesTotal = filteredExpenses.reduce((sum, e) => sum + e.total_amount, 0);
+    const agreementsTotal = couple.agreements
+      .filter(a => a.is_active)
+      .reduce((sum, a) => sum + a.amount, 0);
+    return expensesTotal + agreementsTotal;
+  }, [filteredExpenses, couple.agreements]);
 
   // Encontrar parcelas relacionadas do mesmo parcelamento
   const getRelatedExpenses = (expense: Expense): Expense[] => {
@@ -102,7 +106,12 @@ export default function History() {
           <div className="flex items-center justify-between">
             <div>
               <p className="text-sm text-muted-foreground">{prefT('Total do mês')}</p>
-              <p className="text-2xl font-bold">{formatCurrency(totalAmount)}</p>
+              <p className={cn(
+                "text-2xl font-bold transition-all duration-300",
+                valuesHidden && "blur-md select-none"
+              )}>
+                {formatCurrency(totalAmount)}
+              </p>
             </div>
             <div className="text-right">
               <p className="text-sm text-muted-foreground">
@@ -175,14 +184,22 @@ export default function History() {
                         </p>
                       </div>
                     </div>
-                    <span className="font-semibold">{formatCurrency(agreement.amount)}</span>
+                    <span className={cn(
+                      "font-semibold transition-all duration-300",
+                      valuesHidden && "blur-md select-none"
+                    )}>
+                      {formatCurrency(agreement.amount)}
+                    </span>
                   </div>
                 );
               })}
               <div className="pt-2 border-t border-border/50">
                 <div className="flex justify-between text-sm">
                   <span className="text-muted-foreground">{prefT('Total acordos')}</span>
-                  <span className="font-bold">
+                  <span className={cn(
+                    "font-bold transition-all duration-300",
+                    valuesHidden && "blur-md select-none"
+                  )}>
                     {formatCurrency(
                       couple.agreements.filter(a => a.is_active).reduce((sum, a) => sum + a.amount, 0)
                     )}
