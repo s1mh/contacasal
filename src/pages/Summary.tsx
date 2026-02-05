@@ -12,14 +12,28 @@ import { MonthComparisonCard } from '@/components/MonthComparisonCard';
 import { TopCategoriesCard } from '@/components/TopCategoriesCard';
 import { isConfiguredProfile } from '@/lib/utils';
 import { usePreferences } from '@/contexts/PreferencesContext';
+import { MonthlyBalanceCard } from '@/components/MonthlyBalanceCard';
 
 export default function Summary() {
-  const { couple } = useOutletContext<{ couple: Couple }>();
+  const { couple, myPosition } = useOutletContext<{ couple: Couple; myPosition: number | null }>();
   const { calculateBalance } = useCoupleContext();
   const { shareCode } = useParams();
   const { toast } = useToast();
   const { t: prefT } = usePreferences();
   const balance = calculateBalance();
+
+  // Get current user's profile
+  const currentUserProfile = myPosition
+    ? couple.profiles.find(p => p.position === myPosition && isConfiguredProfile(p))
+    : null;
+
+  // Get greeting based on time of day
+  const getGreeting = () => {
+    const hour = new Date().getHours();
+    if (hour >= 5 && hour < 12) return prefT('Bom dia');
+    if (hour >= 12 && hour < 18) return prefT('Boa tarde');
+    return prefT('Boa noite');
+  };
 
   const recentExpenses = couple.expenses.slice(0, 5);
 
@@ -49,20 +63,38 @@ export default function Summary() {
 
   return (
     <AnimatedPage className="p-4 safe-top">
-      {/* Header */}
+      {/* Header with greeting */}
       <AnimatedItem delay={0}>
         <div className="flex items-center justify-between mb-6">
           <div className="flex items-center gap-3">
-            {configuredProfiles.map(profile => (
-              <Avatar
-                key={profile.id}
-                avatarIndex={profile.avatar_index}
-                size="md"
-                ringColor={profile.color}
-                animateOnHover
-                animation="playing"
-              />
-            ))}
+            {currentUserProfile ? (
+              <>
+                <Avatar
+                  avatarIndex={currentUserProfile.avatar_index}
+                  size="md"
+                  ringColor={currentUserProfile.color}
+                  animateOnHover
+                  animation="playing"
+                />
+                <div className="flex flex-col">
+                  <span className="text-xs text-muted-foreground">{getGreeting()},</span>
+                  <span className="font-semibold text-foreground" style={{ color: currentUserProfile.color }}>
+                    {currentUserProfile.name}
+                  </span>
+                </div>
+              </>
+            ) : (
+              configuredProfiles.map(profile => (
+                <Avatar
+                  key={profile.id}
+                  avatarIndex={profile.avatar_index}
+                  size="md"
+                  ringColor={profile.color}
+                  animateOnHover
+                  animation="playing"
+                />
+              ))
+            )}
           </div>
           <Button
             variant="outline"
@@ -76,9 +108,21 @@ export default function Summary() {
         </div>
       </AnimatedItem>
 
-      {/* Balance Card */}
+      {/* Balance Card (Total) */}
       <AnimatedItem delay={100}>
         <BalanceCard profiles={couple.profiles} balance={balance} />
+      </AnimatedItem>
+
+      {/* Monthly Balance Card */}
+      <AnimatedItem delay={125}>
+        <div className="mt-4">
+          <MonthlyBalanceCard
+            profiles={couple.profiles}
+            expenses={couple.expenses}
+            agreements={couple.agreements}
+            settlements={couple.settlements}
+          />
+        </div>
       </AnimatedItem>
 
       {/* AI Insights */}

@@ -15,6 +15,7 @@ import { usePreferences } from "@/contexts/PreferencesContext";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { SupportedLocale } from "@/lib/i18n";
 import { SupportedCurrency } from "@/lib/preferences";
+import { OnboardingTutorial, useTutorialState } from "@/components/OnboardingTutorial";
 
 interface LastSpace {
   shareCode: string;
@@ -47,6 +48,10 @@ export default function Index() {
   const [lastSpace, setLastSpace] = useState<LastSpace | null>(null);
   const [catsAnimating, setCatsAnimating] = useState(false);
 
+  // Tutorial state
+  const { hasSeenTutorial } = useTutorialState();
+  const [showTutorial, setShowTutorial] = useState(false);
+
   // Username login state
   const [showUsernameLogin, setShowUsernameLogin] = useState(false);
   const [username, setUsername] = useState("");
@@ -57,6 +62,15 @@ export default function Index() {
   const [lockedUntil, setLockedUntil] = useState<string | null>(null);
   const [showRecovery, setShowRecovery] = useState(false);
   const [showUsernamePin, setShowUsernamePin] = useState(false);
+
+  // Show tutorial for first-time users (no saved spaces and hasn't seen tutorial)
+  useEffect(() => {
+    if (!hasSeenTutorial && !lastSpace) {
+      // Small delay to let page render first
+      const timer = setTimeout(() => setShowTutorial(true), 500);
+      return () => clearTimeout(timer);
+    }
+  }, [hasSeenTutorial, lastSpace]);
 
   // Check for saved space on mount - get the most recent one
   useEffect(() => {
@@ -605,6 +619,14 @@ export default function Index() {
 
       {/* Recovery Modal for username login */}
       <RecoveryModal open={showRecovery} onClose={() => setShowRecovery(false)} />
+
+      {/* Onboarding Tutorial for first-time users */}
+      <OnboardingTutorial
+        open={showTutorial}
+        onClose={() => setShowTutorial(false)}
+        onComplete={() => setShowTutorial(false)}
+        context="welcome"
+      />
     </div>
   );
 }
