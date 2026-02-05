@@ -1,6 +1,6 @@
 import { useState, useMemo } from 'react';
 import { useOutletContext } from 'react-router-dom';
-import { Calendar, Filter, FileText } from 'lucide-react';
+import { Calendar, Filter, FileText, Eye, EyeOff } from 'lucide-react';
 import { ExpenseCard } from '@/components/ExpenseCard';
 import { TagPill } from '@/components/TagPill';
 import { AnimatedPage, AnimatedItem } from '@/components/AnimatedPage';
@@ -8,7 +8,7 @@ import { Couple, Expense, useCoupleContext } from '@/contexts/CoupleContext';
 import { format, startOfMonth, endOfMonth, isWithinInterval, parseISO } from 'date-fns';
 import { getDateFnsLocale } from '@/lib/preferences';
 import { usePreferences } from '@/contexts/PreferencesContext';
-import { cn } from '@/lib/utils';
+import { cn, maskCurrencyValue } from '@/lib/utils';
 import { Avatar } from '@/components/Avatar';
 import { DeleteExpenseDialog } from '@/components/DeleteExpenseDialog';
 import { EditExpenseDialog } from '@/components/EditExpenseDialog';
@@ -24,7 +24,7 @@ export default function History() {
   const [expenseToDelete, setExpenseToDelete] = useState<Expense | null>(null);
   const [editDialogOpen, setEditDialogOpen] = useState(false);
   const [expenseToEdit, setExpenseToEdit] = useState<Expense | null>(null);
-  const { locale: prefLocale, t: prefT, valuesHidden } = usePreferences();
+  const { locale: prefLocale, t: prefT, valuesHidden, setValuesHidden } = usePreferences();
   const dateLocale = getDateFnsLocale(prefLocale);
 
   const monthStart = startOfMonth(selectedMonth);
@@ -106,12 +106,22 @@ export default function History() {
           <div className="flex items-center justify-between">
             <div>
               <p className="text-sm text-muted-foreground">{prefT('Total do mês')}</p>
-              <p className={cn(
-                "text-2xl font-bold transition-all duration-300",
-                valuesHidden && "blur-md select-none"
-              )}>
-                {formatCurrency(totalAmount)}
-              </p>
+              <div className="flex items-center gap-2">
+                <p className="text-2xl font-bold transition-all duration-300">
+                  {valuesHidden ? maskCurrencyValue(formatCurrency(totalAmount)) : formatCurrency(totalAmount)}
+                </p>
+                <button
+                  onClick={() => setValuesHidden(!valuesHidden)}
+                  className="p-1.5 rounded-full hover:bg-muted/80 transition-colors"
+                  aria-label={valuesHidden ? prefT('Mostrar valores') : prefT('Ocultar valores')}
+                >
+                  {valuesHidden ? (
+                    <EyeOff className="w-5 h-5 text-muted-foreground" />
+                  ) : (
+                    <Eye className="w-5 h-5 text-muted-foreground" />
+                  )}
+                </button>
+              </div>
             </div>
             <div className="text-right">
               <p className="text-sm text-muted-foreground">
@@ -184,11 +194,8 @@ export default function History() {
                         </p>
                       </div>
                     </div>
-                    <span className={cn(
-                      "font-semibold transition-all duration-300",
-                      valuesHidden && "blur-md select-none"
-                    )}>
-                      {formatCurrency(agreement.amount)}
+                    <span className="font-semibold transition-all duration-300">
+                      {valuesHidden ? maskCurrencyValue(formatCurrency(agreement.amount)) : formatCurrency(agreement.amount)}
                     </span>
                   </div>
                 );
@@ -196,13 +203,11 @@ export default function History() {
               <div className="pt-2 border-t border-border/50">
                 <div className="flex justify-between text-sm">
                   <span className="text-muted-foreground">{prefT('Total acordos')}</span>
-                  <span className={cn(
-                    "font-bold transition-all duration-300",
-                    valuesHidden && "blur-md select-none"
-                  )}>
-                    {formatCurrency(
-                      couple.agreements.filter(a => a.is_active).reduce((sum, a) => sum + a.amount, 0)
-                    )}
+                  <span className="font-bold transition-all duration-300">
+                    {valuesHidden
+                      ? maskCurrencyValue(formatCurrency(couple.agreements.filter(a => a.is_active).reduce((sum, a) => sum + a.amount, 0)))
+                      : formatCurrency(couple.agreements.filter(a => a.is_active).reduce((sum, a) => sum + a.amount, 0))
+                    }
                   </span>
                 </div>
               </div>
