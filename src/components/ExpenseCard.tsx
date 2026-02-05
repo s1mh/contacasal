@@ -1,4 +1,4 @@
-import { cn } from '@/lib/utils';
+import { cn, maskCurrencyValue } from '@/lib/utils';
 import { formatCurrency as formatCurrencyConst, formatDate, CAT_AVATARS } from '@/lib/constants';
 import { Expense, Profile, Tag, Card } from '@/hooks/useCouple';
 import { usePreferences } from '@/contexts/PreferencesContext';
@@ -111,11 +111,8 @@ export function ExpenseCard({ expense, profiles, tags, cards = [], onDelete, onE
                 </span>
               </div>
             </div>
-            <p className={cn(
-              "text-lg font-bold text-primary whitespace-nowrap transition-all duration-300",
-              valuesHidden && "blur-md select-none"
-            )}>
-              {formatCurrency(expense.total_amount)}
+            <p className="text-lg font-bold text-primary whitespace-nowrap transition-all duration-300">
+              {valuesHidden ? maskCurrencyValue(formatCurrency(expense.total_amount)) : formatCurrency(expense.total_amount)}
             </p>
           </div>
 
