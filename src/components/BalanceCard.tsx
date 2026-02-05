@@ -40,10 +40,10 @@ export function BalanceCard({ profiles, balance }: BalanceCardProps) {
       {!bothConfigured ? (
         <div className="flex flex-col items-center justify-center py-4">
           {person1Configured && (
-            <Avatar avatarIndex={person1.avatar_index} size="lg" ringColor={person1.color} animation="licking" />
+            <Avatar avatarIndex={person1.avatar_index} size="lg" ringColor={person1.color} animateOnHover animation="licking" />
           )}
           {person2Configured && (
-            <Avatar avatarIndex={person2.avatar_index} size="lg" ringColor={person2.color} animation="licking" />
+            <Avatar avatarIndex={person2.avatar_index} size="lg" ringColor={person2.color} animateOnHover animation="licking" />
           )}
           <div className="text-center mt-3">
             <p className="text-lg font-semibold text-secondary-foreground">
@@ -56,7 +56,7 @@ export function BalanceCard({ profiles, balance }: BalanceCardProps) {
         </div>
       ) : isBalanced ? (
         <div className="flex items-center justify-center gap-4 py-4">
-          <Avatar avatarIndex={person1.avatar_index} size="lg" ringColor={person1.color} animation="sleeping" />
+          <Avatar avatarIndex={person1.avatar_index} size="lg" ringColor={person1.color} animateOnHover animation="sleeping" />
           <div className="text-center">
             <p className="text-lg font-semibold text-secondary-foreground">
               {prefT('Tudo equilibrado! 🎉')}
@@ -65,12 +65,12 @@ export function BalanceCard({ profiles, balance }: BalanceCardProps) {
               {prefT('Vocês estão em dia')}
             </p>
           </div>
-          <Avatar avatarIndex={person2.avatar_index} size="lg" ringColor={person2.color} animation="purring" />
+          <Avatar avatarIndex={person2.avatar_index} size="lg" ringColor={person2.color} animateOnHover animation="purring" />
         </div>
       ) : (
         <div className="flex items-center justify-center gap-3">
           <div className="flex flex-col items-center">
-            <Avatar avatarIndex={owingPerson.avatar_index} size="lg" ringColor={owingPerson.color} animation="stretching" />
+            <Avatar avatarIndex={owingPerson.avatar_index} size="lg" ringColor={owingPerson.color} animateOnHover animation="stretching" />
             <p className="text-sm font-medium mt-2" style={{ color: owingPerson.color }}>
               {owingPerson.name}
             </p>
@@ -99,7 +99,7 @@ export function BalanceCard({ profiles, balance }: BalanceCardProps) {
           </div>
 
           <div className="flex flex-col items-center">
-            <Avatar avatarIndex={receivingPerson.avatar_index} size="lg" ringColor={receivingPerson.color} animation="playing" />
+            <Avatar avatarIndex={receivingPerson.avatar_index} size="lg" ringColor={receivingPerson.color} animateOnHover animation="playing" />
             <p className="text-sm font-medium mt-2" style={{ color: receivingPerson.color }}>
               {receivingPerson.name}
             </p>
