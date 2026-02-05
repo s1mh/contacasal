@@ -34,14 +34,14 @@ export function BalanceCard({ profiles, balance }: BalanceCardProps) {
   const settlements = useMemo<SettlementNeeded[]>(() => {
     if (!couple || configuredProfiles.length < 2) return [];
 
-    // Calculate total each person has paid and should have paid
+    // Balance tracking: positive = owes money, negative = is owed money (creditor)
     const balances: Map<string, number> = new Map();
     configuredProfiles.forEach(p => {
       balances.set(p.id, 0);
     });
 
-    // Helper to calculate shares
-    const calculateShares = (
+    // Helper to calculate shares and update balances
+    const processExpense = (
       totalAmount: number,
       splitType: string,
       splitValue: { person1: number; person2: number } | Record<string, number>,
@@ -61,39 +61,58 @@ export function BalanceCard({ profiles, balance }: BalanceCardProps) {
 
       const numPeople = configuredProfiles.length;
 
+      // Calculate each person's share
+      const shares: Map<string, number> = new Map();
+
       if (splitType === 'equal') {
         const sharePerPerson = totalAmount / numPeople;
         configuredProfiles.forEach(p => {
-          if (p.id !== payerProfile!.id) {
-            balances.set(p.id, (balances.get(p.id) || 0) + sharePerPerson);
-          }
+          shares.set(p.id, sharePerPerson);
         });
       } else if (splitType === 'percentage') {
         const sv = splitValue as Record<string, number>;
         configuredProfiles.forEach(p => {
-          if (p.id !== payerProfile!.id) {
-            const key = `person${p.position}`;
-            const percentage = sv[key] || (100 / numPeople);
-            balances.set(p.id, (balances.get(p.id) || 0) + (totalAmount * percentage) / 100);
-          }
+          const key = `person${p.position}`;
+          const percentage = sv[key] ?? (100 / numPeople);
+          shares.set(p.id, (totalAmount * percentage) / 100);
         });
       } else if (splitType === 'fixed') {
         const sv = splitValue as Record<string, number>;
         configuredProfiles.forEach(p => {
-          if (p.id !== payerProfile!.id) {
-            const key = `person${p.position}`;
-            balances.set(p.id, (balances.get(p.id) || 0) + (sv[key] || 0));
-          }
+          const key = `person${p.position}`;
+          shares.set(p.id, sv[key] ?? 0);
         });
       } else if (splitType === 'full') {
-        // Full means one person pays for everything - no split
-        // No one else owes anything
+        // One person pays 100% - they owe the full amount, others owe nothing
+        const sv = splitValue as Record<string, number>;
+        configuredProfiles.forEach(p => {
+          const key = `person${p.position}`;
+          if (sv[key] === 100) {
+            shares.set(p.id, totalAmount);
+          } else {
+            shares.set(p.id, 0);
+          }
+        });
       }
+
+      // The payer paid the full amount (becomes creditor for what they advanced)
+      // Then each person owes their share (becomes debtor)
+      // Net effect: payer's balance = their_share - total_paid = negative (creditor)
+      // Others' balance = their_share (positive = debtor)
+
+      // Payer advanced the full amount
+      balances.set(payerProfile.id, (balances.get(payerProfile.id) || 0) - totalAmount);
+
+      // Each person owes their share
+      configuredProfiles.forEach(p => {
+        const share = shares.get(p.id) || 0;
+        balances.set(p.id, (balances.get(p.id) || 0) + share);
+      });
     };
 
     // Process all expenses
     couple.expenses.forEach(expense => {
-      calculateShares(
+      processExpense(
         expense.total_amount,
         expense.split_type,
         expense.split_value,
@@ -104,7 +123,7 @@ export function BalanceCard({ profiles, balance }: BalanceCardProps) {
 
     // Process active agreements
     couple.agreements.filter(a => a.is_active).forEach(agreement => {
-      calculateShares(
+      processExpense(
         agreement.amount,
         agreement.split_type,
         agreement.split_value,
@@ -113,9 +132,12 @@ export function BalanceCard({ profiles, balance }: BalanceCardProps) {
       );
     });
 
-    // Process settlements (reduce debts)
+    // Process settlements (when someone pays back, reduce their debt)
     couple.settlements.forEach(s => {
       let payerProfile: Profile | undefined;
+      let receiverProfile: Profile | undefined;
+
+      // Find who paid the settlement
       if (s.paid_by_profile_id) {
         payerProfile = configuredProfiles.find(p => p.id === s.paid_by_profile_id);
       }
@@ -123,32 +145,44 @@ export function BalanceCard({ profiles, balance }: BalanceCardProps) {
         payerProfile = configuredProfiles.find(p => p.position === s.paid_by);
       }
 
+      // Find who received the settlement
+      if (s.received_by_profile_id) {
+        receiverProfile = configuredProfiles.find(p => p.id === s.received_by_profile_id);
+      }
+
       if (payerProfile) {
+        // Payer reduces their debt (or increases credit)
         balances.set(payerProfile.id, (balances.get(payerProfile.id) || 0) - s.amount);
+      }
+      if (receiverProfile) {
+        // Receiver reduces their credit (or increases debt)
+        balances.set(receiverProfile.id, (balances.get(receiverProfile.id) || 0) + s.amount);
       }
     });
 
     // Calculate settlements needed
+    // Positive balance = debtor (owes money)
+    // Negative balance = creditor (is owed money)
     const debtors: { profile: Profile; owes: number }[] = [];
     const creditors: { profile: Profile; receives: number }[] = [];
 
     configuredProfiles.forEach(p => {
-      const balance = balances.get(p.id) || 0;
-      if (balance > 0.01) {
-        debtors.push({ profile: p, owes: balance });
-      } else if (balance < -0.01) {
-        creditors.push({ profile: p, receives: Math.abs(balance) });
+      const bal = balances.get(p.id) || 0;
+      if (bal > 0.01) {
+        debtors.push({ profile: p, owes: bal });
+      } else if (bal < -0.01) {
+        creditors.push({ profile: p, receives: Math.abs(bal) });
       }
     });
 
-    // Sort to optimize settlements
+    // Sort to optimize settlements (largest first)
     debtors.sort((a, b) => b.owes - a.owes);
     creditors.sort((a, b) => b.receives - a.receives);
 
     // Calculate who pays whom
     const settlementsNeeded: SettlementNeeded[] = [];
 
-    debtors.forEach(debtor => {
+    for (const debtor of debtors) {
       let remaining = debtor.owes;
 
       for (const creditor of creditors) {
@@ -166,7 +200,7 @@ export function BalanceCard({ profiles, balance }: BalanceCardProps) {
           creditor.receives -= amount;
         }
       }
-    });
+    }
 
     return settlementsNeeded;
   }, [couple, configuredProfiles]);
