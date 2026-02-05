@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Sparkles, Brain, TrendingUp, AlertTriangle, PartyPopper, RefreshCw, Lightbulb } from 'lucide-react';
+import { Sparkles, Brain, TrendingUp, AlertTriangle, PartyPopper } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { cn } from '@/lib/utils';
 import { usePreferences } from '@/contexts/PreferencesContext';
@@ -35,10 +35,10 @@ export function AIInsightsCard({ coupleId }: AIInsightsCardProps) {
   const fetchInsights = async () => {
     setLoading(true);
     setError(null);
-    
+
     try {
       const { data, error: fnError } = await supabase.functions.invoke('generate-insights');
-      
+
       if (fnError) {
         console.error('Error fetching insights:', fnError);
         setError(t('Não foi possível gerar insights'));
@@ -77,30 +77,13 @@ export function AIInsightsCard({ coupleId }: AIInsightsCardProps) {
     }
   };
 
-  const getInsightStyle = (type: string) => {
-    switch (type) {
-      case 'celebration':
-        return 'bg-green-500/10 text-green-600 border-green-500/20';
-      case 'alert':
-        return 'bg-amber-500/10 text-amber-600 border-amber-500/20';
-      case 'tip':
-      default:
-        return 'bg-blue-500/10 text-blue-600 border-blue-500/20';
-    }
-  };
-
   if (loading) {
     return (
-      <div className="relative rounded-3xl p-4 shadow-lg overflow-hidden">
-        <AIBackgroundBlob />
-        <div className="relative z-10">
-          <div className="flex items-center gap-2 mb-3">
-            <Sparkles className="w-5 h-5 text-orange-600 animate-pulse" />
-            <span className="font-semibold text-sm text-orange-900">{t('Insights')}</span>
-          </div>
-          <div className="flex items-center justify-center py-4">
-            <RefreshCw className="w-5 h-5 text-orange-600 animate-spin" />
-          </div>
+      <div className="relative rounded-3xl p-4 shadow-lg overflow-hidden min-h-[120px]">
+        <AIBackgroundBlob thinking />
+        <div className="relative z-10 flex flex-col items-center justify-center h-full py-4">
+          <Sparkles className="w-6 h-6 text-orange-600 mb-2" />
+          <span className="text-sm font-medium text-orange-800">{t('Pensando...')}</span>
         </div>
       </div>
     );
@@ -174,18 +157,9 @@ export function AIInsightsCard({ coupleId }: AIInsightsCardProps) {
     <div className="relative rounded-3xl p-4 shadow-lg overflow-hidden">
       <AIBackgroundBlob />
       <div className="relative z-10">
-        <div className="flex items-center justify-between mb-3">
-          <div className="flex items-center gap-2">
-            <Sparkles className="w-5 h-5 text-orange-600" />
-            <span className="font-semibold text-sm text-orange-900">{t('Insights')}</span>
-          </div>
-          <button
-            onClick={fetchInsights}
-            className="p-1.5 rounded-lg hover:bg-white/30 transition-colors"
-            disabled={loading}
-          >
-            <RefreshCw className={cn("w-4 h-4 text-orange-600", loading && "animate-spin")} />
-          </button>
+        <div className="flex items-center gap-2 mb-3">
+          <Sparkles className="w-5 h-5 text-orange-600" />
+          <span className="font-semibold text-sm text-orange-900">{t('Insights')}</span>
         </div>
 
         {insights.length === 0 ? (
