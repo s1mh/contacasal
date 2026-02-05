@@ -1,7 +1,7 @@
-import { cn, isConfiguredProfile } from '@/lib/utils';
+import { cn, isConfiguredProfile, maskCurrencyValue } from '@/lib/utils';
 import { Avatar } from './Avatar';
 import { Profile } from '@/hooks/useCouple';
-import { ArrowRight } from 'lucide-react';
+import { ArrowRight, Eye, EyeOff } from 'lucide-react';
 import { usePreferences } from '@/contexts/PreferencesContext';
 import { useI18n } from '@/contexts/I18nContext';
 
@@ -15,7 +15,7 @@ interface BalanceCardProps {
 }
 
 export function BalanceCard({ profiles, balance }: BalanceCardProps) {
-  const { t: prefT, valuesHidden } = usePreferences();
+  const { t: prefT, valuesHidden, setValuesHidden } = usePreferences();
   const { formatCurrency } = useI18n();
   const person1 = profiles.find(p => p.position === 1);
   const person2 = profiles.find(p => p.position === 2);
@@ -40,10 +40,10 @@ export function BalanceCard({ profiles, balance }: BalanceCardProps) {
       {!bothConfigured ? (
         <div className="flex flex-col items-center justify-center py-4">
           {person1Configured && (
-            <Avatar avatarIndex={person1.avatar_index} size="lg" ringColor={person1.color} />
+            <Avatar avatarIndex={person1.avatar_index} size="lg" ringColor={person1.color} animation="licking" />
           )}
           {person2Configured && (
-            <Avatar avatarIndex={person2.avatar_index} size="lg" ringColor={person2.color} />
+            <Avatar avatarIndex={person2.avatar_index} size="lg" ringColor={person2.color} animation="licking" />
           )}
           <div className="text-center mt-3">
             <p className="text-lg font-semibold text-secondary-foreground">
@@ -56,7 +56,7 @@ export function BalanceCard({ profiles, balance }: BalanceCardProps) {
         </div>
       ) : isBalanced ? (
         <div className="flex items-center justify-center gap-4 py-4">
-          <Avatar avatarIndex={person1.avatar_index} size="lg" ringColor={person1.color} />
+          <Avatar avatarIndex={person1.avatar_index} size="lg" ringColor={person1.color} animation="sleeping" />
           <div className="text-center">
             <p className="text-lg font-semibold text-secondary-foreground">
               {prefT('Tudo equilibrado! 🎉')}
@@ -65,12 +65,12 @@ export function BalanceCard({ profiles, balance }: BalanceCardProps) {
               {prefT('Vocês estão em dia')}
             </p>
           </div>
-          <Avatar avatarIndex={person2.avatar_index} size="lg" ringColor={person2.color} />
+          <Avatar avatarIndex={person2.avatar_index} size="lg" ringColor={person2.color} animation="purring" />
         </div>
       ) : (
         <div className="flex items-center justify-center gap-3">
           <div className="flex flex-col items-center">
-            <Avatar avatarIndex={owingPerson.avatar_index} size="lg" ringColor={owingPerson.color} />
+            <Avatar avatarIndex={owingPerson.avatar_index} size="lg" ringColor={owingPerson.color} animation="stretching" />
             <p className="text-sm font-medium mt-2" style={{ color: owingPerson.color }}>
               {owingPerson.name}
             </p>
@@ -80,16 +80,26 @@ export function BalanceCard({ profiles, balance }: BalanceCardProps) {
             <div className="flex items-center gap-2 text-muted-foreground">
               <ArrowRight className="w-5 h-5" />
             </div>
-            <p className={cn(
-              "text-2xl font-bold text-foreground mt-1 transition-all duration-300",
-              valuesHidden && "blur-md select-none"
-            )}>
-              {formatCurrency(amount)}
-            </p>
+            <div className="flex items-center gap-1 mt-1">
+              <p className="text-2xl font-bold text-foreground transition-all duration-300">
+                {valuesHidden ? maskCurrencyValue(formatCurrency(amount)) : formatCurrency(amount)}
+              </p>
+              <button
+                onClick={() => setValuesHidden(!valuesHidden)}
+                className="p-1 rounded-full hover:bg-muted/80 transition-colors"
+                aria-label={valuesHidden ? prefT('Mostrar valores') : prefT('Ocultar valores')}
+              >
+                {valuesHidden ? (
+                  <EyeOff className="w-4 h-4 text-muted-foreground" />
+                ) : (
+                  <Eye className="w-4 h-4 text-muted-foreground" />
+                )}
+              </button>
+            </div>
           </div>
 
           <div className="flex flex-col items-center">
-            <Avatar avatarIndex={receivingPerson.avatar_index} size="lg" ringColor={receivingPerson.color} />
+            <Avatar avatarIndex={receivingPerson.avatar_index} size="lg" ringColor={receivingPerson.color} animation="playing" />
             <p className="text-sm font-medium mt-2" style={{ color: receivingPerson.color }}>
               {receivingPerson.name}
             </p>
@@ -98,12 +108,12 @@ export function BalanceCard({ profiles, balance }: BalanceCardProps) {
       )}
 
       <p className="text-center text-xs text-muted-foreground mt-4">
-        {!bothConfigured 
+        {!bothConfigured
           ? prefT('Use o botão "Compartilhar" para convidar')
-          : isBalanced 
+          : isBalanced
             ? prefT('Continue registrando para manter o equilíbrio 💕')
             : prefT('O equilíbrio está em {amount} com {name}', {
-              amount: formatCurrency(amount),
+              amount: valuesHidden ? maskCurrencyValue(formatCurrency(amount)) : formatCurrency(amount),
               name: receivingPerson.name,
             })
         }

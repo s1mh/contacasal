@@ -3,7 +3,7 @@
  import { startOfMonth, endOfMonth, subMonths, parseISO, isWithinInterval } from 'date-fns';
  import { usePreferences } from '@/contexts/PreferencesContext';
  import { useI18n } from '@/contexts/I18nContext';
- import { cn } from '@/lib/utils';
+ import { cn, maskCurrencyValue } from '@/lib/utils';
  import { Expense, Agreement } from '@/contexts/CoupleContext';
  
  interface MonthComparisonCardProps {
@@ -102,18 +102,12 @@
            </div>
            
            <div className="flex items-center gap-2 text-sm">
-             <span className={cn(
-               "transition-all duration-300",
-               valuesHidden && "blur-md select-none"
-             )}>
-               {formatCurrency(previousTotal)}
+             <span className="transition-all duration-300">
+               {valuesHidden ? maskCurrencyValue(formatCurrency(previousTotal)) : formatCurrency(previousTotal)}
              </span>
              <span className="text-muted-foreground">→</span>
-             <span className={cn(
-               "font-medium transition-all duration-300",
-               valuesHidden && "blur-md select-none"
-             )}>
-               {formatCurrency(currentTotal)}
+             <span className="font-medium transition-all duration-300">
+               {valuesHidden ? maskCurrencyValue(formatCurrency(currentTotal)) : formatCurrency(currentTotal)}
              </span>
            </div>
          </div>
