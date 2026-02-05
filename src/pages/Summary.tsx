@@ -1,10 +1,9 @@
 import { useOutletContext, useParams } from 'react-router-dom';
 import { Share2 } from 'lucide-react';
-import { BalanceCard } from '@/components/BalanceCard';
 import { ExpenseCard } from '@/components/ExpenseCard';
 import { Avatar } from '@/components/Avatar';
 import { AnimatedPage, AnimatedItem } from '@/components/AnimatedPage';
-import { Couple, useCoupleContext } from '@/contexts/CoupleContext';
+import { Couple } from '@/contexts/CoupleContext';
 import { useToast } from '@/hooks/use-toast';
 import { Button } from '@/components/ui/button';
 import { AIInsightsCard } from '@/components/AIInsightsCard';
@@ -16,11 +15,9 @@ import { MonthlyBalanceCard } from '@/components/MonthlyBalanceCard';
 
 export default function Summary() {
   const { couple, myPosition } = useOutletContext<{ couple: Couple; myPosition: number | null }>();
-  const { calculateBalance } = useCoupleContext();
   const { shareCode } = useParams();
   const { toast } = useToast();
   const { t: prefT } = usePreferences();
-  const balance = calculateBalance();
 
   // Get current user's profile
   const currentUserProfile = myPosition
@@ -108,60 +105,53 @@ export default function Summary() {
         </div>
       </AnimatedItem>
 
-      {/* Balance Card (Total) */}
-      <AnimatedItem delay={100}>
-        <BalanceCard profiles={couple.profiles} balance={balance} />
-      </AnimatedItem>
-
       {/* Monthly Balance Card */}
-      <AnimatedItem delay={125}>
-        <div className="mt-4">
-          <MonthlyBalanceCard
-            profiles={couple.profiles}
-            expenses={couple.expenses}
-            agreements={couple.agreements}
-            settlements={couple.settlements}
-          />
-        </div>
+      <AnimatedItem delay={100}>
+        <MonthlyBalanceCard
+          profiles={couple.profiles}
+          expenses={couple.expenses}
+          agreements={couple.agreements}
+          settlements={couple.settlements}
+        />
       </AnimatedItem>
 
       {/* AI Insights */}
-      <AnimatedItem delay={150}>
+      <AnimatedItem delay={125}>
         <div className="mt-4">
           <AIInsightsCard coupleId={couple.id} />
         </div>
       </AnimatedItem>
 
       {/* Month Comparison */}
-      <AnimatedItem delay={175}>
+      <AnimatedItem delay={150}>
         <div className="mt-4">
-          <MonthComparisonCard 
-            expenses={couple.expenses} 
-            agreements={couple.agreements} 
+          <MonthComparisonCard
+            expenses={couple.expenses}
+            agreements={couple.agreements}
           />
         </div>
       </AnimatedItem>
 
       {/* Top Categories */}
-      <AnimatedItem delay={200}>
+      <AnimatedItem delay={175}>
         <div className="mt-4">
-          <TopCategoriesCard 
-            expenses={couple.expenses} 
-            tags={couple.tags} 
+          <TopCategoriesCard
+            expenses={couple.expenses}
+            tags={couple.tags}
           />
         </div>
       </AnimatedItem>
 
       {/* Recent Expenses */}
       <div className="mt-6">
-        <AnimatedItem delay={225}>
+        <AnimatedItem delay={200}>
           <h2 className="text-sm font-medium text-muted-foreground mb-3">
             {prefT('Últimos gastos')}
           </h2>
         </AnimatedItem>
         
         {recentExpenses.length === 0 ? (
-          <AnimatedItem delay={250}>
+          <AnimatedItem delay={225}>
             <div className="bg-card rounded-2xl p-6 text-center shadow-glass">
               <p className="text-muted-foreground">
                 {prefT('Nenhum gasto ainda')}
@@ -174,7 +164,7 @@ export default function Summary() {
         ) : (
           <div className="space-y-3">
             {recentExpenses.map((expense, index) => (
-              <AnimatedItem key={expense.id} delay={275 + index * 50}>
+              <AnimatedItem key={expense.id} delay={225 + index * 50}>
                 <ExpenseCard
                   expense={expense}
                   profiles={couple.profiles}
