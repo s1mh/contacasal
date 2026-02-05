@@ -6,15 +6,36 @@ const corsHeaders = {
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
 };
 
-interface SpendingData {
-  totalMonth: number;
-  totalPreviousMonth: number;
-  topCategories: { name: string; amount: number }[];
-  person1Paid: number;
-  person2Paid: number;
-  expenseCount: number;
-  uniqueDays: number;
-  uniqueCategories: number;
+interface SplitValue {
+  person1?: number;
+  person2?: number;
+  person3?: number;
+  person4?: number;
+  person5?: number;
+  [key: string]: number | undefined;
+}
+
+interface Expense {
+  id: string;
+  total_amount: number;
+  paid_by: number;
+  split_type: string;
+  split_value: SplitValue;
+  tag_id: string | null;
+  expense_date: string;
+  installment_number?: number;
+}
+
+interface Profile {
+  id: string;
+  position: number;
+  name: string;
+  color: string;
+}
+
+interface Tag {
+  id: string;
+  name: string;
 }
 
 serve(async (req) => {
@@ -59,7 +80,6 @@ serve(async (req) => {
     const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1).toISOString().split('T')[0];
     const startOfPrevMonth = new Date(now.getFullYear(), now.getMonth() - 1, 1).toISOString().split('T')[0];
     const endOfPrevMonth = new Date(now.getFullYear(), now.getMonth(), 0).toISOString().split('T')[0];
-    const minLearningDate = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000).toISOString().split('T')[0];
 
     const [expensesRes, profilesRes, tagsRes] = await Promise.all([
       supabaseClient.from('expenses').select('*').eq('couple_id', coupleId),
@@ -67,17 +87,16 @@ serve(async (req) => {
       supabaseClient.from('tags').select('*').eq('couple_id', coupleId),
     ]);
 
-    const expenses = expensesRes.data || [];
-    const profiles = profilesRes.data || [];
-    const tags = tagsRes.data || [];
+    const expenses: Expense[] = expensesRes.data || [];
+    const profiles: Profile[] = (profilesRes.data || []).filter((p: Profile) => p.name && p.name !== 'Pessoa');
+    const tags: Tag[] = tagsRes.data || [];
 
     // Filter out installments > 1 to count purchases (not each installment)
-    // Only first installment or non-installment expenses count as unique purchases
     const uniquePurchases = expenses.filter(e =>
       !e.installment_number || e.installment_number === 1
     );
 
-    // Check learning progress (using unique purchases, not individual installments)
+    // Check learning progress
     const uniqueDays = new Set(uniquePurchases.map(e => e.expense_date)).size;
     const uniqueCategories = new Set(uniquePurchases.filter(e => e.tag_id).map(e => e.tag_id)).size;
     const hasEnoughData = uniqueDays >= 7 && uniquePurchases.length >= 5 && uniqueCategories >= 2;
@@ -100,7 +119,7 @@ serve(async (req) => {
       });
     }
 
-    // Calculate spending data (all expenses for amounts, but unique purchases for counts)
+    // Calculate spending data with correct split understanding
     const thisMonthExpenses = expenses.filter(e => e.expense_date >= startOfMonth);
     const thisMonthPurchases = thisMonthExpenses.filter(e =>
       !e.installment_number || e.installment_number === 1
@@ -127,13 +146,93 @@ serve(async (req) => {
         return { name: tag?.name || 'Outros', amount };
       });
 
-    // Calculate who paid more
-    const person1Expenses = thisMonthExpenses.filter(e => e.paid_by === 1);
-    const person2Expenses = thisMonthExpenses.filter(e => e.paid_by === 2);
-    const person1Paid = person1Expenses.reduce((sum, e) => sum + e.total_amount, 0);
-    const person2Paid = person2Expenses.reduce((sum, e) => sum + e.total_amount, 0);
+    // Calculate ACTUAL shares per person (considering splits!)
+    // This is key: we need to calculate what each person actually paid vs what they should have paid
+    const personShares: Record<number, { paid: number; shouldPay: number; categories: Record<string, number> }> = {};
 
-    // Generate insights using AI
+    profiles.forEach(p => {
+      personShares[p.position] = { paid: 0, shouldPay: 0, categories: {} };
+    });
+
+    // Process this month's expenses with proper split calculations
+    thisMonthExpenses.forEach(expense => {
+      const { total_amount, paid_by, split_type, split_value, tag_id } = expense;
+
+      // Add to paid amount for the payer
+      if (personShares[paid_by]) {
+        personShares[paid_by].paid += total_amount;
+
+        // Track categories for the payer
+        const category = tags.find(t => t.id === tag_id)?.name || 'Outros';
+        personShares[paid_by].categories[category] = (personShares[paid_by].categories[category] || 0) + total_amount;
+      }
+
+      // Calculate what each person should pay based on split
+      const numPeople = profiles.length || 2;
+
+      if (split_type === 'equal') {
+        // 50/50 (or equal split among all configured people)
+        const sharePerPerson = total_amount / numPeople;
+        profiles.forEach(p => {
+          if (personShares[p.position]) {
+            personShares[p.position].shouldPay += sharePerPerson;
+          }
+        });
+      } else if (split_type === 'percentage') {
+        profiles.forEach(p => {
+          const key = `person${p.position}` as keyof SplitValue;
+          const percentage = split_value[key] || (100 / numPeople);
+          if (personShares[p.position]) {
+            personShares[p.position].shouldPay += (total_amount * (percentage as number)) / 100;
+          }
+        });
+      } else if (split_type === 'fixed') {
+        profiles.forEach(p => {
+          const key = `person${p.position}` as keyof SplitValue;
+          const fixed = split_value[key] || 0;
+          if (personShares[p.position]) {
+            personShares[p.position].shouldPay += (fixed as number);
+          }
+        });
+      } else if (split_type === 'full') {
+        // One person pays 100% - no division
+        profiles.forEach(p => {
+          const key = `person${p.position}` as keyof SplitValue;
+          if (split_value[key] === 100 && personShares[p.position]) {
+            personShares[p.position].shouldPay += total_amount;
+          }
+        });
+      }
+    });
+
+    // Calculate split statistics
+    const equalSplitCount = thisMonthExpenses.filter(e => e.split_type === 'equal').length;
+    const fullPayCount = thisMonthExpenses.filter(e => e.split_type === 'full').length;
+    const percentageSplitCount = thisMonthExpenses.filter(e => e.split_type === 'percentage').length;
+
+    const equalSplitPercentage = thisMonthPurchases.length > 0
+      ? Math.round((equalSplitCount / thisMonthExpenses.length) * 100)
+      : 0;
+
+    // Build profile summary for AI
+    const profileSummary = profiles.map(p => {
+      const shares = personShares[p.position];
+      const balance = shares.paid - shares.shouldPay;
+      const topCategory = Object.entries(shares.categories)
+        .sort(([, a], [, b]) => b - a)[0];
+
+      return {
+        name: p.name,
+        position: p.position,
+        totalPaid: shares.paid,
+        shouldHavePaid: shares.shouldPay,
+        balance: balance, // positive = paid more than should, negative = owes
+        topCategory: topCategory ? topCategory[0] : null,
+        topCategoryAmount: topCategory ? topCategory[1] : 0,
+      };
+    });
+
+    // Generate insights using AI with BETTER context
     const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
     if (!LOVABLE_API_KEY) {
       return new Response(JSON.stringify({ error: "LOVABLE_API_KEY not configured" }), {
@@ -142,32 +241,45 @@ serve(async (req) => {
       });
     }
 
-    const person1Name = profiles.find(p => p.position === 1)?.name || 'Pessoa 1';
-    const person2Name = profiles.find(p => p.position === 2)?.name || 'Pessoa 2';
-    const trend = totalPreviousMonth > 0 
-      ? ((totalMonth - totalPreviousMonth) / totalPreviousMonth * 100).toFixed(0) 
+    const trend = totalPreviousMonth > 0
+      ? ((totalMonth - totalPreviousMonth) / totalPreviousMonth * 100).toFixed(0)
       : 'N/A';
 
-    const prompt = `Você é um assistente financeiro simpático para casais brasileiros.
+    const prompt = `Você é um assistente financeiro simpático para um app de divisão de contas entre pessoas que moram juntas (pode ser casal, amigos, família).
 
-Dados do casal:
-- Total gasto esse mês: R$ ${totalMonth.toFixed(2)}
+CONTEXTO IMPORTANTE SOBRE O APP:
+- As despesas são divididas entre as pessoas (geralmente 50/50, mas pode variar)
+- ${equalSplitPercentage}% das despesas deste mês são divididas igualmente (50/50 ou proporcionalmente)
+- ${fullPayCount} despesas são pagas 100% por uma pessoa (sem divisão)
+- Quem "paga" a despesa está apenas adiantando o valor - depois as partes devidas são calculadas automaticamente
+- NÃO sugira que uma pessoa "pague" uma categoria específica, pois as despesas são compartilhadas
+- Foque em padrões de gastos, economia, e celebrações - NÃO em quem deve pagar o quê
+
+Dados deste mês:
+- Total gasto: R$ ${totalMonth.toFixed(2)}
 - Total mês anterior: R$ ${totalPreviousMonth.toFixed(2)}
-- Tendência: ${trend}%
+- Tendência: ${trend === 'N/A' ? 'Primeiro mês completo' : trend + '%'}
 - Categorias mais usadas: ${topCategories.map(c => `${c.name} (R$ ${c.amount.toFixed(2)})`).join(', ')}
-- ${person1Name} pagou: R$ ${person1Paid.toFixed(2)} (${totalMonth > 0 ? ((person1Paid / totalMonth) * 100).toFixed(0) : 0}%)
-- ${person2Name} pagou: R$ ${person2Paid.toFixed(2)} (${totalMonth > 0 ? ((person2Paid / totalMonth) * 100).toFixed(0) : 0}%)
-- Total de ${thisMonthPurchases.length} compras esse mês
+- Total de ${thisMonthPurchases.length} compras este mês
 
-Gere 3 insights curtos (máx 80 caracteres cada) em português brasileiro.
-Seja amigável, use emojis, evite ser crítico demais. Personalize com os nomes.
+Participantes e seus gastos:
+${profileSummary.map(p => `- ${p.name}: adiantou R$ ${p.totalPaid.toFixed(2)}, parte devida R$ ${p.shouldHavePaid.toFixed(2)}${p.balance > 0 ? ` (tem R$ ${p.balance.toFixed(2)} a receber)` : p.balance < 0 ? ` (deve R$ ${Math.abs(p.balance).toFixed(2)})` : ' (equilibrado)'}`).join('\n')}
+
+Gere 2-3 insights curtos (máx 80 caracteres cada) em português brasileiro.
+- Seja amigável e positivo, use emojis ocasionalmente
+- Foque em: tendências de gastos, economia, categorias maiores, celebrações de metas
+- NUNCA sugira que uma pessoa pague uma categoria inteira - tudo é dividido!
+- NUNCA diga "X pagou o lazer" ou "que tal você pagar X" - isso não faz sentido no app
+- Se alguém adiantou mais, apenas celebre a contribuição, não sugira mudanças
+- Personalize com os nomes quando apropriado
 
 Responda APENAS em JSON válido neste formato:
 [
   { "type": "celebration", "message": "...", "priority": 8 },
-  { "type": "tip", "message": "...", "priority": 5 },
-  { "type": "alert", "message": "...", "priority": 3 }
-]`;
+  { "type": "tip", "message": "...", "priority": 5 }
+]
+
+Tipos: "celebration" (positivo/meta atingida), "tip" (dica financeira), "alert" (atenção a gastos altos)`;
 
     const aiResponse = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
       method: "POST",
@@ -178,7 +290,7 @@ Responda APENAS em JSON válido neste formato:
       body: JSON.stringify({
         model: "google/gemini-3-flash-preview",
         messages: [
-          { role: "system", content: "Você gera insights financeiros em JSON. Responda APENAS com o array JSON, sem markdown." },
+          { role: "system", content: "Você gera insights financeiros em JSON. Responda APENAS com o array JSON, sem markdown. Nunca sugira que uma pessoa pague sozinha uma categoria - todas as despesas são divididas automaticamente." },
           { role: "user", content: prompt },
         ],
       }),
@@ -207,20 +319,19 @@ Responda APENAS em JSON válido neste formato:
 
     const aiData = await aiResponse.json();
     const content = aiData.choices?.[0]?.message?.content || "[]";
-    
+
     let insights = [];
     try {
-      // Try to parse the JSON from the response
       const cleanContent = content.replace(/```json\n?|\n?```/g, '').trim();
       insights = JSON.parse(cleanContent);
     } catch (parseError) {
       console.error("Failed to parse AI response:", content);
       insights = [
-        { type: "tip", message: "Continue registrando seus gastos! 📊", priority: 5 }
+        { type: "tip", message: "Continue registrando seus gastos!", priority: 5 }
       ];
     }
 
-    // Save insights to database (optional - for history)
+    // Save insights to database
     const serviceClient = createClient(
       Deno.env.get("SUPABASE_URL") ?? "",
       Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? ""
@@ -236,7 +347,7 @@ Responda APENAS em JSON válido neste formato:
     // Insert new insights
     if (insights.length > 0) {
       await serviceClient.from('ai_insights').insert(
-        insights.map((insight: any) => ({
+        insights.map((insight: { type: string; message: string; priority: number }) => ({
           couple_id: coupleId,
           insight_type: insight.type,
           message: insight.message,
@@ -254,8 +365,8 @@ Responda APENAS em JSON válido neste formato:
         totalMonth,
         totalPreviousMonth,
         trend,
-        person1Paid,
-        person2Paid,
+        profileSummary,
+        equalSplitPercentage,
       }
     }), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },

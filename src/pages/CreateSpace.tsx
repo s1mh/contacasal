@@ -151,14 +151,15 @@ export default function CreateSpace() {
     }
   };
 
-  const handlePinComplete = () => {
+  const handlePinComplete = async () => {
     if (pinCode.length === 4) {
       const weakCheck = isWeakPin(pinCode);
       if (weakCheck.weak) {
         setPinError(weakCheck.reason ? prefT(weakCheck.reason) : prefT('Código muito fraco'));
         return;
       }
-      setStep('email');
+      // Skip email step - go directly to creating space
+      await createSpaceWithProfile();
     }
   };
 
@@ -481,22 +482,34 @@ export default function CreateSpace() {
                   </div>
 
                   <div className="flex gap-2 w-full">
-                    <Button variant="ghost" onClick={() => setStep('profile')} className="flex-1">
+                    <Button variant="ghost" onClick={() => setStep('profile')} className="flex-1" disabled={creating}>
                       <ArrowLeft className="w-4 h-4 mr-2" />
                       {prefT('Voltar')}
                     </Button>
-                    <Button 
-                      onClick={handlePinComplete} 
-                      disabled={pinCode.length !== 4 || !!pinError || !!usernameError} 
+                    <Button
+                      onClick={handlePinComplete}
+                      disabled={pinCode.length !== 4 || !!pinError || !!usernameError || creating}
                       className="flex-1"
                     >
-                      {prefT('Continuar')}
-                      <ArrowRight className="w-4 h-4 ml-2" />
+                      {creating ? (
+                        <>
+                          <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                          {prefT('Criando...')}
+                        </>
+                      ) : (
+                        <>
+                          <Heart className="w-4 h-4 mr-2" />
+                          {prefT('Criar espaço')}
+                        </>
+                      )}
                     </Button>
                   </div>
                 </div>
               </>
-            ) : (
+            )}
+
+            {/* Email Step - DISABLED but kept for future use */}
+            {false && (
               <>
                 {/* Email Step */}
                 <div className="flex flex-col items-center gap-6 animate-fade-in">
@@ -567,8 +580,8 @@ export default function CreateSpace() {
                     </Button>
                   </div>
 
-                  <Button 
-                    variant="link" 
+                  <Button
+                    variant="link"
                     onClick={handleSkipEmail}
                     className="text-muted-foreground"
                     disabled={creating}
