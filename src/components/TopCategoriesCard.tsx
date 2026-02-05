@@ -2,7 +2,7 @@
  import { startOfMonth, endOfMonth, parseISO, isWithinInterval } from 'date-fns';
  import { usePreferences } from '@/contexts/PreferencesContext';
  import { useI18n } from '@/contexts/I18nContext';
- import { cn } from '@/lib/utils';
+ import { cn, maskCurrencyValue } from '@/lib/utils';
  import { Expense, Tag } from '@/contexts/CoupleContext';
  import { 
    Tag as TagIcon, 
@@ -106,11 +106,8 @@
                    </div>
                    <span className="text-sm font-medium">{category.name}</span>
                  </div>
-                 <span className={cn(
-                   "text-sm font-semibold transition-all duration-300",
-                   valuesHidden && "blur-md select-none"
-                 )}>
-                   {formatCurrency(category.amount)}
+                 <span className="text-sm font-semibold transition-all duration-300">
+                   {valuesHidden ? maskCurrencyValue(formatCurrency(category.amount)) : formatCurrency(category.amount)}
                  </span>
                </div>
                <div className="flex items-center gap-2">

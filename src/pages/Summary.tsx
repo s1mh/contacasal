@@ -1,5 +1,5 @@
 import { useOutletContext, useParams } from 'react-router-dom';
-import { Share2, Eye, EyeOff } from 'lucide-react';
+import { Share2 } from 'lucide-react';
 import { BalanceCard } from '@/components/BalanceCard';
 import { ExpenseCard } from '@/components/ExpenseCard';
 import { Avatar } from '@/components/Avatar';
@@ -18,7 +18,7 @@ export default function Summary() {
   const { calculateBalance } = useCoupleContext();
   const { shareCode } = useParams();
   const { toast } = useToast();
-  const { t: prefT, valuesHidden, setValuesHidden } = usePreferences();
+  const { t: prefT } = usePreferences();
   const balance = calculateBalance();
 
   const recentExpenses = couple.expenses.slice(0, 5);
@@ -62,29 +62,15 @@ export default function Summary() {
               />
             ))}
           </div>
-          <div className="flex items-center gap-2">
-            <Button
-              variant="ghost"
-              size="icon"
-              onClick={() => setValuesHidden(!valuesHidden)}
-              className="rounded-full h-9 w-9"
-            >
-              {valuesHidden ? (
-                <EyeOff className="w-4 h-4 text-muted-foreground" />
-              ) : (
-                <Eye className="w-4 h-4 text-muted-foreground" />
-              )}
-            </Button>
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={handleShare}
-              className="rounded-full gap-2"
-            >
-              <Share2 className="w-4 h-4" />
-              {prefT('Compartilhar')}
-            </Button>
-          </div>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={handleShare}
+            className="rounded-full gap-2"
+          >
+            <Share2 className="w-4 h-4" />
+            {prefT('Compartilhar')}
+          </Button>
         </div>
       </AnimatedItem>
 
