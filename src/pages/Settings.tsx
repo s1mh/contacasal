@@ -3,6 +3,7 @@ import { useOutletContext, useParams, useNavigate } from 'react-router-dom';
 import { User, Palette, Tag, Plus, Trash2, Check, Copy, LogOut, UserX, AtSign, RefreshCw, Users, Crown, Globe, Coins } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Avatar } from '@/components/Avatar';
 import { TagPill } from '@/components/TagPill';
 import { CardManager } from '@/components/CardManager';
@@ -16,6 +17,9 @@ import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
 import { usePreferences } from '@/contexts/PreferencesContext';
+import { useI18n } from '@/contexts/I18nContext';
+import { SupportedLocale } from '@/lib/i18n';
+import { SupportedCurrency } from '@/lib/preferences';
 
 export default function Settings() {
   const { couple, myPosition } = useOutletContext<{ couple: Couple; myPosition: number | null }>();
@@ -36,6 +40,7 @@ export default function Settings() {
   const { shareCode } = useParams();
   const { toast } = useToast();
   const { t: prefT } = usePreferences();
+  const { locale, currency, setLocale, setCurrency } = useI18n();
   const [regeneratingCode, setRegeneratingCode] = useState(false);
 
   const [editingName, setEditingName] = useState(false);
@@ -55,14 +60,14 @@ export default function Settings() {
   const handleLocaleChange = (newLocale: SupportedLocale) => {
     setLocale(newLocale);
     toast({ 
-      title: t.toast.preferencesUpdated,
+      title: prefT('Preferências atualizadas'),
     });
   };
 
   const handleCurrencyChange = (newCurrency: SupportedCurrency) => {
     setCurrency(newCurrency);
     toast({ 
-      title: t.toast.preferencesUpdated,
+      title: prefT('Preferências atualizadas'),
     });
   };
 
@@ -356,24 +361,24 @@ export default function Settings() {
           <div className="flex items-center gap-3 mb-4">
             <Globe className="w-4 h-4 text-muted-foreground" />
             <span className="text-sm font-medium text-muted-foreground">
-              {t.settings.preferences}
+              {prefT('Preferências')}
             </span>
           </div>
 
           <div className="space-y-4">
             {/* Language */}
             <div>
-              <label className="text-sm text-muted-foreground mb-2 block">{t.settings.language}</label>
+              <label className="text-sm text-muted-foreground mb-2 block">{prefT('Idioma')}</label>
               <Select value={locale} onValueChange={(value) => handleLocaleChange(value as SupportedLocale)}>
                 <SelectTrigger>
                   <SelectValue>
-                    {t.languages[locale]}
+                    {locale === 'pt-BR' ? 'Português (Brasil)' : locale === 'en-US' ? 'English (US)' : 'Español'}
                   </SelectValue>
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="pt-BR">{t.languages['pt-BR']}</SelectItem>
-                  <SelectItem value="en-US">{t.languages['en-US']}</SelectItem>
-                  <SelectItem value="es-ES">{t.languages['es-ES']}</SelectItem>
+                  <SelectItem value="pt-BR">Português (Brasil)</SelectItem>
+                  <SelectItem value="en-US">English (US)</SelectItem>
+                  <SelectItem value="es-ES">Español</SelectItem>
                 </SelectContent>
               </Select>
             </div>
@@ -381,18 +386,18 @@ export default function Settings() {
             {/* Currency */}
             <div>
               <label className="text-sm text-muted-foreground mb-2 block flex items-center gap-2">
-                <Coins className="w-4 h-4" /> {t.settings.currency}
+                <Coins className="w-4 h-4" /> {prefT('Moeda')}
               </label>
               <Select value={currency} onValueChange={(value) => handleCurrencyChange(value as SupportedCurrency)}>
                 <SelectTrigger>
                   <SelectValue>
-                    {t.currencies[currency]}
+                    {currency === 'BRL' ? 'Real (R$)' : currency === 'USD' ? 'Dollar ($)' : 'Euro (€)'}
                   </SelectValue>
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="BRL">{t.currencies.BRL}</SelectItem>
-                  <SelectItem value="USD">{t.currencies.USD}</SelectItem>
-                  <SelectItem value="EUR">{t.currencies.EUR}</SelectItem>
+                  <SelectItem value="BRL">Real (R$)</SelectItem>
+                  <SelectItem value="USD">Dollar ($)</SelectItem>
+                  <SelectItem value="EUR">Euro (€)</SelectItem>
                 </SelectContent>
               </Select>
             </div>
