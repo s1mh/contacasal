@@ -3,25 +3,41 @@ import { cn } from '@/lib/utils';
 import { CAT_AVATARS, CAT_BG_COLORS } from '@/lib/constants';
 import { CatAnimationType } from './CatAnimation';
 
+export type AvatarSize = 'xs' | 'sm' | 'md' | 'lg' | 'xl' | '2xl';
+
 interface AvatarProps {
   avatarIndex: number;
-  size?: 'sm' | 'md' | 'lg' | 'xl';
+  size?: AvatarSize;
   className?: string;
-  ringColor?: string;
-  animated?: boolean; // Force animation always on
-  animateOnHover?: boolean; // Only animate when hovered (wiggle like profile creation)
-  animateOnce?: boolean; // Animate once for 2 seconds then stop
-  selected?: boolean; // Is this avatar selected (for selection screens)
-  showBackground?: boolean;
+  ringColor?: string;        // Cor do anel (hex). Usa ring-2 por padrão.
+  ringWidth?: 2 | 4;         // Espessura do anel (2 = ring-2, 4 = ring-4)
+  animated?: boolean;         // Animação contínua (idle)
+  animateOnHover?: boolean;   // Wiggle ao passar o mouse
+  animateOnce?: boolean;      // Anima uma vez e para
+  selected?: boolean;         // Estado selecionado (idle animation)
+  showBackground?: boolean;   // Fundo colorido do avatar
+  shadow?: boolean;           // Adiciona shadow-lg
   animation?: CatAnimationType;
   onClick?: () => void;
 }
 
-const sizeClasses = {
-  sm: 'w-8 h-8',
-  md: 'w-12 h-12',
-  lg: 'w-16 h-16',
-  xl: 'w-24 h-24',
+/**
+ * Componente centralizado de Avatar.
+ *
+ * REGRA: SEMPRE use este componente para renderizar avatares de gatinho.
+ * NUNCA use <img> com CAT_AVATARS diretamente.
+ *
+ * @example
+ * <Avatar avatarIndex={profile.avatar_index} size="md" ringColor={profile.color} />
+ */
+
+const sizeClasses: Record<AvatarSize, string> = {
+  xs:   'w-6 h-6',     // 24px — inline, expense cards
+  sm:   'w-8 h-8',     // 32px — listas compactas
+  md:   'w-12 h-12',   // 48px — padrão
+  lg:   'w-16 h-16',   // 64px — perfil, modais
+  xl:   'w-24 h-24',   // 96px — destaque, onboarding
+  '2xl': 'w-32 h-32',  // 128px — hero
 };
 
 export function Avatar({
@@ -29,11 +45,13 @@ export function Avatar({
   size = 'md',
   className,
   ringColor,
+  ringWidth = 2,
   animated = false,
   animateOnHover = true,
   animateOnce = false,
   selected = false,
   showBackground = true,
+  shadow = false,
   animation = 'idle',
   onClick,
 }: AvatarProps) {
@@ -65,12 +83,19 @@ export function Avatar({
     return '';
   };
 
+  const ringClasses = ringColor
+    ? ringWidth === 4
+      ? 'ring-4 ring-offset-2 ring-offset-background'
+      : 'ring-2 ring-offset-2 ring-offset-background'
+    : '';
+
   return (
     <div
       className={cn(
         'rounded-full overflow-hidden flex-shrink-0 relative',
         sizeClasses[size],
-        ringColor && 'ring-2 ring-offset-2 ring-offset-background',
+        ringClasses,
+        shadow && 'shadow-lg',
         onClick && 'cursor-pointer',
         className
       )}
