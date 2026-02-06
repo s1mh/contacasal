@@ -1,9 +1,9 @@
 import { cn, maskCurrencyValue } from '@/lib/utils';
 import { formatCurrency as formatCurrencyConst, formatDate } from '@/lib/constants';
-import { Avatar } from '@/components/Avatar';
 import { Expense, Profile, Tag, Card } from '@/hooks/useCouple';
 import { usePreferences } from '@/contexts/PreferencesContext';
 import { useI18n } from '@/contexts/I18nContext';
+import { Avatar } from '@/components/Avatar';
 import { 
   Tag as TagIcon, 
   Utensils, 
@@ -124,9 +124,11 @@ export function ExpenseCard({ expense, profiles, tags, cards = [], onDelete, onE
                 <div className="flex items-center gap-1.5">
                   <Avatar
                     avatarIndex={paidByProfile.avatar_index}
-                    size="xs"
+                    size="sm"
+                    className="w-6 h-6"
                     ringColor={paidByProfile.color}
-                    animateOnHover
+                    animateOnHover={false}
+                    showBackground={false}
                   />
                   <span className="text-xs text-muted-foreground">{prefT('pagou')}</span>
                 </div>

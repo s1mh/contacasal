@@ -214,15 +214,19 @@ export default function ResetPin() {
           {/* Profile Header */}
           {profile && (
             <div className="flex flex-col items-center gap-4 mb-8">
-              <Avatar
-                avatarIndex={profile.avatar_index}
-                size="xl"
-                ringColor={profile.color}
-                ringWidth={4}
-                animated
-                animateOnHover={false}
-                className="w-20 h-20"
-              />
+              <div 
+                className="w-20 h-20 rounded-full overflow-hidden ring-4 animate-cat-idle"
+                style={{ boxShadow: `0 0 0 4px ${profile.color}` }}
+              >
+                <Avatar
+                  avatarIndex={profile.avatar_index}
+                  size="xl"
+                  className="w-20 h-20"
+                  selected
+                  animateOnHover={false}
+                  showBackground={false}
+                />
+              </div>
               <div className="text-center">
                 <h1 className="text-xl font-semibold">{profile.name}</h1>
                 <p className="text-sm text-muted-foreground">

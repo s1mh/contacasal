@@ -7,7 +7,6 @@ import { InputOTP, InputOTPGroup, InputOTPSlot, InputOTPSlotMasked } from "@/com
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { useAuthContext } from "@/contexts/AuthContext";
-import { Avatar } from "@/components/Avatar";
 import { devLog } from "@/lib/validation";
 import { cn } from "@/lib/utils";
 import { RecoveryModal } from "@/components/RecoveryModal";
@@ -16,6 +15,7 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { SupportedLocale } from "@/lib/i18n";
 import { SupportedCurrency } from "@/lib/preferences";
 import { OnboardingTutorial, useTutorialState } from "@/components/OnboardingTutorial";
+import { Avatar } from "@/components/Avatar";
 
 interface LastSpace {
   shareCode: string;
@@ -229,8 +229,20 @@ export default function Index() {
       <div className="min-h-screen bg-background flex items-center justify-center">
         <div className="flex flex-col items-center gap-4 animate-fade-in">
           <div className="flex gap-2">
-            <Avatar avatarIndex={1} size="md" shadow animated animateOnHover={false} />
-            <Avatar avatarIndex={2} size="md" shadow animated animateOnHover={false} className="[animation-delay:200ms]" />
+            <Avatar
+              avatarIndex={1}
+              size="md"
+              className="w-12 h-12 shadow-lg animate-bounce-gentle"
+              animateOnHover={false}
+              showBackground={false}
+            />
+            <Avatar
+              avatarIndex={2}
+              size="md"
+              className="w-12 h-12 shadow-lg animate-bounce-gentle"
+              animateOnHover={false}
+              showBackground={false}
+            />
           </div>
           <Loader2 className="w-6 h-6 animate-spin text-primary" />
           <p className="text-sm text-muted-foreground">{t('Preparando o amor...')}</p>
@@ -315,10 +327,10 @@ export default function Index() {
           <div className="flex justify-center items-center gap-3 mb-4">
             <Avatar
               avatarIndex={1}
-              size="lg"
-              shadow
+              size="xl"
+              className={cn("w-16 h-16 shadow-lg transition-all duration-500", catsAnimating && "animate-jump")}
               animateOnHover={false}
-              className={cn("transition-all duration-500", catsAnimating && "animate-jump")}
+              showBackground={false}
             />
             <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center">
               <Heart
@@ -330,10 +342,10 @@ export default function Index() {
             </div>
             <Avatar
               avatarIndex={2}
-              size="lg"
-              shadow
+              size="xl"
+              className={cn("w-16 h-16 shadow-lg transition-all duration-500", catsAnimating && "animate-jump")}
               animateOnHover={false}
-              className={cn("transition-all duration-500", catsAnimating && "animate-jump [animation-delay:100ms]")}
+              showBackground={false}
             />
           </div>
           <h1 className="text-3xl font-bold text-foreground mb-2">{t('Conta de Casal')}</h1>
@@ -348,13 +360,15 @@ export default function Index() {
             style={{ animationDelay: "100ms" }}
           >
             <div className="flex flex-col items-center gap-3">
-              <Avatar
-                avatarIndex={lastSpace.avatarIndex || 1}
-                size="lg"
-                animated
-                animateOnHover={false}
-                ringColor="hsl(var(--primary))"
-              />
+              <div className="w-16 h-16 rounded-full overflow-hidden ring-2 ring-primary animate-bounce-gentle">
+                <Avatar
+                  avatarIndex={lastSpace.avatarIndex || 1}
+                  size="xl"
+                  className="w-16 h-16"
+                  animateOnHover={false}
+                  showBackground={false}
+                />
+              </div>
               <div className="text-center">
                 <p className="text-xs text-muted-foreground">{t('Continuar como')}</p>
                 <p className="font-semibold text-lg">{lastSpace.name}</p>

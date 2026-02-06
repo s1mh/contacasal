@@ -110,13 +110,13 @@ export function SettlementModal({ open, onClose, balance, profiles, onSettle, co
           <div className="flex items-center justify-center gap-4 mb-6">
             <div className="flex flex-col items-center">
               <Avatar
-                avatarIndex={debtor?.avatar_index || 1}
+                avatarIndex={(debtor?.avatar_index || 1)}
                 size="md"
-                ringColor={debtor?.color}
-                ringWidth={4}
-                animated
-                animateOnHover={false}
                 className="w-14 h-14"
+                ringColor={debtor?.color}
+                selected
+                animateOnHover={false}
+                showBackground={false}
               />
               <span className="text-sm font-medium mt-2">{debtor?.name}</span>
             </div>
@@ -130,13 +130,13 @@ export function SettlementModal({ open, onClose, balance, profiles, onSettle, co
 
             <div className="flex flex-col items-center">
               <Avatar
-                avatarIndex={creditor?.avatar_index || 1}
+                avatarIndex={(creditor?.avatar_index || 1)}
                 size="md"
-                ringColor={creditor?.color}
-                ringWidth={4}
-                animated
-                animateOnHover={false}
                 className="w-14 h-14"
+                ringColor={creditor?.color}
+                selected
+                animateOnHover={false}
+                showBackground={false}
               />
               <span className="text-sm font-medium mt-2">{creditor?.name}</span>
             </div>

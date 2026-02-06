@@ -323,8 +323,20 @@ function CoupleLayoutContent() {
       <div className="min-h-screen bg-background flex items-center justify-center">
         <div className="flex flex-col items-center gap-4 animate-fade-in">
           <div className="flex gap-2">
-            <Avatar avatarIndex={1} size="md" shadow animated animateOnHover={false} />
-            <Avatar avatarIndex={2} size="md" shadow animated animateOnHover={false} className="[animation-delay:200ms]" />
+            <Avatar
+              avatarIndex={1}
+              size="md"
+              className="w-12 h-12 shadow-lg animate-bounce-gentle"
+              animateOnHover={false}
+              showBackground={false}
+            />
+            <Avatar
+              avatarIndex={2}
+              size="md"
+              className="w-12 h-12 shadow-lg animate-bounce-gentle"
+              animateOnHover={false}
+              showBackground={false}
+            />
           </div>
           <Loader2 className="w-6 h-6 animate-spin text-primary" />
           <p className="text-sm text-muted-foreground">

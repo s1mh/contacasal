@@ -159,10 +159,11 @@ export function ReconnectModal({ open, profiles, onReconnect, onCreateNew, share
                     >
                       <Avatar
                         avatarIndex={profile.avatar_index}
-                        size="lg"
+                        size="xl"
+                        className="w-16 h-16"
                         ringColor={profile.color}
-                        ringWidth={4}
                         animateOnHover
+                        showBackground={false}
                       />
                       <span className="font-medium text-sm">{profile.name}</span>
                       {profile.username && (
@@ -195,11 +196,11 @@ export function ReconnectModal({ open, profiles, onReconnect, onCreateNew, share
                     <Avatar
                       avatarIndex={selectedProfile.avatar_index}
                       size="xl"
-                      ringColor={selectedProfile.color}
-                      ringWidth={4}
-                      animated
-                      animateOnHover={false}
                       className="w-20 h-20"
+                      ringColor={selectedProfile.color}
+                      selected
+                      animateOnHover={false}
+                      showBackground={false}
                     />
                     {selectedProfile.username && (
                       <span className="text-sm text-muted-foreground">@{selectedProfile.username}</span>
