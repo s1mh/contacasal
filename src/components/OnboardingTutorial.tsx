@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { Dialog, DialogContent } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
-import { CAT_AVATARS } from '@/lib/constants';
+import { Avatar } from '@/components/Avatar';
 import { usePreferences } from '@/contexts/PreferencesContext';
 import {
   Heart,
@@ -331,19 +331,22 @@ export function OnboardingTutorial({ open, onClose, onComplete, context }: Onboa
       case 'cats':
         return (
           <div className="flex justify-center items-center gap-4 py-6">
-            <img
-              src={CAT_AVATARS[0]}
-              alt=""
-              className="w-20 h-20 rounded-full shadow-lg animate-bounce-gentle ring-4 ring-pink-200"
+            <Avatar
+              avatarIndex={1}
+              size="xl"
+              className="w-20 h-20 shadow-lg animate-bounce-gentle ring-4 ring-pink-200"
+              animateOnHover={false}
+              showBackground={false}
             />
             <div className="w-12 h-12 rounded-full bg-pink-100 flex items-center justify-center animate-pulse">
               <Heart className="w-6 h-6 text-pink-500 fill-pink-500" />
             </div>
-            <img
-              src={CAT_AVATARS[1]}
-              alt=""
-              className="w-20 h-20 rounded-full shadow-lg animate-bounce-gentle ring-4 ring-blue-200"
-              style={{ animationDelay: '150ms' }}
+            <Avatar
+              avatarIndex={2}
+              size="xl"
+              className="w-20 h-20 shadow-lg animate-bounce-gentle ring-4 ring-blue-200"
+              animateOnHover={false}
+              showBackground={false}
             />
           </div>
         );
@@ -354,15 +357,16 @@ export function OnboardingTutorial({ open, onClose, onComplete, context }: Onboa
             <div className="relative">
               <div className="flex -space-x-3">
                 {[0, 1, 2, 3, 4].map((i) => (
-                  <img
+                  <Avatar
                     key={i}
-                    src={CAT_AVATARS[i]}
-                    alt=""
+                    avatarIndex={i + 1}
+                    size="xl"
                     className={cn(
-                      "w-14 h-14 rounded-full shadow-lg ring-2 ring-white",
+                      "w-14 h-14 shadow-lg ring-2 ring-white",
                       i > 2 && "opacity-50"
                     )}
-                    style={{ animationDelay: `${i * 100}ms` }}
+                    animateOnHover={false}
+                    showBackground={false}
                   />
                 ))}
               </div>
@@ -400,7 +404,13 @@ export function OnboardingTutorial({ open, onClose, onComplete, context }: Onboa
         return (
           <div className="flex justify-center items-center gap-4 py-6">
             <div className="flex flex-col items-center">
-              <img src={CAT_AVATARS[2]} alt="" className="w-14 h-14 rounded-full shadow-lg ring-2 ring-amber-200" />
+              <Avatar
+                avatarIndex={3}
+                size="xl"
+                className="w-14 h-14 shadow-lg ring-2 ring-amber-200"
+                animateOnHover={false}
+                showBackground={false}
+              />
               <span className="text-xs mt-1 font-medium">Ana</span>
             </div>
             <div className="flex flex-col items-center px-4">
@@ -408,7 +418,13 @@ export function OnboardingTutorial({ open, onClose, onComplete, context }: Onboa
               <span className="text-sm font-bold mt-1">R$ 75</span>
             </div>
             <div className="flex flex-col items-center">
-              <img src={CAT_AVATARS[3]} alt="" className="w-14 h-14 rounded-full shadow-lg ring-2 ring-emerald-200" />
+              <Avatar
+                avatarIndex={4}
+                size="xl"
+                className="w-14 h-14 shadow-lg ring-2 ring-emerald-200"
+                animateOnHover={false}
+                showBackground={false}
+              />
               <span className="text-xs mt-1 font-medium">João</span>
             </div>
           </div>

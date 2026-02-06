@@ -5,7 +5,9 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { InputOTP, InputOTPGroup, InputOTPSlot, InputOTPSlotMasked } from '@/components/ui/input-otp';
 import { cn } from '@/lib/utils';
-import { CAT_AVATARS, PERSON_COLORS } from '@/lib/constants';
+import { PERSON_COLORS } from '@/lib/constants';
+import { Avatar } from '@/components/Avatar';
+import { AvatarSelectionGrid } from '@/components/AvatarSelectionGrid';
 import { Check, Heart, Sparkles, Lock, ArrowRight, ArrowLeft, Mail, SkipForward, AtSign, Loader2, Eye, EyeOff } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
@@ -74,7 +76,6 @@ export default function CreateSpace() {
   const [compliment, setCompliment] = useState('');
   const [showCompliment, setShowCompliment] = useState(false);
   const [creating, setCreating] = useState(false);
-  const [hoveredAvatar, setHoveredAvatar] = useState<number | null>(null);
   const nameCompliments = [
     prefT('Que nome lindo! 💕'),
     prefT('Adorável! ✨'),
@@ -308,42 +309,7 @@ export default function CreateSpace() {
                 {/* Avatar Selection */}
                 <div className="space-y-2 animate-fade-in" style={{ animationDelay: '150ms' }}>
                   <label className="text-sm font-medium text-muted-foreground">{prefT('Escolha seu gatinho')}</label>
-                  <div className="grid grid-cols-4 gap-3">
-                    {CAT_AVATARS.map((avatar, index) => {
-                      const isSelected = avatarIndex === index + 1;
-                      const isHovered = hoveredAvatar === index;
-                      
-                      return (
-                        <button
-                          key={index}
-                          onClick={() => setAvatarIndex(index + 1)}
-                          onMouseEnter={() => setHoveredAvatar(index)}
-                          onMouseLeave={() => setHoveredAvatar(null)}
-                          className={cn(
-                            "relative w-14 h-14 rounded-full overflow-hidden ring-2 transition-all duration-300",
-                            isSelected 
-                              ? "ring-primary ring-offset-2 shadow-lg" 
-                              : "ring-border hover:ring-primary/50"
-                          )}
-                        >
-                          <img 
-                            src={avatar} 
-                            alt={`Avatar ${index + 1}`} 
-                            className={cn(
-                              "w-full h-full object-cover",
-                              isSelected && "animate-cat-idle",
-                              isHovered && !isSelected && "animate-wiggle"
-                            )}
-                          />
-                          {isSelected && (
-                            <div className="absolute inset-0 bg-primary/20 flex items-center justify-center">
-                              <Check className="w-6 h-6 text-primary drop-shadow-md animate-scale-in" />
-                            </div>
-                          )}
-                        </button>
-                      );
-                    })}
-                  </div>
+                  <AvatarSelectionGrid value={avatarIndex} onChange={setAvatarIndex} />
                 </div>
 
                 {/* Color Selection */}
@@ -376,7 +342,14 @@ export default function CreateSpace() {
                     className="w-14 h-14 rounded-full overflow-hidden ring-4"
                     style={{ boxShadow: `0 0 0 4px ${color}` }}
                   >
-                    <img src={CAT_AVATARS[avatarIndex - 1]} alt="Preview" className={cn("w-full h-full object-cover", "animate-cat-idle")} />
+                    <Avatar
+                      avatarIndex={avatarIndex}
+                      size="md"
+                      className="w-14 h-14"
+                      selected
+                      animateOnHover={false}
+                      showBackground={false}
+                    />
                   </div>
                   <span className="font-semibold text-lg">{name.trim() || prefT('Seu nome')}</span>
                 </div>
@@ -398,7 +371,14 @@ export default function CreateSpace() {
                     className="w-20 h-20 rounded-full overflow-hidden ring-4 animate-cat-idle"
                     style={{ boxShadow: `0 0 0 4px ${color}` }}
                   >
-                    <img src={CAT_AVATARS[avatarIndex - 1]} alt="Preview" className="w-full h-full object-cover" />
+                    <Avatar
+                      avatarIndex={avatarIndex}
+                      size="xl"
+                      className="w-20 h-20"
+                      selected
+                      animateOnHover={false}
+                      showBackground={false}
+                    />
                   </div>
                   <div className="text-center">
                     <span className="font-semibold text-lg block">{name}</span>
@@ -510,7 +490,14 @@ export default function CreateSpace() {
                     className="w-20 h-20 rounded-full overflow-hidden ring-4"
                     style={{ boxShadow: `0 0 0 4px ${color}` }}
                   >
-                    <img src={CAT_AVATARS[avatarIndex - 1]} alt="Preview" className="w-full h-full object-cover" />
+                    <Avatar
+                      avatarIndex={avatarIndex}
+                      size="xl"
+                      className="w-20 h-20"
+                      selected
+                      animateOnHover={false}
+                      showBackground={false}
+                    />
                   </div>
                   <div className="text-center">
                     <span className="font-semibold text-lg block">{name}</span>

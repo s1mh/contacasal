@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
 import Lottie, { LottieRefCurrentProps } from 'lottie-react';
 import { cn } from '@/lib/utils';
-import { CAT_AVATARS, CAT_BG_COLORS } from '@/lib/constants';
+import { getAvatarBgColor, getAvatarSrc } from '@/lib/avatar-registry';
 
 // Types of cat animations available
 export type CatAnimationType = 'idle' | 'licking' | 'rolling' | 'sleeping' | 'playing' | 'stretching' | 'lying' | 'purring';
@@ -66,8 +66,8 @@ export function CatAnimation({
   const [hasLottieError, setHasLottieError] = useState(false);
   const [isLottieLoading, setIsLottieLoading] = useState(false);
 
-  const avatarSrc = CAT_AVATARS[avatarIndex - 1] || CAT_AVATARS[0];
-  const bgColor = CAT_BG_COLORS[avatarIndex] || CAT_BG_COLORS[1];
+  const avatarSrc = getAvatarSrc(avatarIndex);
+  const bgColor = getAvatarBgColor(avatarIndex);
   const cssAnimationClass = CSS_ANIMATIONS[animation];
   const lottieUrl = LOTTIE_ANIMATIONS[animation];
 
