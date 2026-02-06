@@ -3,7 +3,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } f
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { Profile, Settlement } from '@/hooks/useCouple';
-import { CAT_AVATARS } from '@/lib/constants';
+import { Avatar } from '@/components/Avatar';
 import { ArrowRight, Check, PartyPopper } from 'lucide-react';
 import { usePreferences } from '@/contexts/PreferencesContext';
 import { useI18n } from '@/contexts/I18nContext';
@@ -109,16 +109,15 @@ export function SettlementModal({ open, onClose, balance, profiles, onSettle, co
           {/* Transfer visualization */}
           <div className="flex items-center justify-center gap-4 mb-6">
             <div className="flex flex-col items-center">
-              <div 
-                className="w-14 h-14 rounded-full overflow-hidden ring-4 animate-cat-idle"
-                style={{ boxShadow: `0 0 0 4px ${debtor?.color}` }}
-              >
-                <img 
-                  src={CAT_AVATARS[(debtor?.avatar_index || 1) - 1]} 
-                  alt={debtor?.name}
-                  className="w-full h-full object-cover"
-                />
-              </div>
+              <Avatar
+                avatarIndex={(debtor?.avatar_index || 1)}
+                size="md"
+                className="w-14 h-14"
+                ringColor={debtor?.color}
+                selected
+                animateOnHover={false}
+                showBackground={false}
+              />
               <span className="text-sm font-medium mt-2">{debtor?.name}</span>
             </div>
 
@@ -130,16 +129,15 @@ export function SettlementModal({ open, onClose, balance, profiles, onSettle, co
             </div>
 
             <div className="flex flex-col items-center">
-              <div 
-                className="w-14 h-14 rounded-full overflow-hidden ring-4 animate-cat-idle"
-                style={{ boxShadow: `0 0 0 4px ${creditor?.color}` }}
-              >
-                <img 
-                  src={CAT_AVATARS[(creditor?.avatar_index || 1) - 1]} 
-                  alt={creditor?.name}
-                  className="w-full h-full object-cover"
-                />
-              </div>
+              <Avatar
+                avatarIndex={(creditor?.avatar_index || 1)}
+                size="md"
+                className="w-14 h-14"
+                ringColor={creditor?.color}
+                selected
+                animateOnHover={false}
+                showBackground={false}
+              />
               <span className="text-sm font-medium mt-2">{creditor?.name}</span>
             </div>
           </div>

@@ -4,7 +4,9 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { InputOTP, InputOTPGroup, InputOTPSlot, InputOTPSlotMasked } from '@/components/ui/input-otp';
 import { cn, isConfiguredProfile } from '@/lib/utils';
-import { CAT_AVATARS, PERSON_COLORS } from '@/lib/constants';
+import { PERSON_COLORS } from '@/lib/constants';
+import { Avatar } from '@/components/Avatar';
+import { AvatarSelectionGrid } from '@/components/AvatarSelectionGrid';
 import { Profile } from '@/contexts/CoupleContext';
 import { Check, Heart, Sparkles, Lock, ArrowRight, ArrowLeft, AtSign, Loader2, Eye, EyeOff, PartyPopper } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
@@ -82,7 +84,6 @@ export function OnboardingModal({ open, onClose, onComplete, profiles, shareCode
   const [generatingUsername, setGeneratingUsername] = useState(false);
   const [compliment, setCompliment] = useState('');
   const [showCompliment, setShowCompliment] = useState(false);
-  const [hoveredAvatar, setHoveredAvatar] = useState<number | null>(null);
   const [complimentTimeout, setComplimentTimeout] = useState<NodeJS.Timeout | null>(null);
   const [isTransitioning, setIsTransitioning] = useState(false);
   const { t: prefT } = usePreferences();
@@ -292,10 +293,13 @@ export function OnboardingModal({ open, onClose, onComplete, profiles, shareCode
                           className="w-24 h-24 rounded-full overflow-hidden ring-4 animate-bounce-gentle"
                           style={{ boxShadow: `0 0 0 4px ${hostProfile.color}` }}
                         >
-                          <img 
-                            src={CAT_AVATARS[hostProfile.avatar_index - 1]} 
-                            alt={hostProfile.name}
-                            className="w-full h-full object-cover"
+                          <Avatar
+                            avatarIndex={hostProfile.avatar_index}
+                            size="xl"
+                            className="w-24 h-24"
+                            selected
+                            animateOnHover={false}
+                            showBackground={false}
                           />
                         </div>
                         <span className="font-semibold text-lg">{hostProfile.name}</span>
@@ -354,42 +358,7 @@ export function OnboardingModal({ open, onClose, onComplete, profiles, shareCode
               {/* Avatar Selection */}
               <div className="space-y-2 animate-fade-in" style={{ animationDelay: '150ms' }}>
                 <label className="text-sm font-medium text-muted-foreground">{prefT('Escolha seu gatinho')}</label>
-                <div className="grid grid-cols-4 gap-3">
-                  {CAT_AVATARS.map((avatar, index) => {
-                    const isSelected = avatarIndex === index + 1;
-                    const isHovered = hoveredAvatar === index;
-                    
-                    return (
-                      <button
-                        key={index}
-                        onClick={() => setAvatarIndex(index + 1)}
-                        onMouseEnter={() => setHoveredAvatar(index)}
-                        onMouseLeave={() => setHoveredAvatar(null)}
-                        className={cn(
-                          "relative w-14 h-14 rounded-full overflow-hidden ring-2 transition-all duration-300",
-                          isSelected 
-                            ? "ring-primary ring-offset-2 shadow-lg" 
-                            : "ring-border hover:ring-primary/50"
-                        )}
-                      >
-                        <img 
-                          src={avatar} 
-                          alt={`Avatar ${index + 1}`} 
-                          className={cn(
-                            "w-full h-full object-cover",
-                            isSelected && "animate-cat-idle",
-                            isHovered && !isSelected && "animate-wiggle"
-                          )}
-                        />
-                        {isSelected && (
-                          <div className="absolute inset-0 bg-primary/20 flex items-center justify-center">
-                            <Check className="w-6 h-6 text-primary drop-shadow-md animate-scale-in" />
-                          </div>
-                        )}
-                      </button>
-                    );
-                  })}
-                </div>
+                <AvatarSelectionGrid value={avatarIndex} onChange={setAvatarIndex} />
               </div>
 
               {/* Color Selection */}
@@ -428,13 +397,13 @@ export function OnboardingModal({ open, onClose, onComplete, profiles, shareCode
                     transition: 'box-shadow 0.3s ease'
                   }}
                 >
-                  <img 
-                    src={CAT_AVATARS[avatarIndex - 1]} 
-                    alt="Preview"
-                    className={cn(
-                      "w-full h-full object-cover",
-                      name.trim() && "animate-cat-idle"
-                    )}
+                  <Avatar
+                    avatarIndex={avatarIndex}
+                    size="md"
+                    className="w-14 h-14"
+                    selected={!!name.trim()}
+                    animateOnHover={false}
+                    showBackground={false}
                   />
                 </div>
                 <div className="text-left">
@@ -478,10 +447,13 @@ export function OnboardingModal({ open, onClose, onComplete, profiles, shareCode
                   className="w-20 h-20 rounded-full overflow-hidden ring-4 transition-all animate-cat-idle"
                   style={{ boxShadow: `0 0 0 4px ${color}` }}
                 >
-                  <img 
-                    src={CAT_AVATARS[avatarIndex - 1]} 
-                    alt="Preview"
-                    className="w-full h-full object-cover"
+                  <Avatar
+                    avatarIndex={avatarIndex}
+                    size="xl"
+                    className="w-20 h-20"
+                    selected
+                    animateOnHover={false}
+                    showBackground={false}
                   />
                 </div>
                 <div className="text-center">

@@ -1,4 +1,5 @@
 import { cn } from '@/lib/utils';
+import { aiInsightsBackground } from '@/design-system/tokens';
 
 interface AIBackgroundBlobProps {
   className?: string;
@@ -15,7 +16,7 @@ export function AIBackgroundBlob({ className, thinking = false }: AIBackgroundBl
           thinking ? "animate-ai-gradient-fast" : "animate-ai-gradient"
         )}
         style={{
-          background: 'linear-gradient(-45deg, #ffe4c9, #ffd4a8, #ffcba4, #ffe0c0, #fff0e0, #ffdcc8)',
+          background: aiInsightsBackground.gradient,
           backgroundSize: '400% 400%',
         }}
       />
@@ -36,7 +37,7 @@ export function AIBackgroundBlob({ className, thinking = false }: AIBackgroundBl
             height: '120%',
             top: '-30%',
             left: '-20%',
-            background: 'radial-gradient(circle at 30% 30%, rgba(255,180,130,0.6) 0%, transparent 50%)',
+            background: aiInsightsBackground.blob1,
             filter: thinking ? 'blur(30px)' : 'blur(40px)',
           }}
         />
@@ -52,7 +53,7 @@ export function AIBackgroundBlob({ className, thinking = false }: AIBackgroundBl
             height: '100%',
             bottom: '-20%',
             right: '-10%',
-            background: 'radial-gradient(circle at 70% 70%, rgba(255,200,160,0.5) 0%, transparent 50%)',
+            background: aiInsightsBackground.blob2,
             filter: thinking ? 'blur(25px)' : 'blur(35px)',
           }}
         />
@@ -66,7 +67,7 @@ export function AIBackgroundBlob({ className, thinking = false }: AIBackgroundBl
               height: '80%',
               top: '10%',
               left: '10%',
-              background: 'radial-gradient(circle at 50% 50%, rgba(255,170,120,0.4) 0%, transparent 40%)',
+              background: aiInsightsBackground.blob3,
               filter: 'blur(20px)',
             }}
           />
@@ -78,7 +79,7 @@ export function AIBackgroundBlob({ className, thinking = false }: AIBackgroundBl
         <div
           className="absolute inset-0 animate-ai-shimmer"
           style={{
-            background: 'linear-gradient(90deg, transparent 0%, rgba(255,255,255,0.3) 50%, transparent 100%)',
+            background: aiInsightsBackground.shimmer,
             backgroundSize: '200% 100%',
           }}
         />

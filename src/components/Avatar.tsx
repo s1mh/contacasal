@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { cn } from '@/lib/utils';
-import { CAT_AVATARS, CAT_BG_COLORS } from '@/lib/constants';
+import { getAvatarBgColor, getAvatarSrc } from '@/lib/avatar-registry';
 import { CatAnimationType } from './CatAnimation';
 
 interface AvatarProps {
@@ -39,8 +39,8 @@ export function Avatar({
 }: AvatarProps) {
   const [isHovered, setIsHovered] = useState(false);
   const [isAnimating, setIsAnimating] = useState(animateOnce);
-  const avatarSrc = CAT_AVATARS[avatarIndex - 1] || CAT_AVATARS[0];
-  const bgColor = CAT_BG_COLORS[avatarIndex] || CAT_BG_COLORS[1];
+  const avatarSrc = getAvatarSrc(avatarIndex);
+  const bgColor = getAvatarBgColor(avatarIndex);
 
   // Handle animateOnce - stop animation after 2 seconds
   useEffect(() => {

@@ -11,7 +11,7 @@ import { AgreementManager } from '@/components/AgreementManager';
 import { MemberManagement } from '@/components/MemberManagement';
 import { AnimatedPage, AnimatedItem } from '@/components/AnimatedPage';
 import { Couple, useCoupleContext } from '@/contexts/CoupleContext';
-import { CAT_AVATARS, PERSON_COLORS, TAG_ICONS } from '@/lib/constants';
+import { PERSON_COLORS, TAG_ICONS } from '@/lib/constants';
 import { cn, isConfiguredProfile } from '@/lib/utils';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
@@ -20,6 +20,8 @@ import { usePreferences } from '@/contexts/PreferencesContext';
 import { useI18n } from '@/contexts/I18nContext';
 import { SupportedLocale } from '@/lib/i18n';
 import { SupportedCurrency } from '@/lib/preferences';
+import { getAvatarIndices } from '@/lib/avatar-registry';
+import { colorFallbacks } from '@/design-system/tokens';
 
 export default function Settings() {
   const { couple, myPosition } = useOutletContext<{ couple: Couple; myPosition: number | null }>();
@@ -51,7 +53,7 @@ export default function Settings() {
   const [checkingUsername, setCheckingUsername] = useState(false);
   const [newTagName, setNewTagName] = useState('');
   const [newTagIcon, setNewTagIcon] = useState('tag');
-  const [newTagColor, setNewTagColor] = useState('#94A3B8');
+  const [newTagColor, setNewTagColor] = useState(colorFallbacks.tagDefault);
   const [showAddTag, setShowAddTag] = useState(false);
 
   // Get only MY profile
@@ -136,7 +138,7 @@ export default function Settings() {
     });
     setNewTagName('');
     setNewTagIcon('tag');
-    setNewTagColor('#94A3B8');
+    setNewTagColor(colorFallbacks.tagDefault);
     setShowAddTag(false);
   };
 
@@ -231,17 +233,17 @@ export default function Settings() {
             <div className="flex-1">
               <p className="text-sm text-muted-foreground mb-2">{prefT('Escolha o gatinho')}</p>
               <div className="flex gap-2 flex-wrap">
-                {CAT_AVATARS.map((_, idx) => (
+                {getAvatarIndices().map((avatarIndex) => (
                   <button
-                    key={idx}
-                    onClick={() => handleUpdateAvatar(idx + 1)}
+                    key={avatarIndex}
+                    onClick={() => handleUpdateAvatar(avatarIndex)}
                     className={cn(
                       'rounded-full transition-all',
-                      myProfile.avatar_index === idx + 1 && 'ring-2 ring-primary ring-offset-2'
+                      myProfile.avatar_index === avatarIndex && 'ring-2 ring-primary ring-offset-2'
                     )}
                   >
                     <Avatar
-                      avatarIndex={idx + 1}
+                      avatarIndex={avatarIndex}
                       size="sm"
                     />
                   </button>

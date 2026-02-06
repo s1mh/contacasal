@@ -5,7 +5,7 @@ import { Button } from '@/components/ui/button';
 import { Loader2, Lock, CheckCircle, AlertCircle, ArrowRight } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
-import { CAT_AVATARS } from '@/lib/constants';
+import { Avatar } from '@/components/Avatar';
 import { cn } from '@/lib/utils';
 
 interface ProfileData {
@@ -218,10 +218,13 @@ export default function ResetPin() {
                 className="w-20 h-20 rounded-full overflow-hidden ring-4 animate-cat-idle"
                 style={{ boxShadow: `0 0 0 4px ${profile.color}` }}
               >
-                <img 
-                  src={CAT_AVATARS[profile.avatar_index - 1]} 
-                  alt={profile.name}
-                  className="w-full h-full object-cover"
+                <Avatar
+                  avatarIndex={profile.avatar_index}
+                  size="xl"
+                  className="w-20 h-20"
+                  selected
+                  animateOnHover={false}
+                  showBackground={false}
                 />
               </div>
               <div className="text-center">

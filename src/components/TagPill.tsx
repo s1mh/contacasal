@@ -14,6 +14,7 @@ import {
   LucideIcon
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { withAlpha } from '@/design-system/tokens';
 
 interface TagPillProps {
   name: string;
@@ -53,7 +54,7 @@ export function TagPill({ name, icon, color, selected, onClick, size = 'md' }: T
           : 'hover:scale-105'
       )}
       style={{
-        backgroundColor: `${color}20`,
+        backgroundColor: withAlpha(color, 0.125),
         color: color,
         ...(selected ? { '--tw-ring-color': color } as React.CSSProperties : {}),
       }}
