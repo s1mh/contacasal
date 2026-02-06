@@ -1,5 +1,7 @@
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
 import { getCorsHeaders, handleCorsOptions } from '../_shared/cors.ts'
+import { isValidUUID } from '../_shared/sanitize.ts'
+import { checkRateLimit, rateLimitResponse } from '../_shared/rate-limit.ts'
 
 Deno.serve(async (req) => {
   const corsResponse = handleCorsOptions(req)
@@ -12,16 +14,20 @@ Deno.serve(async (req) => {
     const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
     const supabaseAdmin = createClient(supabaseUrl, supabaseServiceKey)
 
+    // Rate limit: 15 requests per minute
+    const { allowed } = await checkRateLimit(supabaseAdmin, req, 'check-username', 15, 1)
+    if (!allowed) return rateLimitResponse(corsHeaders)
+
     const { username, exclude_profile_id } = await req.json()
 
-    if (!username) {
+    if (!username || typeof username !== 'string') {
       return new Response(
         JSON.stringify({ error: 'username is required' }),
         { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       )
     }
 
-    const cleanUsername = username.trim().toLowerCase().replace(/^@/, '')
+    const cleanUsername = username.trim().toLowerCase().replace(/^@/, '').replace(/[^a-z0-9_]/g, '')
 
     if (cleanUsername.length < 3) {
       return new Response(
@@ -35,7 +41,7 @@ Deno.serve(async (req) => {
       .select('id')
       .ilike('username', cleanUsername)
 
-    if (exclude_profile_id) {
+    if (exclude_profile_id && isValidUUID(exclude_profile_id)) {
       query = query.neq('id', exclude_profile_id)
     }
 
@@ -55,7 +61,7 @@ Deno.serve(async (req) => {
       { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     )
   } catch (error) {
-    console.error('Edge function error:', error)
+    console.error('[check-username] Error')
     return new Response(
       JSON.stringify({ error: 'Erro interno' }),
       { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }

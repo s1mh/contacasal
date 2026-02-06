@@ -1,6 +1,8 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { Resend } from "https://esm.sh/resend@2.0.0";
 import { getCorsHeaders, handleCorsOptions } from "../_shared/cors.ts";
+import { isValidEmail } from "../_shared/sanitize.ts";
+import { checkRateLimit, rateLimitResponse } from "../_shared/rate-limit.ts";
 
 const TOKEN_EXPIRY_MINUTES = 15;
 
@@ -49,18 +51,20 @@ Deno.serve(async (req) => {
     const supabaseServiceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
+    // Rate limit: 3 requests per 5 minutes (prevent email spam)
+    const { allowed } = await checkRateLimit(supabase, req, 'request-pin-recovery', 3, 5);
+    if (!allowed) return rateLimitResponse(corsHeaders);
+
     const { share_code, email }: RecoveryRequest = await req.json();
 
-    if (!email) {
+    if (!email || typeof email !== 'string') {
       return new Response(
         JSON.stringify({ success: false, error: "Email is required" }),
         { status: 400, headers: { "Content-Type": "application/json", ...corsHeaders } }
       );
     }
 
-    // Validate email format
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    if (!emailRegex.test(email)) {
+    if (!isValidEmail(email.trim())) {
       return new Response(
         JSON.stringify({ success: false, error: "Invalid email format" }),
         { status: 400, headers: { "Content-Type": "application/json", ...corsHeaders } }
@@ -79,7 +83,7 @@ Deno.serve(async (req) => {
         .single();
 
       if (coupleError || !couple) {
-        console.log("Couple not found for share code (silent):", share_code);
+        // Couple not found - return generic response (no logging of share_code)
         return new Response(
           JSON.stringify({ 
             success: true, 
@@ -128,7 +132,7 @@ Deno.serve(async (req) => {
 
     // If no profiles found, return success message (security - don't reveal if email exists)
     if (profiles.length === 0) {
-      console.log("No profiles found for email (silent):", normalizedEmail);
+      // No profiles found - return generic response (no logging of email)
       return new Response(
         JSON.stringify({ 
           success: true, 
@@ -157,7 +161,7 @@ Deno.serve(async (req) => {
         .eq("id", profile.id);
 
       if (updateError) {
-        console.error("Error saving recovery token for profile:", profile.id, updateError);
+        console.error("Error saving recovery token");
         continue; // Skip to next profile
       }
 
@@ -264,9 +268,7 @@ Deno.serve(async (req) => {
       });
 
       if (emailError) {
-        console.error("Error sending email to profile:", profile.id, emailError);
-      } else {
-        console.log("Recovery email sent successfully for profile:", profile.id, "to:", normalizedEmail);
+        console.error("Error sending recovery email");
       }
     }
 
@@ -278,7 +280,7 @@ Deno.serve(async (req) => {
       { status: 200, headers: { "Content-Type": "application/json", ...corsHeaders } }
     );
   } catch (error: unknown) {
-    console.error("Error in request-pin-recovery:", error);
+    console.error("[request-pin-recovery] Error");
     return new Response(
       JSON.stringify({ success: false, error: "Erro interno" }),
       { status: 500, headers: { "Content-Type": "application/json", ...corsHeaders } }
