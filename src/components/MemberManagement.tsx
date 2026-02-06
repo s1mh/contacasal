@@ -64,8 +64,7 @@ export function MemberManagement({ profiles, roles, myProfileId, onRefresh }: Me
       });
 
       await onRefresh();
-    } catch (err) {
-      console.error('Error managing member:', err);
+    } catch {
       toast({
         title: 'Ops! Algo deu errado 😕',
         description: 'Não foi possível realizar a ação',

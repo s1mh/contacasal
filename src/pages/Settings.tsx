@@ -120,7 +120,7 @@ export default function Settings() {
       setEditingUsername(false);
       setUsernameValue('');
     } catch (err) {
-      console.error('Error updating username:', err);
+      // Error handled by UI
       setUsernameError(prefT('Erro ao verificar username'));
     } finally {
       setCheckingUsername(false);
@@ -171,7 +171,7 @@ export default function Settings() {
         await refetch();
       }
     } catch (err) {
-      console.error('Error regenerating code:', err);
+      // Error handled by UI
       toast({ 
         title: prefT('Ops! Algo deu errado 😕'),
         description: prefT('Não foi possível regenerar o código'),
