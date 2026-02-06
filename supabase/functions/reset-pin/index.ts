@@ -1,37 +1,12 @@
-import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { getCorsHeaders, handleCorsOptions } from "../_shared/cors.ts";
+import { hashPin, isValidPin } from "../_shared/pin.ts";
 
-const corsHeaders = {
-  "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
-};
+Deno.serve(async (req) => {
+  const corsResponse = handleCorsOptions(req);
+  if (corsResponse) return corsResponse;
 
-// Salt for PIN hashing - must match verify-pin function
-const PIN_SALT = "couple_pin_salt_v1_";
-
-// Hash PIN using SHA-256
-async function hashPin(pin: string): Promise<string> {
-  const encoder = new TextEncoder();
-  const data = encoder.encode(PIN_SALT + pin);
-  const hashBuffer = await crypto.subtle.digest("SHA-256", data);
-  const hashArray = Array.from(new Uint8Array(hashBuffer));
-  return hashArray.map(b => b.toString(16).padStart(2, "0")).join("");
-}
-
-interface ResetPinRequest {
-  token: string;
-  new_pin: string;
-}
-
-interface ValidateTokenRequest {
-  token: string;
-}
-
-const handler = async (req: Request): Promise<Response> => {
-  // Handle CORS preflight requests
-  if (req.method === "OPTIONS") {
-    return new Response(null, { headers: corsHeaders });
-  }
+  const corsHeaders = getCorsHeaders(req);
 
   try {
     const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
@@ -40,18 +15,16 @@ const handler = async (req: Request): Promise<Response> => {
 
     const body = await req.json();
 
-    // Check if this is a token validation request (GET-like behavior via POST)
+    // Token validation request
     if (body.validate_only) {
-      const { token }: ValidateTokenRequest = body;
-
+      const { token } = body;
       if (!token || token.length !== 64) {
         return new Response(
-          JSON.stringify({ success: false, error: "Invalid token format" }),
+          JSON.stringify({ success: false, error: "Token inválido" }),
           { status: 400, headers: { "Content-Type": "application/json", ...corsHeaders } }
         );
       }
 
-      // Find profile with this recovery token
       const { data: profile, error: fetchError } = await supabase
         .from("profiles")
         .select("id, name, avatar_index, color, recovery_token_expires_at, couple_id")
@@ -65,18 +38,15 @@ const handler = async (req: Request): Promise<Response> => {
         );
       }
 
-      // Check if token is expired
       if (profile.recovery_token_expires_at) {
-        const expiresAt = new Date(profile.recovery_token_expires_at);
-        if (expiresAt < new Date()) {
+        if (new Date(profile.recovery_token_expires_at) < new Date()) {
           return new Response(
-            JSON.stringify({ success: false, error: "Token expirado. Solicite um novo link de recuperação." }),
+            JSON.stringify({ success: false, error: "Token expirado. Solicite um novo link." }),
             { status: 410, headers: { "Content-Type": "application/json", ...corsHeaders } }
           );
         }
       }
 
-      // Get share code for redirect
       const { data: couple } = await supabase
         .from("couples")
         .select("share_code")
@@ -84,37 +54,32 @@ const handler = async (req: Request): Promise<Response> => {
         .single();
 
       return new Response(
-        JSON.stringify({ 
-          success: true, 
-          profile: {
-            name: profile.name,
-            avatar_index: profile.avatar_index,
-            color: profile.color,
-          },
+        JSON.stringify({
+          success: true,
+          profile: { name: profile.name, avatar_index: profile.avatar_index, color: profile.color },
           share_code: couple?.share_code
         }),
         { status: 200, headers: { "Content-Type": "application/json", ...corsHeaders } }
       );
     }
 
-    // This is a PIN reset request
-    const { token, new_pin }: ResetPinRequest = body;
+    // PIN reset request
+    const { token, new_pin } = body;
 
     if (!token || token.length !== 64) {
       return new Response(
-        JSON.stringify({ success: false, error: "Invalid token format" }),
+        JSON.stringify({ success: false, error: "Token inválido" }),
         { status: 400, headers: { "Content-Type": "application/json", ...corsHeaders } }
       );
     }
 
-    if (!new_pin || new_pin.length !== 4 || !/^\d{4}$/.test(new_pin)) {
+    if (!new_pin || !isValidPin(new_pin)) {
       return new Response(
-        JSON.stringify({ success: false, error: "PIN must be 4 digits" }),
+        JSON.stringify({ success: false, error: "PIN deve ter 4 dígitos" }),
         { status: 400, headers: { "Content-Type": "application/json", ...corsHeaders } }
       );
     }
 
-    // Find profile with this recovery token
     const { data: profile, error: fetchError } = await supabase
       .from("profiles")
       .select("id, name, recovery_token_expires_at, couple_id, position, avatar_index, color")
@@ -122,28 +87,23 @@ const handler = async (req: Request): Promise<Response> => {
       .single();
 
     if (fetchError || !profile) {
-      console.error("Token not found:", fetchError);
       return new Response(
         JSON.stringify({ success: false, error: "Token inválido ou expirado" }),
         { status: 404, headers: { "Content-Type": "application/json", ...corsHeaders } }
       );
     }
 
-    // Check if token is expired
     if (profile.recovery_token_expires_at) {
-      const expiresAt = new Date(profile.recovery_token_expires_at);
-      if (expiresAt < new Date()) {
+      if (new Date(profile.recovery_token_expires_at) < new Date()) {
         return new Response(
-          JSON.stringify({ success: false, error: "Token expirado. Solicite um novo link de recuperação." }),
+          JSON.stringify({ success: false, error: "Token expirado. Solicite um novo link." }),
           { status: 410, headers: { "Content-Type": "application/json", ...corsHeaders } }
         );
       }
     }
 
-    // Hash the new PIN
     const hashedPin = await hashPin(new_pin);
 
-    // Update profile with new PIN and clear recovery token
     const { error: updateError } = await supabase
       .from("profiles")
       .update({
@@ -156,44 +116,32 @@ const handler = async (req: Request): Promise<Response> => {
       .eq("id", profile.id);
 
     if (updateError) {
-      console.error("Error updating PIN:", updateError);
       return new Response(
-        JSON.stringify({ success: false, error: "Failed to update PIN" }),
+        JSON.stringify({ success: false, error: "Falha ao atualizar PIN" }),
         { status: 500, headers: { "Content-Type": "application/json", ...corsHeaders } }
       );
     }
 
-    // Get share code for redirect
     const { data: couple } = await supabase
       .from("couples")
       .select("share_code")
       .eq("id", profile.couple_id)
       .single();
 
-    console.log("PIN reset successfully for profile:", profile.id);
-
     return new Response(
-      JSON.stringify({ 
-        success: true, 
+      JSON.stringify({
+        success: true,
         message: "Código redefinido com sucesso!",
-        profile: {
-          name: profile.name,
-          position: profile.position,
-          avatar_index: profile.avatar_index,
-          color: profile.color,
-        },
+        profile: { name: profile.name, position: profile.position, avatar_index: profile.avatar_index, color: profile.color },
         share_code: couple?.share_code
       }),
       { status: 200, headers: { "Content-Type": "application/json", ...corsHeaders } }
     );
   } catch (error: unknown) {
-    console.error("Error in reset-pin function:", error);
-    const message = error instanceof Error ? error.message : "Unknown error";
+    console.error("Error in reset-pin:", error);
     return new Response(
-      JSON.stringify({ success: false, error: message }),
+      JSON.stringify({ success: false, error: "Erro interno" }),
       { status: 500, headers: { "Content-Type": "application/json", ...corsHeaders } }
     );
   }
-};
-
-serve(handler);
+});

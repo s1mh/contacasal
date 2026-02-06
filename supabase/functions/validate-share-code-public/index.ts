@@ -1,22 +1,18 @@
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
-
-const corsHeaders = {
-  'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
-};
+import { getCorsHeaders, handleCorsOptions } from '../_shared/cors.ts';
 
 Deno.serve(async (req) => {
-  // Handle CORS preflight requests
-  if (req.method === 'OPTIONS') {
-    return new Response(null, { headers: corsHeaders });
-  }
+  const corsResponse = handleCorsOptions(req);
+  if (corsResponse) return corsResponse;
+
+  const corsHeaders = getCorsHeaders(req);
 
   try {
     const { share_code } = await req.json();
 
-    if (!share_code || typeof share_code !== 'string') {
+    if (!share_code || typeof share_code !== 'string' || !/^[a-f0-9]{16}$/i.test(share_code.trim())) {
       return new Response(
-        JSON.stringify({ success: false, error: 'Código de compartilhamento inválido' }),
+        JSON.stringify({ success: false, error: 'Código inválido' }),
         { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
@@ -25,7 +21,6 @@ Deno.serve(async (req) => {
     const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
     const supabaseAdmin = createClient(supabaseUrl, supabaseServiceKey);
 
-    // Get the couple by share code
     const { data: space, error: spaceError } = await supabaseAdmin
       .from('couples')
       .select('id, share_code, max_members')
@@ -33,14 +28,13 @@ Deno.serve(async (req) => {
       .single();
 
     if (spaceError || !space) {
-      console.log('Space not found for share code:', share_code);
+      // Generic error - don't confirm or deny existence
       return new Response(
-        JSON.stringify({ success: false, error: 'Código não encontrado' }),
-        { status: 404, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        JSON.stringify({ success: false, error: 'Código inválido' }),
+        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
 
-    // Count active members (excluding pending profiles)
     const { count: activeCount, error: countError } = await supabaseAdmin
       .from('profiles')
       .select('*', { count: 'exact', head: true })
@@ -48,7 +42,6 @@ Deno.serve(async (req) => {
       .or('status.eq.active,status.is.null');
 
     if (countError) {
-      console.error('Error counting members:', countError);
       return new Response(
         JSON.stringify({ success: false, error: 'Erro ao verificar espaço' }),
         { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
@@ -59,7 +52,6 @@ Deno.serve(async (req) => {
     const currentMembers = activeCount || 0;
     const hasVacancy = currentMembers < maxMembers;
 
-    // Get host profile name for welcome message
     const { data: hostProfile } = await supabaseAdmin
       .from('profiles')
       .select('name')
@@ -70,14 +62,6 @@ Deno.serve(async (req) => {
       .neq('name', 'Pessoa')
       .limit(1)
       .single();
-
-    console.log('Space validated:', {
-      coupleId: space.id,
-      currentMembers,
-      maxMembers,
-      hasVacancy,
-      hostName: hostProfile?.name
-    });
 
     return new Response(
       JSON.stringify({
@@ -94,7 +78,7 @@ Deno.serve(async (req) => {
   } catch (error) {
     console.error('Error in validate-share-code-public:', error);
     return new Response(
-      JSON.stringify({ success: false, error: 'Erro interno do servidor' }),
+      JSON.stringify({ success: false, error: 'Erro interno' }),
       { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
   }
