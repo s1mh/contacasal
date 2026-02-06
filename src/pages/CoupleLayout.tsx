@@ -5,6 +5,7 @@ import { OnboardingModal } from '@/components/OnboardingModal';
 import { ReconnectModal } from '@/components/ReconnectModal';
 import { SyncIndicator } from '@/components/SyncIndicator';
 import { OnboardingGuide } from '@/components/OnboardingGuide';
+import { WaitingForPartner } from '@/components/WaitingForPartner';
 import { CoupleProvider, useCoupleContext, Profile } from '@/contexts/CoupleContext';
 import { I18nProvider } from '@/contexts/I18nContext';
 import { useAuthContext } from '@/contexts/AuthContext';
@@ -56,21 +57,16 @@ function CoupleLayoutContent() {
       setValidating(true);
       setValidationError(null);
       
-      console.log('Validating share code publicly:', shareCode);
-      
       try {
         const { data, error: fnError } = await supabase.functions.invoke('validate-share-code-public', {
           body: { share_code: shareCode },
         });
         
         if (fnError || !data?.success) {
-          console.log('Public validation failed:', fnError || data?.error);
           setValidationError(data?.error || 'Código inválido');
           setValidating(false);
           return;
         }
-        
-        console.log('Space validated:', data);
         
         setSpaceInfo({
           coupleId: data.couple_id,
@@ -85,7 +81,6 @@ function CoupleLayoutContent() {
         if (stored) {
           try {
             const localData = JSON.parse(stored);
-            console.log('Found local storage data:', localData);
             setMyPosition(localData.position);
             setValidating(false);
             return;
@@ -97,19 +92,15 @@ function CoupleLayoutContent() {
         
         // No local access - check if space has vacancy for new member
         if (data.has_vacancy) {
-          console.log('Space has vacancy - showing onboarding');
           setIsNewMember(true);
           setShowOnboarding(true);
         } else {
-          // Space is full - try to reconnect
-          console.log('Space is full - showing reconnect');
           setShowReconnect(true);
         }
         
         setValidating(false);
         
-      } catch (err) {
-        console.error('Error in public validation:', err);
+      } catch {
         setValidationError('Erro ao validar código');
         setValidating(false);
       }
@@ -143,7 +134,7 @@ function CoupleLayoutContent() {
     }
   }, [couple, shareCode, myPosition, showOnboarding, showReconnect]);
 
-  // Step 3: Update timestamp and check for onboarding guide
+  // Step 3: Update timestamp when accessing space (for "last accessed" feature)
   useEffect(() => {
     if (couple && shareCode && myPosition && !timestampUpdatedRef.current) {
       const stored = localStorage.getItem(`couple_${shareCode}`);
@@ -152,19 +143,12 @@ function CoupleLayoutContent() {
           const data = JSON.parse(stored);
           const now = Date.now();
 
-          // Show onboarding guide for new users (created within last 30 seconds)
-          if (data.timestamp && now - data.timestamp < 30000 && !localStorage.getItem(`onboarding_complete_${shareCode}`)) {
-            setGuideName(data.name || '');
-            setShowGuide(true);
-          }
-
           // Only update if more than 1 minute has passed
           if (!data.timestamp || now - data.timestamp > 60000) {
             localStorage.setItem(`couple_${shareCode}`, JSON.stringify({
               ...data,
               timestamp: now
             }));
-            console.log('Updated last access timestamp');
           }
           timestampUpdatedRef.current = true;
         } catch {
@@ -193,7 +177,6 @@ function CoupleLayoutContent() {
       let session = (await supabase.auth.getSession()).data.session;
       
       if (!session) {
-        console.log('No session - signing in anonymously');
         const { data: authData, error: authError } = await supabase.auth.signInAnonymously();
         if (authError) {
           throw new Error('Falha na autenticação: ' + authError.message);
@@ -204,8 +187,6 @@ function CoupleLayoutContent() {
       if (!session) {
         throw new Error('Não foi possível criar sessão');
       }
-      
-      console.log('Session ready, calling join-and-activate');
       
       // Step 2: Call join-and-activate with all data
       const { data: joinResult, error: joinError } = await supabase.functions.invoke('join-and-activate', {
@@ -223,8 +204,6 @@ function CoupleLayoutContent() {
       if (joinError || !joinResult?.success) {
         throw new Error(joinResult?.error || 'Falha ao entrar no espaço');
       }
-      
-      console.log('Joined space successfully:', joinResult);
       
       // Step 3: Refresh session to get updated JWT with couple_id
       await supabase.auth.refreshSession();
@@ -248,14 +227,10 @@ function CoupleLayoutContent() {
         description: username ? `Seu @ é @${username}` : 'Seu perfil foi criado'
       });
 
-      // Show onboarding guide if not seen before
-      if (!localStorage.getItem(`onboarding_complete_${shareCode}`)) {
-        setGuideName(name);
-        setShowGuide(true);
-      }
+      // Mark that this user just joined - guide will show when space is ready (2+ members)
+      localStorage.setItem(`onboarding_pending_${shareCode}`, name);
       
     } catch (err) {
-      console.error('Error in onboarding complete:', err);
       toast({
         title: 'Ops! Algo deu errado 😕',
         description: err instanceof Error ? err.message : 'Não foi possível criar o perfil',
@@ -447,6 +422,58 @@ function CoupleLayoutContent() {
             Voltar ao início
           </Button>
         </div>
+      </div>
+    );
+  }
+
+  // Show onboarding guide when space becomes ready (2+ members) and user hasn't seen it
+  const cfgProfiles = couple.profiles.filter(isConfiguredProfile);
+  useEffect(() => {
+    if (!shareCode || cfgProfiles.length < 2) return;
+    if (localStorage.getItem(`onboarding_complete_${shareCode}`)) return;
+
+    const pendingName = localStorage.getItem(`onboarding_pending_${shareCode}`);
+    if (pendingName) {
+      localStorage.removeItem(`onboarding_pending_${shareCode}`);
+      setGuideName(pendingName);
+      setShowGuide(true);
+    }
+  }, [shareCode, cfgProfiles.length]);
+
+  // Check if space has at least 2 configured profiles before unlocking app
+  const configuredProfiles = couple.profiles.filter(isConfiguredProfile);
+  const myProfile = couple.profiles.find(p => p.position === myPosition);
+  const spaceReady = configuredProfiles.length >= 2;
+
+  if (!spaceReady && myProfile && isConfiguredProfile(myProfile)) {
+    return (
+      <div className="min-h-screen bg-background">
+        <SyncIndicator isSyncing={isSyncing} />
+        <WaitingForPartner
+          shareCode={shareCode!}
+          myProfile={myProfile}
+        />
+
+        {/* Onboarding Modal (still needed for new members joining) */}
+        <OnboardingModal
+          open={showOnboarding}
+          onClose={handleCloseOnboarding}
+          onComplete={handleOnboardingComplete}
+          profiles={couple.profiles}
+          shareCode={shareCode}
+          isNewMember={isNewMember}
+          hostName={inviterFromUrl || spaceInfo?.hostName}
+          isJoining={joiningSpace}
+        />
+
+        <ReconnectModal
+          open={showReconnect}
+          profiles={couple.profiles}
+          onReconnect={handleReconnect}
+          onCreateNew={handleCreateNewFromReconnect}
+          shareCode={shareCode}
+          hasVacancy={spaceInfo?.hasVacancy}
+        />
       </div>
     );
   }

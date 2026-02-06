@@ -87,8 +87,7 @@ export function ReconnectModal({ open, profiles, onReconnect, onCreateNew, share
         setError('Erro ao reconectar. Tente novamente.');
         setPin('');
       }
-    } catch (err) {
-      console.error('PIN verification error:', err);
+    } catch {
       setError('Erro ao verificar. Tente novamente.');
       setPin('');
     } finally {

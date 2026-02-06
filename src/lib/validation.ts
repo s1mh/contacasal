@@ -68,10 +68,16 @@ export const settlementSchema = z.object({
   couple_id: z.string().uuid(),
 });
 
-// Dev-only logging helper
+// Dev-only logging helpers - never output in production
 export const devLog = (message: string, data?: unknown) => {
   if (import.meta.env.DEV) {
-    console.log(`[Auth] ${message}`, data ?? '');
+    console.log(`[Dev] ${message}`, data ?? '');
+  }
+};
+
+export const devError = (message: string, data?: unknown) => {
+  if (import.meta.env.DEV) {
+    console.error(`[Dev] ${message}`, data ?? '');
   }
 };
 

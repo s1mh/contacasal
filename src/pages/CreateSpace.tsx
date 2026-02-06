@@ -108,8 +108,8 @@ export default function CreateSpace() {
       if (data?.success && data?.username) {
         setUsername(data.username);
       }
-    } catch (err) {
-      console.error('Error generating username:', err);
+    } catch {
+      // Username generation is optional
     } finally {
       setGeneratingUsername(false);
     }
@@ -126,8 +126,8 @@ export default function CreateSpace() {
       if (data?.exists) {
         setUsernameError(prefT('Este username já está em uso'));
       }
-    } catch (err) {
-      console.error('Error checking username:', err);
+    } catch {
+      // Error handled silently
     } finally {
       setCheckingUsername(false);
     }
@@ -250,8 +250,7 @@ export default function CreateSpace() {
       });
 
       navigate(`/c/${shareCode}`);
-    } catch (err) {
-      console.error('Error creating space:', err);
+    } catch {
       toast({
         title: prefT('Erro ao criar espaço'),
         description: prefT('Tente novamente'),

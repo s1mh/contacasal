@@ -54,8 +54,7 @@ export default function ResetPin() {
 
         setProfile(data.profile);
         setShareCode(data.share_code);
-      } catch (err) {
-        console.error('Token validation error:', err);
+      } catch {
         setError('Link expirado ou inválido');
       } finally {
         setLoading(false);
@@ -138,8 +137,7 @@ export default function ResetPin() {
           navigate('/');
         }
       }, 2000);
-    } catch (err) {
-      console.error('Reset PIN error:', err);
+    } catch {
       toast({
         title: 'Erro',
         description: 'Não foi possível redefinir o código. Tente novamente.',
