@@ -37,8 +37,10 @@ export default function Summary() {
   const configuredProfiles = couple.profiles.filter(isConfiguredProfile);
 
   const handleShare = async () => {
-    const url = window.location.origin + `/c/${shareCode}`;
-    
+    const baseUrl = window.location.origin + `/c/${shareCode}`;
+    const inviterName = currentUserProfile?.name;
+    const url = inviterName ? `${baseUrl}?from=${encodeURIComponent(inviterName)}` : baseUrl;
+
     if (navigator.share) {
       try {
         await navigator.share({

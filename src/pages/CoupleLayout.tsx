@@ -1,9 +1,10 @@
 import { useState, useEffect, useRef } from 'react';
-import { Outlet, useParams, Navigate, useNavigate } from 'react-router-dom';
+import { Outlet, useParams, Navigate, useNavigate, useSearchParams } from 'react-router-dom';
 import { BottomNav } from '@/components/BottomNav';
 import { OnboardingModal } from '@/components/OnboardingModal';
 import { ReconnectModal } from '@/components/ReconnectModal';
 import { SyncIndicator } from '@/components/SyncIndicator';
+import { OnboardingGuide } from '@/components/OnboardingGuide';
 import { CoupleProvider, useCoupleContext, Profile } from '@/contexts/CoupleContext';
 import { I18nProvider } from '@/contexts/I18nContext';
 import { useAuthContext } from '@/contexts/AuthContext';
@@ -25,8 +26,10 @@ interface SpaceInfo {
 
 function CoupleLayoutContent() {
   const { shareCode } = useParams();
+  const [searchParams] = useSearchParams();
   const navigate = useNavigate();
   const { toast } = useToast();
+  const inviterFromUrl = searchParams.get('from');
   const { couple, loading, error, isSyncing, refetch } = useCoupleContext();
   const { loading: authLoading, isValidated, coupleId } = useAuthContext();
   const [showOnboarding, setShowOnboarding] = useState(false);
@@ -39,6 +42,8 @@ function CoupleLayoutContent() {
   const [storedProfileInfo, setStoredProfileInfo] = useState<{ name: string; position: number } | null>(null);
   const [spaceInfo, setSpaceInfo] = useState<SpaceInfo | null>(null);
   const [joiningSpace, setJoiningSpace] = useState(false);
+  const [showGuide, setShowGuide] = useState(false);
+  const [guideName, setGuideName] = useState('');
   const hasValidatedRef = useRef(false);
   const timestampUpdatedRef = useRef(false);
 
@@ -138,7 +143,7 @@ function CoupleLayoutContent() {
     }
   }, [couple, shareCode, myPosition, showOnboarding, showReconnect]);
 
-  // Step 3: Update timestamp when accessing space (for "last accessed" feature)
+  // Step 3: Update timestamp and check for onboarding guide
   useEffect(() => {
     if (couple && shareCode && myPosition && !timestampUpdatedRef.current) {
       const stored = localStorage.getItem(`couple_${shareCode}`);
@@ -146,6 +151,13 @@ function CoupleLayoutContent() {
         try {
           const data = JSON.parse(stored);
           const now = Date.now();
+
+          // Show onboarding guide for new users (created within last 30 seconds)
+          if (data.timestamp && now - data.timestamp < 30000 && !localStorage.getItem(`onboarding_complete_${shareCode}`)) {
+            setGuideName(data.name || '');
+            setShowGuide(true);
+          }
+
           // Only update if more than 1 minute has passed
           if (!data.timestamp || now - data.timestamp > 60000) {
             localStorage.setItem(`couple_${shareCode}`, JSON.stringify({
@@ -230,11 +242,17 @@ function CoupleLayoutContent() {
       setMyPosition(joinResult.position);
       setShowOnboarding(false);
       await refetch();
-      
-      toast({ 
+
+      toast({
         title: 'Bem-vindo! 🎉',
         description: username ? `Seu @ é @${username}` : 'Seu perfil foi criado'
       });
+
+      // Show onboarding guide if not seen before
+      if (!localStorage.getItem(`onboarding_complete_${shareCode}`)) {
+        setGuideName(name);
+        setShowGuide(true);
+      }
       
     } catch (err) {
       console.error('Error in onboarding complete:', err);
@@ -383,7 +401,7 @@ function CoupleLayoutContent() {
           profiles={[]}
           shareCode={shareCode}
           isNewMember={isNewMember}
-          hostName={spaceInfo?.hostName}
+          hostName={inviterFromUrl || spaceInfo?.hostName}
           isJoining={joiningSpace}
         />
         
@@ -479,7 +497,7 @@ function CoupleLayoutContent() {
         profiles={couple.profiles}
         shareCode={shareCode}
         isNewMember={isNewMember}
-        hostName={spaceInfo?.hostName}
+        hostName={inviterFromUrl || spaceInfo?.hostName}
         isJoining={joiningSpace}
       />
 
@@ -492,6 +510,15 @@ function CoupleLayoutContent() {
         shareCode={shareCode}
         hasVacancy={spaceInfo?.hasVacancy}
       />
+
+      {/* Onboarding Guide */}
+      {showGuide && shareCode && (
+        <OnboardingGuide
+          shareCode={shareCode}
+          userName={guideName}
+          onComplete={() => setShowGuide(false)}
+        />
+      )}
     </div>
   );
 }

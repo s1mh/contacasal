@@ -6,7 +6,7 @@ import { InputOTP, InputOTPGroup, InputOTPSlot, InputOTPSlotMasked } from '@/com
 import { cn, isConfiguredProfile } from '@/lib/utils';
 import { CAT_AVATARS, PERSON_COLORS } from '@/lib/constants';
 import { Profile } from '@/contexts/CoupleContext';
-import { Check, Heart, Sparkles, Lock, ArrowRight, ArrowLeft, Mail, SkipForward, AtSign, Loader2, Eye, EyeOff, PartyPopper } from 'lucide-react';
+import { Check, Heart, Sparkles, Lock, ArrowRight, ArrowLeft, AtSign, Loader2, Eye, EyeOff, PartyPopper } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { usePreferences } from '@/contexts/PreferencesContext';
 
@@ -37,13 +37,6 @@ const looksLikeName = (name: string): boolean => {
   // Should not have too many consonants in a row (like "xzpqw")
   const hasVowels = /[aeiouàáâãéêíóôõú]/i.test(trimmed);
   return hasVowels && trimmed.length <= 20;
-};
-
-// Validate email format
-const isValidEmail = (email: string): boolean => {
-  if (!email.trim()) return true; // Email is optional
-  const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-  return emailRegex.test(email.trim());
 };
 
 // Check if PIN is weak - returns key for translation
@@ -78,18 +71,13 @@ const isWeakPin = (pin: string): { weak: boolean; reasonKey?: 'pinSameDigits' | 
 };
 
 export function OnboardingModal({ open, onClose, onComplete, profiles, shareCode, isNewMember = false, hostName, isJoining = false }: OnboardingModalProps) {
-  const [step, setStep] = useState<'welcome' | 'profile' | 'pin' | 'email'>(isNewMember ? 'welcome' : 'profile');
+  const [step, setStep] = useState<'welcome' | 'profile' | 'pin'>(isNewMember ? 'welcome' : 'profile');
   const [name, setName] = useState('');
   const [avatarIndex, setAvatarIndex] = useState(1);
   const [color, setColor] = useState(PERSON_COLORS[0].value);
   const [pinCode, setPinCode] = useState('');
   const [pinError, setPinError] = useState('');
   const [showPin, setShowPin] = useState(false);
-  const [email, setEmail] = useState('');
-  const [emailError, setEmailError] = useState('');
-  const [emailExists, setEmailExists] = useState(false);
-  const [emailExistsInfo, setEmailExistsInfo] = useState<{ masked_space?: string; profile_name?: string } | null>(null);
-  const [checkingEmail, setCheckingEmail] = useState(false);
   const [username, setUsername] = useState('');
   const [generatingUsername, setGeneratingUsername] = useState(false);
   const [compliment, setCompliment] = useState('');
@@ -217,129 +205,27 @@ export function OnboardingModal({ open, onClose, onComplete, profiles, shareCode
         setPinError(weakCheck.reasonKey ? prefT(weakCheck.reasonKey) : prefT('Código muito fraco'));
         return;
       }
-      setStep('email');
+      // Skip email step - go directly to profile creation
+      const position = getAvailablePosition();
+      const formattedName = name.trim()
+        .toLowerCase()
+        .split(' ')
+        .map(word => word.charAt(0).toUpperCase() + word.slice(1))
+        .join(' ');
+
+      localStorage.setItem(`couple_${shareCode}`, JSON.stringify({
+        position,
+        name: formattedName,
+        avatarIndex,
+        color,
+        username,
+        timestamp: Date.now()
+      }));
+
+      onComplete(position, formattedName, avatarIndex, color, pinCode, undefined, username || undefined);
     }
   };
 
-  // Check if email already exists
-  const checkEmailExists = async (emailToCheck: string) => {
-    if (!emailToCheck.trim() || !isValidEmail(emailToCheck)) {
-      setEmailExists(false);
-      setEmailExistsInfo(null);
-      return;
-    }
-
-    setCheckingEmail(true);
-    try {
-      const { data, error } = await supabase.functions.invoke('check-email', {
-        body: { 
-          email: emailToCheck.trim().toLowerCase(),
-          couple_id: profiles[0]?.couple_id
-        }
-      });
-
-      if (data?.exists) {
-        setEmailExists(true);
-        setEmailExistsInfo({
-          masked_space: data.masked_space,
-          profile_name: data.profile_name
-        });
-        setEmailError(
-          `${prefT('Este e-mail já está cadastrado')}${data.masked_space ? ` ${prefT('no espaço')} ${data.masked_space}` : ''}`
-        );
-      } else {
-        setEmailExists(false);
-        setEmailExistsInfo(null);
-        setEmailError('');
-      }
-    } catch (err) {
-      console.error('Error checking email:', err);
-    } finally {
-      setCheckingEmail(false);
-    }
-  };
-
-  const handleEmailChange = (value: string) => {
-    setEmail(value);
-    setEmailError('');
-    setEmailExists(false);
-    setEmailExistsInfo(null);
-  };
-
-  // Check email on blur
-  const handleEmailBlur = () => {
-    if (email.trim()) {
-      checkEmailExists(email);
-    }
-  };
-
-  const handleComplete = () => {
-    // Validate email if provided
-    if (email.trim() && !isValidEmail(email)) {
-      setEmailError(prefT('E-mail inválido'));
-      return;
-    }
-
-    if (emailExists) {
-      setEmailError(prefT('Este e-mail já está em uso'));
-      return;
-    }
-
-    const position = getAvailablePosition();
-    // Format name - capitalize first letter of each word
-    const formattedName = name.trim()
-      .toLowerCase()
-      .split(' ')
-      .map(word => word.charAt(0).toUpperCase() + word.slice(1))
-      .join(' ');
-    
-    localStorage.setItem(`couple_${shareCode}`, JSON.stringify({
-      position,
-      name: formattedName,
-      avatarIndex,
-      color,
-      username,
-      timestamp: Date.now()
-    }));
-    
-    onComplete(position, formattedName, avatarIndex, color, pinCode, email.trim().toLowerCase() || undefined, username || undefined);
-  };
-
-  const handleSkipEmail = () => {
-    const position = getAvailablePosition();
-    const formattedName = name.trim()
-      .toLowerCase()
-      .split(' ')
-      .map(word => word.charAt(0).toUpperCase() + word.slice(1))
-      .join(' ');
-    
-    localStorage.setItem(`couple_${shareCode}`, JSON.stringify({
-      position,
-      name: formattedName,
-      avatarIndex,
-      color,
-      username,
-      timestamp: Date.now()
-    }));
-    
-    onComplete(position, formattedName, avatarIndex, color, pinCode, undefined, username || undefined);
-  };
-
-  const handleSendRecoveryLink = async () => {
-    if (!email.trim()) return;
-    
-    try {
-      await supabase.functions.invoke('request-pin-recovery', {
-        body: { email: email.trim().toLowerCase() }
-      });
-      setEmailError('');
-      setEmailExists(false);
-      // Show success message
-      setEmailExistsInfo({ profile_name: prefT('Link enviado! Verifique seu e-mail.') });
-    } catch (err) {
-      console.error('Error sending recovery:', err);
-    }
-  };
 
   // Render PIN slots based on visibility
   const renderPinSlots = () => {
@@ -379,19 +265,15 @@ export function OnboardingModal({ open, onClose, onComplete, profiles, shareCode
             {step === 'welcome'
               ? prefT('Bem-vindo!')
               : step === 'profile'
-              ? prefT('Olá! Crie seu perfil')
-              : step === 'pin'
-              ? prefT('Crie seu código')
-              : prefT('Adicione seu e-mail')}
+              ? prefT('Crie seu perfil')
+              : prefT('Crie seu código')}
           </DialogTitle>
           <DialogDescription className="text-center animate-fade-in">
             {step === 'welcome'
               ? prefT('{name} convidou você para compartilhar despesas', { name: displayHostName || prefT('Alguém') })
               : step === 'profile'
               ? prefT('Personalize como você aparecerá no app')
-              : step === 'pin'
-              ? prefT('Código de 4 dígitos para entrar em outros dispositivos')
-              : prefT('Para recuperar seu código se esquecer (opcional)')
+              : prefT('Código de 4 dígitos para entrar em outros dispositivos')
             }
           </DialogDescription>
         </DialogHeader>
@@ -469,30 +351,8 @@ export function OnboardingModal({ open, onClose, onComplete, profiles, shareCode
                 </div>
               </div>
 
-              {/* Username - Editable field */}
-              <div className="space-y-2 animate-fade-in" style={{ animationDelay: '150ms' }}>
-                <label className="text-sm font-medium text-muted-foreground flex items-center gap-2">
-                  <AtSign className="w-4 h-4" />
-                  {prefT('Seu @')} <span className="text-xs font-normal">({prefT('você pode personalizar')})</span>
-                </label>
-                <div className="flex items-center gap-2 bg-muted/30 rounded-xl p-3 border-2 border-dashed border-border/50 hover:border-primary/30 transition-colors">
-                  <span className="text-muted-foreground">@</span>
-                  <Input
-                    value={username}
-                    onChange={(e) => setUsername(e.target.value.replace(/[@\s]/g, '').toLowerCase())}
-                    placeholder={generatingUsername ? prefT('gerando...') : prefT('seu_username')}
-                    className="border-0 bg-transparent p-0 focus-visible:ring-0 h-auto"
-                    maxLength={20}
-                  />
-                  {generatingUsername && <Loader2 className="w-4 h-4 animate-spin text-muted-foreground" />}
-                </div>
-                <p className="text-xs text-muted-foreground">
-                  {prefT('Use para fazer login de qualquer dispositivo')}
-                </p>
-              </div>
-
               {/* Avatar Selection */}
-              <div className="space-y-2 animate-fade-in" style={{ animationDelay: '200ms' }}>
+              <div className="space-y-2 animate-fade-in" style={{ animationDelay: '150ms' }}>
                 <label className="text-sm font-medium text-muted-foreground">{prefT('Escolha seu gatinho')}</label>
                 <div className="grid grid-cols-4 gap-3">
                   {CAT_AVATARS.map((avatar, index) => {
@@ -533,7 +393,7 @@ export function OnboardingModal({ open, onClose, onComplete, profiles, shareCode
               </div>
 
               {/* Color Selection */}
-              <div className="space-y-2 animate-fade-in" style={{ animationDelay: '300ms' }}>
+              <div className="space-y-2 animate-fade-in" style={{ animationDelay: '250ms' }}>
                 <label className="text-sm font-medium text-muted-foreground">{prefT('Sua cor')}</label>
                 <div className="flex gap-2 justify-center flex-wrap">
                   {PERSON_COLORS.map((c, index) => (
@@ -557,9 +417,9 @@ export function OnboardingModal({ open, onClose, onComplete, profiles, shareCode
               </div>
 
               {/* Preview */}
-              <div 
+              <div
                 className="flex items-center justify-center gap-3 p-4 rounded-2xl bg-muted/50 animate-fade-in transition-all duration-500"
-                style={{ animationDelay: '400ms' }}
+                style={{ animationDelay: '350ms' }}
               >
                 <div 
                   className="w-14 h-14 rounded-full overflow-hidden ring-4 transition-all duration-500"
@@ -684,7 +544,6 @@ export function OnboardingModal({ open, onClose, onComplete, profiles, shareCode
                 <div className="flex gap-2">
                   <div className="w-2 h-2 rounded-full bg-primary" />
                   <div className="w-2 h-2 rounded-full bg-primary" />
-                  <div className="w-2 h-2 rounded-full bg-muted" />
                 </div>
 
                 <div className="flex gap-2 w-full">
@@ -692,122 +551,15 @@ export function OnboardingModal({ open, onClose, onComplete, profiles, shareCode
                     variant="ghost"
                     onClick={() => setStep('profile')}
                     className="flex-1"
+                    disabled={isJoining}
                   >
                     <ArrowLeft className="w-4 h-4 mr-2" />
                     {prefT('Voltar')}
                   </Button>
                   <Button
                     onClick={handlePinComplete}
-                    disabled={pinCode.length !== 4 || !!pinError}
+                    disabled={pinCode.length !== 4 || !!pinError || isJoining}
                     className="flex-1"
-                  >
-                    {prefT('Continuar')}
-                    <ArrowRight className="w-4 h-4 ml-2" />
-                  </Button>
-                </div>
-              </div>
-            </>
-          ) : (
-            <>
-              {/* Email Step */}
-              <div className="flex flex-col items-center gap-6 animate-fade-in">
-                {/* Profile Preview */}
-                <div
-                  className="w-20 h-20 rounded-full overflow-hidden ring-4 transition-all animate-cat-idle"
-                  style={{ boxShadow: `0 0 0 4px ${color}` }}
-                >
-                  <img
-                    src={CAT_AVATARS[avatarIndex - 1]}
-                    alt="Preview"
-                    className="w-full h-full object-cover"
-                  />
-                </div>
-                <div className="text-center">
-                  <span className="font-semibold text-lg block">{name}</span>
-                  {username && (
-                    <span className="text-sm text-muted-foreground flex items-center justify-center gap-1">
-                      <AtSign className="w-3 h-3" />
-                      {username}
-                    </span>
-                  )}
-                </div>
-
-                {/* Email Input */}
-                <div className="flex flex-col items-center gap-2 w-full">
-                  <div className="flex items-center gap-2 text-sm text-muted-foreground mb-2">
-                    <Mail className="w-4 h-4" />
-                    <span>{prefT('E-mail para recuperação')}</span>
-                  </div>
-
-                  <div className="relative w-full">
-                    <Input
-                      type="email"
-                      value={email}
-                      onChange={(e) => handleEmailChange(e.target.value)}
-                      onBlur={handleEmailBlur}
-                      placeholder={prefT('seu@email.com')}
-                      className={cn(
-                        "text-center",
-                        emailExists && "border-destructive"
-                      )}
-                    />
-                    {checkingEmail && (
-                      <div className="absolute right-3 top-1/2 -translate-y-1/2">
-                        <Loader2 className="w-4 h-4 animate-spin text-muted-foreground" />
-                      </div>
-                    )}
-                  </div>
-
-                  {emailError && !emailExists && (
-                    <p className="text-sm text-destructive animate-fade-in">
-                      {emailError}
-                    </p>
-                  )}
-
-                  {emailExists && (
-                    <div className="text-center animate-fade-in">
-                      <p className="text-sm text-destructive mb-2">
-                        {emailError}
-                      </p>
-                      <Button
-                        variant="link"
-                        size="sm"
-                        onClick={handleSendRecoveryLink}
-                        className="text-primary"
-                      >
-                        <Mail className="w-3 h-3 mr-1" />
-                        {prefT('Enviar link de recuperação')}
-                      </Button>
-                    </div>
-                  )}
-
-                  {!emailExists && !emailError && (
-                    <p className="text-xs text-muted-foreground text-center mt-1">
-                      {prefT('Se esquecer seu código, enviaremos um link de recuperação')}
-                    </p>
-                  )}
-                </div>
-
-                {/* Step indicator */}
-                <div className="flex gap-2">
-                  <div className="w-2 h-2 rounded-full bg-primary" />
-                  <div className="w-2 h-2 rounded-full bg-primary" />
-                  <div className="w-2 h-2 rounded-full bg-primary" />
-                </div>
-
-                <div className="flex gap-2 w-full">
-                  <Button 
-                    variant="ghost"
-                    onClick={() => setStep('pin')}
-                    className="flex-1"
-                  >
-                    <ArrowLeft className="w-4 h-4 mr-2" />
-                    {prefT('Voltar')}
-                  </Button>
-                  <Button 
-                    onClick={handleComplete} 
-                    className="flex-1"
-                    disabled={emailExists || checkingEmail || isJoining}
                   >
                     {isJoining ? (
                       <Loader2 className="w-4 h-4 mr-2 animate-spin" />
@@ -817,19 +569,9 @@ export function OnboardingModal({ open, onClose, onComplete, profiles, shareCode
                     {isJoining ? prefT('Criando...') : prefT('Criar perfil')}
                   </Button>
                 </div>
-
-                <Button 
-                  variant="link" 
-                  onClick={handleSkipEmail}
-                  className="text-muted-foreground"
-                  disabled={emailExists || isJoining}
-                >
-                  <SkipForward className="w-4 h-4 mr-2" />
-                  {prefT('Pular esta etapa')}
-                </Button>
               </div>
             </>
-          )}
+          ) : null}
         </div>
       </DialogContent>
     </Dialog>

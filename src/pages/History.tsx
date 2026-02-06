@@ -1,14 +1,14 @@
 import { useState, useMemo } from 'react';
 import { useOutletContext } from 'react-router-dom';
-import { Calendar, Filter, FileText, Eye, EyeOff } from 'lucide-react';
+import { Calendar, Filter, FileText, Eye, EyeOff, ArrowRight } from 'lucide-react';
 import { ExpenseCard } from '@/components/ExpenseCard';
 import { TagPill } from '@/components/TagPill';
 import { AnimatedPage, AnimatedItem } from '@/components/AnimatedPage';
-import { Couple, Expense, useCoupleContext } from '@/contexts/CoupleContext';
+import { Couple, Expense, Profile, useCoupleContext } from '@/contexts/CoupleContext';
 import { format, startOfMonth, endOfMonth, isWithinInterval, parseISO } from 'date-fns';
 import { getDateFnsLocale } from '@/lib/preferences';
 import { usePreferences } from '@/contexts/PreferencesContext';
-import { cn, maskCurrencyValue } from '@/lib/utils';
+import { cn, maskCurrencyValue, isConfiguredProfile } from '@/lib/utils';
 import { Avatar } from '@/components/Avatar';
 import { DeleteExpenseDialog } from '@/components/DeleteExpenseDialog';
 import { EditExpenseDialog } from '@/components/EditExpenseDialog';
@@ -50,6 +50,137 @@ export default function History() {
       .reduce((sum, a) => sum + a.amount, 0);
     return expensesTotal + agreementsTotal;
   }, [filteredExpenses, couple.agreements]);
+
+  // Calculate who paid whom for the selected month
+  const configuredProfiles = couple.profiles.filter(isConfiguredProfile);
+
+  const monthlySettlements = useMemo(() => {
+    if (configuredProfiles.length < 2) return [];
+
+    const balances: Map<string, number> = new Map();
+    configuredProfiles.forEach(p => balances.set(p.id, 0));
+
+    const processExpense = (
+      totalAmount: number,
+      splitType: string,
+      splitValue: { person1: number; person2: number } | Record<string, number>,
+      paidByPosition: number,
+      paidByProfileId?: string | null
+    ) => {
+      let payerProfile: Profile | undefined;
+      if (paidByProfileId) {
+        payerProfile = configuredProfiles.find(p => p.id === paidByProfileId);
+      }
+      if (!payerProfile) {
+        payerProfile = configuredProfiles.find(p => p.position === paidByPosition);
+      }
+      if (!payerProfile) return;
+
+      const numPeople = configuredProfiles.length;
+      const shares: Map<string, number> = new Map();
+
+      if (splitType === 'equal') {
+        const sharePerPerson = totalAmount / numPeople;
+        configuredProfiles.forEach(p => shares.set(p.id, sharePerPerson));
+      } else if (splitType === 'percentage') {
+        const sv = splitValue as Record<string, number>;
+        configuredProfiles.forEach(p => {
+          const key = `person${p.position}`;
+          const percentage = sv[key] ?? (100 / numPeople);
+          shares.set(p.id, (totalAmount * percentage) / 100);
+        });
+      } else if (splitType === 'fixed') {
+        const sv = splitValue as Record<string, number>;
+        configuredProfiles.forEach(p => {
+          const key = `person${p.position}`;
+          shares.set(p.id, sv[key] ?? 0);
+        });
+      } else if (splitType === 'full') {
+        const sv = splitValue as Record<string, number>;
+        configuredProfiles.forEach(p => {
+          const key = `person${p.position}`;
+          shares.set(p.id, sv[key] === 100 ? totalAmount : 0);
+        });
+      }
+
+      balances.set(payerProfile.id, (balances.get(payerProfile.id) || 0) - totalAmount);
+      configuredProfiles.forEach(p => {
+        const share = shares.get(p.id) || 0;
+        balances.set(p.id, (balances.get(p.id) || 0) + share);
+      });
+    };
+
+    // Process filtered expenses for this month
+    filteredExpenses.forEach(expense => {
+      processExpense(expense.total_amount, expense.split_type, expense.split_value, expense.paid_by, expense.paid_by_profile_id);
+    });
+
+    // Process active agreements
+    couple.agreements.filter(a => a.is_active).forEach(agreement => {
+      processExpense(agreement.amount, agreement.split_type, agreement.split_value, agreement.paid_by, agreement.paid_by_profile_id);
+    });
+
+    // Process settlements for this month
+    couple.settlements
+      .filter(s => {
+        const settlementDate = parseISO(s.settled_at);
+        return isWithinInterval(settlementDate, { start: monthStart, end: monthEnd });
+      })
+      .forEach(s => {
+        let payerProfile: Profile | undefined;
+        let receiverProfile: Profile | undefined;
+
+        if (s.paid_by_profile_id) {
+          payerProfile = configuredProfiles.find(p => p.id === s.paid_by_profile_id);
+        }
+        if (!payerProfile) {
+          payerProfile = configuredProfiles.find(p => p.position === s.paid_by);
+        }
+        if (s.received_by_profile_id) {
+          receiverProfile = configuredProfiles.find(p => p.id === s.received_by_profile_id);
+        }
+
+        if (payerProfile) {
+          balances.set(payerProfile.id, (balances.get(payerProfile.id) || 0) - s.amount);
+        }
+        if (receiverProfile) {
+          balances.set(receiverProfile.id, (balances.get(receiverProfile.id) || 0) + s.amount);
+        }
+      });
+
+    // Calculate settlements needed
+    const debtors: { profile: Profile; owes: number }[] = [];
+    const creditors: { profile: Profile; receives: number }[] = [];
+
+    configuredProfiles.forEach(p => {
+      const balance = balances.get(p.id) || 0;
+      if (balance > 0.01) {
+        debtors.push({ profile: p, owes: balance });
+      } else if (balance < -0.01) {
+        creditors.push({ profile: p, receives: Math.abs(balance) });
+      }
+    });
+
+    debtors.sort((a, b) => b.owes - a.owes);
+    creditors.sort((a, b) => b.receives - a.receives);
+
+    const settlements: { from: Profile; to: Profile; amount: number }[] = [];
+    debtors.forEach(debtor => {
+      let remaining = debtor.owes;
+      for (const creditor of creditors) {
+        if (remaining <= 0.01) break;
+        if (creditor.receives <= 0.01) continue;
+        const amount = Math.min(remaining, creditor.receives);
+        if (amount > 0.01) {
+          settlements.push({ from: debtor.profile, to: creditor.profile, amount });
+          remaining -= amount;
+          creditor.receives -= amount;
+        }
+      }
+    });
+
+    return settlements;
+  }, [filteredExpenses, couple.agreements, couple.settlements, configuredProfiles, monthStart, monthEnd]);
 
   // Encontrar parcelas relacionadas do mesmo parcelamento
   const getRelatedExpenses = (expense: Expense): Expense[] => {
@@ -129,6 +260,55 @@ export default function History() {
               </p>
             </div>
           </div>
+
+          {/* Who paid whom */}
+          {monthlySettlements.length > 0 && (
+            <div className="mt-3 pt-3 border-t border-border/50 space-y-2">
+              {monthlySettlements.map((settlement, index) => (
+                <div
+                  key={index}
+                  className="flex items-center justify-between p-2 bg-muted/50 rounded-xl"
+                >
+                  <div className="flex items-center gap-2">
+                    <Avatar
+                      avatarIndex={settlement.from.avatar_index}
+                      size="sm"
+                      ringColor={settlement.from.color}
+                    />
+                    <span className="text-sm font-medium" style={{ color: settlement.from.color }}>
+                      {settlement.from.name}
+                    </span>
+                  </div>
+                  <div className="flex items-center gap-1.5 px-2">
+                    <ArrowRight className="w-3.5 h-3.5 text-muted-foreground" />
+                    <span className="font-semibold text-sm">
+                      {valuesHidden
+                        ? maskCurrencyValue(formatCurrency(settlement.amount))
+                        : formatCurrency(settlement.amount)}
+                    </span>
+                    <ArrowRight className="w-3.5 h-3.5 text-muted-foreground" />
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <span className="text-sm font-medium" style={{ color: settlement.to.color }}>
+                      {settlement.to.name}
+                    </span>
+                    <Avatar
+                      avatarIndex={settlement.to.avatar_index}
+                      size="sm"
+                      ringColor={settlement.to.color}
+                    />
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+          {monthlySettlements.length === 0 && configuredProfiles.length >= 2 && (
+            <div className="mt-3 pt-3 border-t border-border/50">
+              <p className="text-xs text-center text-green-600 font-medium">
+                {prefT('Tudo equilibrado este mês!')}
+              </p>
+            </div>
+          )}
         </div>
       </AnimatedItem>
 

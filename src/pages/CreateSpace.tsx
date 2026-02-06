@@ -296,16 +296,12 @@ export default function CreateSpace() {
               <Heart className="w-5 h-5 text-primary animate-pulse" />
               {step === 'profile'
                 ? prefT('Crie seu perfil')
-                : step === 'pin'
-                ? prefT('Crie seu código')
-                : prefT('Adicione seu e-mail')}
+                : prefT('Crie seu código')}
             </DialogTitle>
             <DialogDescription className="text-center animate-fade-in">
               {step === 'profile'
                 ? prefT('Personalize como você aparecerá no app')
-                : step === 'pin'
-                ? prefT('Código de 4 dígitos para entrar em outros dispositivos')
-                : prefT('Para recuperar seu código se esquecer (opcional)')
+                : prefT('Código de 4 dígitos para entrar em outros dispositivos')
               }
             </DialogDescription>
           </DialogHeader>
