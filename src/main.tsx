@@ -5,7 +5,7 @@ import "./index.css";
 // Production security hardening
 if (!import.meta.env.DEV) {
   // Disable React DevTools
-  const w = window as Record<string, unknown>;
+  const w = window as unknown as Record<string, unknown>;
   if (typeof w.__REACT_DEVTOOLS_GLOBAL_HOOK__ === 'object' && w.__REACT_DEVTOOLS_GLOBAL_HOOK__) {
     const hook = w.__REACT_DEVTOOLS_GLOBAL_HOOK__ as Record<string, unknown>;
     hook.inject = () => {};
