@@ -24,6 +24,30 @@ interface AIInsightsCardProps {
   coupleId: string;
 }
 
+const CACHE_KEY_PREFIX = 'ai_insights_';
+const CACHE_DURATION_MS = 24 * 60 * 60 * 1000; // 24 hours
+const LEARNING_CACHE_DURATION_MS = 2 * 60 * 60 * 1000; // 2 hours
+
+function getCachedInsights(coupleId: string) {
+  try {
+    const raw = localStorage.getItem(CACHE_KEY_PREFIX + coupleId);
+    if (!raw) return null;
+    const cached = JSON.parse(raw);
+    const maxAge = cached.learning ? LEARNING_CACHE_DURATION_MS : CACHE_DURATION_MS;
+    if (Date.now() - cached.timestamp < maxAge) {
+      return cached;
+    }
+    localStorage.removeItem(CACHE_KEY_PREFIX + coupleId);
+  } catch { /* ignore */ }
+  return null;
+}
+
+function setCachedInsights(coupleId: string, data: { learning: boolean; insights: AIInsight[]; progress?: LearningProgress | null }) {
+  try {
+    localStorage.setItem(CACHE_KEY_PREFIX + coupleId, JSON.stringify({ ...data, timestamp: Date.now() }));
+  } catch { /* ignore */ }
+}
+
 export function AIInsightsCard({ coupleId }: AIInsightsCardProps) {
   const { t } = usePreferences();
   const [insights, setInsights] = useState<AIInsight[]>([]);
@@ -35,6 +59,21 @@ export function AIInsightsCard({ coupleId }: AIInsightsCardProps) {
   const fetchInsights = async () => {
     setLoading(true);
     setError(null);
+
+    // Check cache first
+    const cached = getCachedInsights(coupleId);
+    if (cached) {
+      if (cached.learning) {
+        setLearning(true);
+        setProgress(cached.progress);
+        setInsights([]);
+      } else {
+        setLearning(false);
+        setInsights(cached.insights || []);
+      }
+      setLoading(false);
+      return;
+    }
 
     try {
       const { data, error: fnError } = await supabase.functions.invoke('generate-insights');
@@ -48,9 +87,11 @@ export function AIInsightsCard({ coupleId }: AIInsightsCardProps) {
         setLearning(true);
         setProgress(data.progress);
         setInsights([]);
+        setCachedInsights(coupleId, { learning: true, progress: data.progress, insights: [] });
       } else {
         setLearning(false);
         setInsights(data.insights || []);
+        setCachedInsights(coupleId, { learning: false, insights: data.insights || [] });
       }
     } catch {
       setError(t('Erro ao conectar'));

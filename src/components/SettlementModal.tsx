@@ -110,7 +110,7 @@ export function SettlementModal({ open, onClose, balance, profiles, onSettle, co
           <div className="flex items-center justify-center gap-4 mb-6">
             <div className="flex flex-col items-center">
               <div 
-                className="w-14 h-14 rounded-full overflow-hidden ring-4"
+                className="w-14 h-14 rounded-full overflow-hidden ring-4 animate-cat-idle"
                 style={{ boxShadow: `0 0 0 4px ${debtor?.color}` }}
               >
                 <img 
@@ -131,7 +131,7 @@ export function SettlementModal({ open, onClose, balance, profiles, onSettle, co
 
             <div className="flex flex-col items-center">
               <div 
-                className="w-14 h-14 rounded-full overflow-hidden ring-4"
+                className="w-14 h-14 rounded-full overflow-hidden ring-4 animate-cat-idle"
                 style={{ boxShadow: `0 0 0 4px ${creditor?.color}` }}
               >
                 <img 

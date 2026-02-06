@@ -9,7 +9,7 @@ interface AvatarProps {
   className?: string;
   ringColor?: string;
   animated?: boolean; // Force animation always on
-  animateOnHover?: boolean; // Only animate when hovered
+  animateOnHover?: boolean; // Only animate when hovered (wiggle like profile creation)
   animateOnce?: boolean; // Animate once for 2 seconds then stop
   selected?: boolean; // Is this avatar selected (for selection screens)
   showBackground?: boolean;
@@ -24,43 +24,20 @@ const sizeClasses = {
   xl: 'w-24 h-24',
 };
 
-// CSS animation class mapping
-const CSS_ANIMATIONS: Record<CatAnimationType, string> = {
-  idle: 'animate-cat-idle',
-  licking: 'animate-cat-licking',
-  rolling: 'animate-cat-rolling',
-  sleeping: 'animate-cat-sleeping',
-  playing: 'animate-cat-playing',
-  stretching: 'animate-cat-stretching',
-  lying: 'animate-cat-lying',
-  purring: 'animate-cat-purring',
-};
-
-// Hover-only animation classes (using group-hover)
-const CSS_HOVER_ANIMATIONS: Record<CatAnimationType, string> = {
-  idle: 'group-hover:animate-cat-idle',
-  licking: 'group-hover:animate-cat-licking',
-  rolling: 'group-hover:animate-cat-rolling',
-  sleeping: 'group-hover:animate-cat-sleeping',
-  playing: 'group-hover:animate-cat-playing',
-  stretching: 'group-hover:animate-cat-stretching',
-  lying: 'group-hover:animate-cat-lying',
-  purring: 'group-hover:animate-cat-purring',
-};
-
 export function Avatar({
   avatarIndex,
   size = 'md',
   className,
   ringColor,
   animated = false,
-  animateOnHover = false,
+  animateOnHover = true,
   animateOnce = false,
   selected = false,
   showBackground = true,
   animation = 'idle',
   onClick,
 }: AvatarProps) {
+  const [isHovered, setIsHovered] = useState(false);
   const [isAnimating, setIsAnimating] = useState(animateOnce);
   const avatarSrc = CAT_AVATARS[avatarIndex - 1] || CAT_AVATARS[0];
   const bgColor = CAT_BG_COLORS[avatarIndex] || CAT_BG_COLORS[1];
@@ -74,15 +51,16 @@ export function Avatar({
       }, 2000);
       return () => clearTimeout(timer);
     }
-  }, [animateOnce, avatarIndex]); // Re-trigger when avatar changes
+  }, [animateOnce, avatarIndex]);
 
   // Determine animation class based on props
   const getAnimationClass = () => {
-    if (animated || selected || isAnimating) {
-      return CSS_ANIMATIONS[animation];
+    // Hover wiggle takes priority (same animation as profile creation screen)
+    if (animateOnHover && isHovered) {
+      return 'animate-wiggle';
     }
-    if (animateOnHover) {
-      return CSS_HOVER_ANIMATIONS[animation];
+    if (animated || selected || isAnimating) {
+      return 'animate-cat-idle';
     }
     return '';
   };
@@ -90,7 +68,7 @@ export function Avatar({
   return (
     <div
       className={cn(
-        'rounded-full overflow-hidden flex-shrink-0 relative group',
+        'rounded-full overflow-hidden flex-shrink-0 relative',
         sizeClasses[size],
         ringColor && 'ring-2 ring-offset-2 ring-offset-background',
         onClick && 'cursor-pointer',
@@ -98,6 +76,8 @@ export function Avatar({
       )}
       style={ringColor ? { '--tw-ring-color': ringColor } as React.CSSProperties : undefined}
       onClick={onClick}
+      onMouseEnter={() => setIsHovered(true)}
+      onMouseLeave={() => setIsHovered(false)}
     >
       {/* Fundo colorido */}
       {showBackground && (

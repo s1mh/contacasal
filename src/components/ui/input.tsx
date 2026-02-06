@@ -7,6 +7,8 @@ const Input = React.forwardRef<HTMLInputElement, React.ComponentProps<"input">>(
     return (
       <input
         type={type}
+        spellCheck
+        lang="pt-BR"
         className={cn(
           "flex h-12 w-full rounded-2xl border-2 border-border/50 bg-muted/50 px-4 py-3 text-base ring-offset-background transition-all duration-300",
           "file:border-0 file:bg-transparent file:text-sm file:font-medium file:text-foreground",

@@ -185,6 +185,8 @@ export default function NewExpense() {
           onChange={(e) => setDescription(e.target.value)}
           placeholder={prefT('Descrição (opcional)')}
           className="mt-4 rounded-xl bg-muted border-0"
+          spellCheck
+          autoCorrect="on"
         />
       </div>
 

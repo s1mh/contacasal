@@ -1,6 +1,8 @@
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
 import { getCorsHeaders, handleCorsOptions } from '../_shared/cors.ts'
 import { checkRateLimit, rateLimitResponse } from '../_shared/rate-limit.ts'
+import { sanitizeName } from '../_shared/sanitize.ts'
+import { hashPin, isValidPin } from '../_shared/pin.ts'
 
 Deno.serve(async (req) => {
   const corsResponse = handleCorsOptions(req)
@@ -21,9 +23,10 @@ Deno.serve(async (req) => {
     const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
     const supabaseAnonKey = Deno.env.get('SUPABASE_ANON_KEY')!
 
+    const supabaseAdmin = createClient(supabaseUrl, supabaseServiceKey)
+
     // Rate limit: 5 space creations per 10 minutes
-    const supabaseRL = createClient(supabaseUrl, supabaseServiceKey)
-    const { allowed } = await checkRateLimit(supabaseRL, req, 'create-couple', 5, 10)
+    const { allowed } = await checkRateLimit(supabaseAdmin, req, 'create-couple', 5, 10)
     if (!allowed) return rateLimitResponse(corsHeaders)
 
     const supabaseUser = createClient(supabaseUrl, supabaseAnonKey, {
@@ -42,7 +45,9 @@ Deno.serve(async (req) => {
 
     const userId = claims.claims.sub
 
-    const supabaseAdmin = createClient(supabaseUrl, supabaseServiceKey)
+    // Parse optional profile data from request body
+    const body = await req.json().catch(() => ({}))
+    const { name, avatar_index, color, pin, email, username } = body
 
     const { data: couple, error: coupleError } = await supabaseAdmin
       .from('couples')
@@ -51,7 +56,7 @@ Deno.serve(async (req) => {
       .single()
 
     if (coupleError || !couple) {
-      return new Response(JSON.stringify({ error: 'Failed to create space' }), {
+      return new Response(JSON.stringify({ error: 'Falha ao criar espaço' }), {
         status: 500,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       })
@@ -68,10 +73,22 @@ Deno.serve(async (req) => {
       .single()
 
     if (firstProfile) {
-      if (userExists?.user) {
+      // Build profile update with provided data
+      const profileUpdate: Record<string, unknown> = {}
+      if (userExists?.user) profileUpdate.user_id = userId
+      if (name && typeof name === 'string') profileUpdate.name = sanitizeName(name, 50)
+      if (avatar_index && typeof avatar_index === 'number' && avatar_index >= 1 && avatar_index <= 8) {
+        profileUpdate.avatar_index = avatar_index
+      }
+      if (color && typeof color === 'string') profileUpdate.color = color.substring(0, 7)
+      if (pin && isValidPin(pin)) profileUpdate.pin_code = await hashPin(pin)
+      if (email && typeof email === 'string') profileUpdate.email = email.trim().toLowerCase().substring(0, 100)
+      if (username && typeof username === 'string') profileUpdate.username = username.trim().toLowerCase().substring(0, 20)
+
+      if (Object.keys(profileUpdate).length > 0) {
         await supabaseAdmin
           .from('profiles')
-          .update({ user_id: userId })
+          .update(profileUpdate)
           .eq('id', firstProfile.id)
       }
 
@@ -95,7 +112,7 @@ Deno.serve(async (req) => {
       { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } },
     )
   } catch (error) {
-    console.error('Edge function error:', error)
+    console.error('[create-couple] Error')
     return new Response(JSON.stringify({ error: 'Erro interno' }), {
       status: 500,
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
