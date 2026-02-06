@@ -9,6 +9,8 @@ import {
   validateCard,
   validateAgreement,
   validateSettlement,
+  devError,
+  devLog,
 } from '@/lib/validation';
 
 // ============ Types ============
@@ -216,7 +218,7 @@ export function CoupleProvider({ children, shareCode }: CoupleProviderProps) {
 
       setCouple(await fetchCoupleData(coupleData.id, coupleData));
     } catch (err: unknown) {
-      console.error('Error fetching couple:', err);
+      devError('Error fetching couple:', err);
       setError('Erro ao carregar dados');
     } finally {
       setLoading(false);
@@ -244,7 +246,7 @@ export function CoupleProvider({ children, shareCode }: CoupleProviderProps) {
 
       setCouple(await fetchCoupleData(coupleData.id, coupleData));
     } catch (err: unknown) {
-      console.error('[CoupleContext] Silent refetch error:', err);
+      devError('[CoupleContext] Silent refetch error:', err);
     } finally {
       if (syncTimeoutRef.current) {
         clearTimeout(syncTimeoutRef.current);
@@ -288,7 +290,7 @@ export function CoupleProvider({ children, shareCode }: CoupleProviderProps) {
         description: 'Suas alterações foram salvas'
       });
     } catch (err: unknown) {
-      console.error('Error updating profile:', err);
+      devError('Error updating profile:', err);
       toast({ 
         title: 'Ops! Algo deu errado 😕',
         description: 'Não foi possível atualizar o perfil',
@@ -316,7 +318,7 @@ export function CoupleProvider({ children, shareCode }: CoupleProviderProps) {
       });
       return true;
     } catch (err: unknown) {
-      console.error('Error deleting profile:', err);
+      devError('Error deleting profile:', err);
       toast({ 
         title: 'Ops! Algo deu errado 😕',
         description: 'Não foi possível remover o perfil',
@@ -366,7 +368,7 @@ export function CoupleProvider({ children, shareCode }: CoupleProviderProps) {
       // Refetch to get real ID
       await refetch();
     } catch (err: unknown) {
-      console.error('Error adding expense:', err);
+      devError('Error adding expense:', err);
       toast({ 
         title: 'Ops! Algo deu errado 😕',
         description: 'Não foi possível registrar o gasto',
@@ -431,7 +433,7 @@ export function CoupleProvider({ children, shareCode }: CoupleProviderProps) {
       // Single refetch
       await refetch();
     } catch (err: unknown) {
-      console.error('Error adding expenses:', err);
+      devError('Error adding expenses:', err);
       toast({ 
         title: 'Ops! Algo deu errado 😕',
         description: 'Não foi possível registrar',
@@ -475,7 +477,7 @@ export function CoupleProvider({ children, shareCode }: CoupleProviderProps) {
         description: 'Alterações salvas'
       });
     } catch (err: unknown) {
-      console.error('Error updating expense:', err);
+      devError('Error updating expense:', err);
       toast({ 
         title: 'Ops! Algo deu errado 😕',
         description: 'Não foi possível atualizar',
@@ -510,7 +512,7 @@ export function CoupleProvider({ children, shareCode }: CoupleProviderProps) {
         description: 'Retirado da conta'
       });
     } catch (err: unknown) {
-      console.error('Error deleting expense:', err);
+      devError('Error deleting expense:', err);
       toast({ 
         title: 'Ops! Algo deu errado 😕',
         description: 'Não foi possível remover o gasto',
@@ -549,7 +551,7 @@ export function CoupleProvider({ children, shareCode }: CoupleProviderProps) {
         description: expenseIds.length > 1 ? `${expenseIds.length} parcelas removidas` : 'Retirado da conta'
       });
     } catch (err: unknown) {
-      console.error('Error deleting expenses:', err);
+      devError('Error deleting expenses:', err);
       toast({ 
         title: 'Ops! Algo deu errado 😕',
         description: 'Não foi possível remover',
@@ -589,7 +591,7 @@ export function CoupleProvider({ children, shareCode }: CoupleProviderProps) {
       });
       await refetch();
     } catch (err: unknown) {
-      console.error('Error adding tag:', err);
+      devError('Error adding tag:', err);
       toast({ 
         title: 'Ops! Algo deu errado 😕',
         description: 'Não foi possível criar a categoria',
@@ -618,7 +620,7 @@ export function CoupleProvider({ children, shareCode }: CoupleProviderProps) {
         description: 'Não afeta gastos anteriores'
       });
     } catch (err: unknown) {
-      console.error('Error deleting tag:', err);
+      devError('Error deleting tag:', err);
       toast({ 
         title: 'Ops! Algo deu errado 😕',
         description: 'Não foi possível remover a categoria',
@@ -655,7 +657,7 @@ export function CoupleProvider({ children, shareCode }: CoupleProviderProps) {
       });
       await refetch();
     } catch (err: unknown) {
-      console.error('Error adding card:', err);
+      devError('Error adding card:', err);
       toast({ 
         title: 'Ops! Algo deu errado 😕',
         description: 'Não foi possível adicionar o cartão',
@@ -684,7 +686,7 @@ export function CoupleProvider({ children, shareCode }: CoupleProviderProps) {
         description: 'Retirado da lista'
       });
     } catch (err: unknown) {
-      console.error('Error deleting card:', err);
+      devError('Error deleting card:', err);
       toast({ 
         title: 'Ops! Algo deu errado 😕',
         description: 'Não foi possível remover o cartão',
@@ -721,7 +723,7 @@ export function CoupleProvider({ children, shareCode }: CoupleProviderProps) {
       });
       await refetch();
     } catch (err: unknown) {
-      console.error('Error adding agreement:', err);
+      devError('Error adding agreement:', err);
       toast({ 
         title: 'Ops! Algo deu errado 😕',
         description: 'Não foi possível criar o acordo',
@@ -749,7 +751,7 @@ export function CoupleProvider({ children, shareCode }: CoupleProviderProps) {
       const { error } = await supabase.from('agreements').update(updates).eq('id', id);
       if (error) throw error;
     } catch (err: unknown) {
-      console.error('Error updating agreement:', err);
+      devError('Error updating agreement:', err);
       toast({ 
         title: 'Ops! Algo deu errado 😕',
         description: 'Não foi possível atualizar o acordo',
@@ -778,7 +780,7 @@ export function CoupleProvider({ children, shareCode }: CoupleProviderProps) {
         description: 'Não afeta gastos anteriores'
       });
     } catch (err: unknown) {
-      console.error('Error deleting agreement:', err);
+      devError('Error deleting agreement:', err);
       toast({ 
         title: 'Ops! Algo deu errado 😕',
         description: 'Não foi possível remover o acordo',
@@ -817,7 +819,7 @@ export function CoupleProvider({ children, shareCode }: CoupleProviderProps) {
       });
       await refetch();
     } catch (err: unknown) {
-      console.error('Error adding settlement:', err);
+      devError('Error adding settlement:', err);
       toast({ 
         title: 'Ops! Algo deu errado 😕',
         description: 'Não foi possível registrar o acerto',
@@ -943,7 +945,7 @@ export function CoupleProvider({ children, shareCode }: CoupleProviderProps) {
     channel.subscribe((status, err) => {
       setRealtimeStatus(status);
       if (status === 'CHANNEL_ERROR') {
-        console.error('[CoupleContext] Realtime error:', err);
+        devError('[CoupleContext] Realtime error:', err);
       }
     });
 
@@ -953,7 +955,7 @@ export function CoupleProvider({ children, shareCode }: CoupleProviderProps) {
   // ============ Fallback polling on focus ============
   useEffect(() => {
     const handleFocus = () => {
-      console.log('[CoupleContext] Window focused, silent refetching...');
+      devLog('[CoupleContext] Window focused, silent refetching...');
       silentRefetch();
     };
 

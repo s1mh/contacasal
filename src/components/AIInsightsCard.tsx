@@ -40,7 +40,6 @@ export function AIInsightsCard({ coupleId }: AIInsightsCardProps) {
       const { data, error: fnError } = await supabase.functions.invoke('generate-insights');
 
       if (fnError) {
-        console.error('Error fetching insights:', fnError);
         setError(t('Não foi possível gerar insights'));
         return;
       }
@@ -53,8 +52,7 @@ export function AIInsightsCard({ coupleId }: AIInsightsCardProps) {
         setLearning(false);
         setInsights(data.insights || []);
       }
-    } catch (err) {
-      console.error('Error:', err);
+    } catch {
       setError(t('Erro ao conectar'));
     } finally {
       setLoading(false);

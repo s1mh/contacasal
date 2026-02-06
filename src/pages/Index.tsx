@@ -196,7 +196,6 @@ export default function Index() {
 
       navigate(`/c/${shareCode}`);
     } catch (err) {
-      console.error("Username login error:", err);
       setUsernameError("Erro ao fazer login. Tente novamente.");
       setUsernamePin("");
     } finally {
