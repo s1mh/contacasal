@@ -3,7 +3,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } f
 import { Button } from '@/components/ui/button';
 import { InputOTP, InputOTPGroup, InputOTPSlotMasked } from '@/components/ui/input-otp';
 import { cn, isConfiguredProfile } from '@/lib/utils';
-import { CAT_AVATARS } from '@/lib/constants';
+import { Avatar } from '@/components/Avatar';
 import { Profile } from '@/contexts/CoupleContext';
 import { Heart, ArrowLeft, UserPlus, Lock, HelpCircle, Loader2 } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
@@ -157,16 +157,13 @@ export function ReconnectModal({ open, profiles, onReconnect, onCreateNew, share
                         "border-2 border-transparent hover:border-primary/30"
                       )}
                     >
-                      <div 
-                        className="w-16 h-16 rounded-full overflow-hidden ring-4 transition-all group"
-                        style={{ boxShadow: `0 0 0 4px ${profile.color}` }}
-                      >
-                        <img 
-                          src={CAT_AVATARS[profile.avatar_index - 1]} 
-                          alt={profile.name}
-                          className="w-full h-full object-cover group-hover:animate-wiggle"
-                        />
-                      </div>
+                      <Avatar
+                        avatarIndex={profile.avatar_index}
+                        size="lg"
+                        ringColor={profile.color}
+                        ringWidth={4}
+                        animateOnHover
+                      />
                       <span className="font-medium text-sm">{profile.name}</span>
                       {profile.username && (
                         <span className="text-xs text-muted-foreground">@{profile.username}</span>
@@ -195,16 +192,15 @@ export function ReconnectModal({ open, profiles, onReconnect, onCreateNew, share
                 <div className="flex flex-col items-center gap-6 animate-fade-in">
                   {/* Selected Profile Preview */}
                   <div className="flex flex-col items-center gap-1">
-                    <div 
-                      className="w-20 h-20 rounded-full overflow-hidden ring-4 transition-all animate-cat-idle"
-                      style={{ boxShadow: `0 0 0 4px ${selectedProfile.color}` }}
-                    >
-                      <img 
-                        src={CAT_AVATARS[selectedProfile.avatar_index - 1]} 
-                        alt={selectedProfile.name}
-                        className="w-full h-full object-cover"
-                      />
-                    </div>
+                    <Avatar
+                      avatarIndex={selectedProfile.avatar_index}
+                      size="xl"
+                      ringColor={selectedProfile.color}
+                      ringWidth={4}
+                      animated
+                      animateOnHover={false}
+                      className="w-20 h-20"
+                    />
                     {selectedProfile.username && (
                       <span className="text-sm text-muted-foreground">@{selectedProfile.username}</span>
                     )}

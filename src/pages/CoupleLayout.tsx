@@ -12,7 +12,7 @@ import { useAuthContext } from '@/contexts/AuthContext';
 import { Loader2, AlertCircle, RefreshCw, Trash2, UserX, Hand } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
-import { CAT_AVATARS } from '@/lib/constants';
+import { Avatar } from '@/components/Avatar';
 import { isConfiguredProfile } from '@/lib/utils';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
@@ -323,17 +323,8 @@ function CoupleLayoutContent() {
       <div className="min-h-screen bg-background flex items-center justify-center">
         <div className="flex flex-col items-center gap-4 animate-fade-in">
           <div className="flex gap-2">
-            <img 
-              src={CAT_AVATARS[0]} 
-              alt="" 
-              className="w-12 h-12 rounded-full shadow-lg animate-bounce-gentle" 
-            />
-            <img 
-              src={CAT_AVATARS[1]} 
-              alt="" 
-              className="w-12 h-12 rounded-full shadow-lg animate-bounce-gentle" 
-              style={{ animationDelay: '200ms' }}
-            />
+            <Avatar avatarIndex={1} size="md" shadow animated animateOnHover={false} />
+            <Avatar avatarIndex={2} size="md" shadow animated animateOnHover={false} className="[animation-delay:200ms]" />
           </div>
           <Loader2 className="w-6 h-6 animate-spin text-primary" />
           <p className="text-sm text-muted-foreground">
