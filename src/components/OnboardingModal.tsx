@@ -168,8 +168,8 @@ export function OnboardingModal({ open, onClose, onComplete, profiles, shareCode
       if (data?.success && data?.username) {
         setUsername(data.username);
       }
-    } catch (err) {
-      console.error('Error generating username:', err);
+    } catch {
+      // Username generation is optional
     } finally {
       setGeneratingUsername(false);
     }

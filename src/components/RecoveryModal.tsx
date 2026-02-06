@@ -59,8 +59,7 @@ export function RecoveryModal({ open, onClose, shareCode }: RecoveryModalProps) 
       }
 
       setSent(true);
-    } catch (err) {
-      console.error('Recovery request error:', err);
+    } catch {
       setError('Erro ao enviar. Tente novamente.');
     } finally {
       setLoading(false);
