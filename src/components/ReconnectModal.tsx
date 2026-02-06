@@ -158,13 +158,13 @@ export function ReconnectModal({ open, profiles, onReconnect, onCreateNew, share
                       )}
                     >
                       <div 
-                        className="w-16 h-16 rounded-full overflow-hidden ring-4 transition-all"
+                        className="w-16 h-16 rounded-full overflow-hidden ring-4 transition-all group"
                         style={{ boxShadow: `0 0 0 4px ${profile.color}` }}
                       >
                         <img 
                           src={CAT_AVATARS[profile.avatar_index - 1]} 
                           alt={profile.name}
-                          className="w-full h-full object-cover"
+                          className="w-full h-full object-cover group-hover:animate-wiggle"
                         />
                       </div>
                       <span className="font-medium text-sm">{profile.name}</span>

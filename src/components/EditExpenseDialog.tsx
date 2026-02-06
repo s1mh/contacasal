@@ -129,6 +129,8 @@ export function EditExpenseDialog({
               value={description}
               onChange={(e) => setDescription(e.target.value)}
               placeholder={prefT('Descrição do gasto')}
+              spellCheck
+              autoCorrect="on"
             />
           </div>
 

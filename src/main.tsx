@@ -66,11 +66,13 @@ if (!import.meta.env.DEV) {
   };
   setInterval(detectDevTools, 3000);
 
-  // Disable text selection on sensitive elements
+  // Disable text selection on non-interactive elements only
   const style = document.createElement('style');
   style.textContent = `
-    body { -webkit-user-select: none; user-select: none; }
-    input, textarea { -webkit-user-select: auto; user-select: auto; }
+    img, svg, button:not(input):not(textarea) { -webkit-user-select: none; user-select: none; }
+    input, textarea, [contenteditable], p, span, div, h1, h2, h3, h4, h5, h6, li, td, th, label, a {
+      -webkit-user-select: auto; user-select: auto;
+    }
   `;
   document.head.appendChild(style);
 

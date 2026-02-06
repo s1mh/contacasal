@@ -108,6 +108,21 @@ export default {
           "0%, 100%": { transform: "translateY(0)" },
           "50%": { transform: "translateY(-4px)" },
         },
+        wiggle: {
+          "0%": { transform: "rotate(0deg) scale(1)" },
+          "15%": { transform: "rotate(-12deg) scale(1.1)" },
+          "30%": { transform: "rotate(10deg) scale(1.15)" },
+          "45%": { transform: "rotate(-8deg) scale(1.1)" },
+          "60%": { transform: "rotate(6deg) scale(1.05)" },
+          "75%": { transform: "rotate(-4deg) scale(1.02)" },
+          "100%": { transform: "rotate(0deg) scale(1)" },
+        },
+        "cat-idle": {
+          "0%, 100%": { transform: "translateY(0) rotate(0deg)" },
+          "25%": { transform: "translateY(-2px) rotate(-1deg)" },
+          "50%": { transform: "translateY(-4px) rotate(1deg)" },
+          "75%": { transform: "translateY(-2px) rotate(-1deg)" },
+        },
       },
       animation: {
         "accordion-down": "accordion-down 0.2s ease-out",
@@ -116,6 +131,8 @@ export default {
         "slide-up": "slide-up 0.4s ease-out",
         "scale-in": "scale-in 0.2s ease-out",
         "bounce-soft": "bounce-soft 2s ease-in-out infinite",
+        wiggle: "wiggle 0.6s ease-in-out",
+        "cat-idle": "cat-idle 2s ease-in-out infinite",
       },
       boxShadow: {
         glass: "0 8px 32px 0 rgba(0, 0, 0, 0.04)",
