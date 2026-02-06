@@ -6,6 +6,7 @@ import { Input } from '@/components/ui/input';
 import { InputOTP, InputOTPGroup, InputOTPSlot, InputOTPSlotMasked } from '@/components/ui/input-otp';
 import { cn } from '@/lib/utils';
 import { CAT_AVATARS, PERSON_COLORS } from '@/lib/constants';
+import { Avatar } from '@/components/Avatar';
 import { Check, Heart, Sparkles, Lock, ArrowRight, ArrowLeft, Mail, SkipForward, AtSign, Loader2, Eye, EyeOff } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
@@ -372,12 +373,15 @@ export default function CreateSpace() {
 
                 {/* Preview */}
                 <div className="flex items-center justify-center gap-3 p-4 rounded-2xl bg-muted/50">
-                  <div 
-                    className="w-14 h-14 rounded-full overflow-hidden ring-4"
-                    style={{ boxShadow: `0 0 0 4px ${color}` }}
-                  >
-                    <img src={CAT_AVATARS[avatarIndex - 1]} alt="Preview" className={cn("w-full h-full object-cover", "animate-cat-idle")} />
-                  </div>
+                  <Avatar
+                    avatarIndex={avatarIndex}
+                    size="md"
+                    ringColor={color}
+                    ringWidth={4}
+                    animated
+                    animateOnHover={false}
+                    className="w-14 h-14"
+                  />
                   <span className="font-semibold text-lg">{name.trim() || prefT('Seu nome')}</span>
                 </div>
 
@@ -394,12 +398,15 @@ export default function CreateSpace() {
               <>
                 {/* PIN Step */}
                 <div className="flex flex-col items-center gap-6 animate-fade-in">
-                  <div 
-                    className="w-20 h-20 rounded-full overflow-hidden ring-4 animate-cat-idle"
-                    style={{ boxShadow: `0 0 0 4px ${color}` }}
-                  >
-                    <img src={CAT_AVATARS[avatarIndex - 1]} alt="Preview" className="w-full h-full object-cover" />
-                  </div>
+                  <Avatar
+                    avatarIndex={avatarIndex}
+                    size="xl"
+                    ringColor={color}
+                    ringWidth={4}
+                    animated
+                    animateOnHover={false}
+                    className="w-20 h-20"
+                  />
                   <div className="text-center">
                     <span className="font-semibold text-lg block">{name}</span>
                     {/* Editable Username */}
@@ -506,12 +513,14 @@ export default function CreateSpace() {
               <>
                 {/* Email Step */}
                 <div className="flex flex-col items-center gap-6 animate-fade-in">
-                  <div 
-                    className="w-20 h-20 rounded-full overflow-hidden ring-4"
-                    style={{ boxShadow: `0 0 0 4px ${color}` }}
-                  >
-                    <img src={CAT_AVATARS[avatarIndex - 1]} alt="Preview" className="w-full h-full object-cover" />
-                  </div>
+                  <Avatar
+                    avatarIndex={avatarIndex}
+                    size="xl"
+                    ringColor={color}
+                    ringWidth={4}
+                    animateOnHover={false}
+                    className="w-20 h-20"
+                  />
                   <div className="text-center">
                     <span className="font-semibold text-lg block">{name}</span>
                     {username && (

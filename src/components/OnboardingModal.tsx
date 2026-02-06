@@ -5,6 +5,7 @@ import { Input } from '@/components/ui/input';
 import { InputOTP, InputOTPGroup, InputOTPSlot, InputOTPSlotMasked } from '@/components/ui/input-otp';
 import { cn, isConfiguredProfile } from '@/lib/utils';
 import { CAT_AVATARS, PERSON_COLORS } from '@/lib/constants';
+import { Avatar } from '@/components/Avatar';
 import { Profile } from '@/contexts/CoupleContext';
 import { Check, Heart, Sparkles, Lock, ArrowRight, ArrowLeft, AtSign, Loader2, Eye, EyeOff, PartyPopper } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
@@ -288,16 +289,14 @@ export function OnboardingModal({ open, onClose, onComplete, profiles, shareCode
                   <div className="flex flex-col items-center gap-3">
                     {hostProfile ? (
                       <>
-                        <div 
-                          className="w-24 h-24 rounded-full overflow-hidden ring-4 animate-bounce-gentle"
-                          style={{ boxShadow: `0 0 0 4px ${hostProfile.color}` }}
-                        >
-                          <img 
-                            src={CAT_AVATARS[hostProfile.avatar_index - 1]} 
-                            alt={hostProfile.name}
-                            className="w-full h-full object-cover"
-                          />
-                        </div>
+                        <Avatar
+                          avatarIndex={hostProfile.avatar_index}
+                          size="xl"
+                          ringColor={hostProfile.color}
+                          ringWidth={4}
+                          animated
+                          animateOnHover={false}
+                        />
                         <span className="font-semibold text-lg">{hostProfile.name}</span>
                       </>
                     ) : displayHostName ? (
@@ -421,22 +420,15 @@ export function OnboardingModal({ open, onClose, onComplete, profiles, shareCode
                 className="flex items-center justify-center gap-3 p-4 rounded-2xl bg-muted/50 animate-fade-in transition-all duration-500"
                 style={{ animationDelay: '350ms' }}
               >
-                <div 
-                  className="w-14 h-14 rounded-full overflow-hidden ring-4 transition-all duration-500"
-                  style={{ 
-                    boxShadow: `0 0 0 4px ${color}`,
-                    transition: 'box-shadow 0.3s ease'
-                  }}
-                >
-                  <img 
-                    src={CAT_AVATARS[avatarIndex - 1]} 
-                    alt="Preview"
-                    className={cn(
-                      "w-full h-full object-cover",
-                      name.trim() && "animate-cat-idle"
-                    )}
-                  />
-                </div>
+                <Avatar
+                  avatarIndex={avatarIndex}
+                  size="md"
+                  ringColor={color}
+                  ringWidth={4}
+                  animated={!!name.trim()}
+                  animateOnHover={false}
+                  className="w-14 h-14 transition-all duration-500"
+                />
                 <div className="text-left">
                   <span className="font-semibold text-lg block transition-all duration-300">
                     {name.trim() || prefT('Seu nome')}
@@ -474,16 +466,15 @@ export function OnboardingModal({ open, onClose, onComplete, profiles, shareCode
               {/* PIN Creation Step */}
               <div className="flex flex-col items-center gap-6 animate-fade-in">
                 {/* Profile Preview */}
-                <div 
-                  className="w-20 h-20 rounded-full overflow-hidden ring-4 transition-all animate-cat-idle"
-                  style={{ boxShadow: `0 0 0 4px ${color}` }}
-                >
-                  <img 
-                    src={CAT_AVATARS[avatarIndex - 1]} 
-                    alt="Preview"
-                    className="w-full h-full object-cover"
-                  />
-                </div>
+                <Avatar
+                  avatarIndex={avatarIndex}
+                  size="xl"
+                  ringColor={color}
+                  ringWidth={4}
+                  animated
+                  animateOnHover={false}
+                  className="w-20 h-20"
+                />
                 <div className="text-center">
                   <span className="font-semibold text-lg block">{name}</span>
                   {username && (
