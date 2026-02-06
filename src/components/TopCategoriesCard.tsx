@@ -3,6 +3,7 @@
  import { usePreferences } from '@/contexts/PreferencesContext';
  import { useI18n } from '@/contexts/I18nContext';
  import { cn, maskCurrencyValue } from '@/lib/utils';
+ import { colorFallbacks, withAlpha } from '@/design-system/tokens';
  import { Expense, Tag } from '@/contexts/CoupleContext';
  import { 
    Tag as TagIcon, 
@@ -78,7 +79,7 @@ export function TopCategoriesCard({ expenses = [], tags = [] }: TopCategoriesCar
           tagId,
           name: tag?.name || prefT('Outros'),
           icon: tag?.icon || 'tag',
-          color: tag?.color || '#888888',
+          color: tag?.color || colorFallbacks.neutral500,
           amount,
           percentage: total > 0 ? Math.round((amount / total) * 100) : 0,
         };
@@ -109,7 +110,7 @@ export function TopCategoriesCard({ expenses = [], tags = [] }: TopCategoriesCar
                  <div className="flex items-center gap-2">
                    <div 
                      className="w-8 h-8 rounded-xl flex items-center justify-center"
-                     style={{ backgroundColor: `${category.color}20` }}
+                    style={{ backgroundColor: withAlpha(category.color, 0.125) }}
                    >
                      <Icon className="w-4 h-4" style={{ color: category.color }} />
                    </div>

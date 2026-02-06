@@ -331,11 +331,23 @@ export function OnboardingTutorial({ open, onClose, onComplete, context }: Onboa
       case 'cats':
         return (
           <div className="flex justify-center items-center gap-4 py-6">
-            <Avatar avatarIndex={1} size="xl" shadow animated animateOnHover={false} ringColor="#F5A9B8" ringWidth={4} className="w-20 h-20" />
+            <Avatar
+              avatarIndex={1}
+              size="xl"
+              className="w-20 h-20 shadow-lg animate-bounce-gentle ring-4 ring-pink-200"
+              animateOnHover={false}
+              showBackground={false}
+            />
             <div className="w-12 h-12 rounded-full bg-pink-100 flex items-center justify-center animate-pulse">
               <Heart className="w-6 h-6 text-pink-500 fill-pink-500" />
             </div>
-            <Avatar avatarIndex={2} size="xl" shadow animated animateOnHover={false} ringColor="#A5D4E8" ringWidth={4} className="w-20 h-20 [animation-delay:150ms]" />
+            <Avatar
+              avatarIndex={2}
+              size="xl"
+              className="w-20 h-20 shadow-lg animate-bounce-gentle ring-4 ring-blue-200"
+              animateOnHover={false}
+              showBackground={false}
+            />
           </div>
         );
 
@@ -344,14 +356,17 @@ export function OnboardingTutorial({ open, onClose, onComplete, context }: Onboa
           <div className="flex justify-center py-6">
             <div className="relative">
               <div className="flex -space-x-3">
-                {[1, 2, 3, 4, 5].map((i) => (
+                {[0, 1, 2, 3, 4].map((i) => (
                   <Avatar
                     key={i}
-                    avatarIndex={i}
-                    size="md"
-                    shadow
+                    avatarIndex={i + 1}
+                    size="xl"
+                    className={cn(
+                      "w-14 h-14 shadow-lg ring-2 ring-white",
+                      i > 2 && "opacity-50"
+                    )}
                     animateOnHover={false}
-                    className={cn("w-14 h-14 ring-2 ring-white", i > 3 && "opacity-50")}
+                    showBackground={false}
                   />
                 ))}
               </div>
@@ -389,7 +404,13 @@ export function OnboardingTutorial({ open, onClose, onComplete, context }: Onboa
         return (
           <div className="flex justify-center items-center gap-4 py-6">
             <div className="flex flex-col items-center">
-              <Avatar avatarIndex={3} size="md" shadow ringColor="#FCD34D" className="w-14 h-14" />
+              <Avatar
+                avatarIndex={3}
+                size="xl"
+                className="w-14 h-14 shadow-lg ring-2 ring-amber-200"
+                animateOnHover={false}
+                showBackground={false}
+              />
               <span className="text-xs mt-1 font-medium">Ana</span>
             </div>
             <div className="flex flex-col items-center px-4">
@@ -397,7 +418,13 @@ export function OnboardingTutorial({ open, onClose, onComplete, context }: Onboa
               <span className="text-sm font-bold mt-1">R$ 75</span>
             </div>
             <div className="flex flex-col items-center">
-              <Avatar avatarIndex={4} size="md" shadow ringColor="#6EE7B7" className="w-14 h-14" />
+              <Avatar
+                avatarIndex={4}
+                size="xl"
+                className="w-14 h-14 shadow-lg ring-2 ring-emerald-200"
+                animateOnHover={false}
+                showBackground={false}
+              />
               <span className="text-xs mt-1 font-medium">João</span>
             </div>
           </div>

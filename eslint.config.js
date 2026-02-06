@@ -21,6 +21,30 @@ export default tseslint.config(
       ...reactHooks.configs.recommended.rules,
       "react-refresh/only-export-components": ["warn", { allowConstantExport: true }],
       "@typescript-eslint/no-unused-vars": "off",
+      "no-restricted-imports": [
+        "error",
+        {
+          paths: [
+            {
+              name: "@/lib/constants",
+              importNames: ["CAT_AVATARS", "CAT_BG_COLORS"],
+              message: "Não importe avatares direto de `lib/constants`. Use `lib/avatar-registry` (getAvatarSrc/getAvatarBgColor).",
+            },
+          ],
+          patterns: [
+            {
+              group: ["@/assets/cat-avatar-*.png", "../assets/cat-avatar-*.png", "./assets/cat-avatar-*.png", "**/assets/cat-avatar-*.png"],
+              message: "Não importe assets `cat-avatar-*.png` diretamente. Centralize em `lib/constants` + `lib/avatar-registry`.",
+            },
+          ],
+        },
+      ],
+    },
+  },
+  {
+    files: ["src/lib/avatar-registry.ts", "src/lib/constants.ts"],
+    rules: {
+      "no-restricted-imports": "off",
     },
   },
 );
