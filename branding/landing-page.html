@@ -1,0 +1,757 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Conta de Casal — Divida gastos com carinho 💕</title>
+  <meta name="description" content="Controle financeiro simples e empático para casais. Divida gastos com clareza e mantenha o equilíbrio. Grátis." />
+
+  <!-- Open Graph -->
+  <meta property="og:title" content="Conta de Casal — Divida gastos com carinho 💕" />
+  <meta property="og:description" content="App gratuito para casais dividirem gastos com clareza e carinho. Avatares de gatinho, IA inteligente e muito amor." />
+  <meta property="og:type" content="website" />
+  <meta property="og:url" content="https://contadecasal.com" />
+  <meta property="og:image" content="https://contadecasal.com/og-image.png" />
+
+  <!-- Twitter Cards -->
+  <meta name="twitter:card" content="summary_large_image" />
+  <meta name="twitter:title" content="Conta de Casal — Divida gastos com carinho 💕" />
+  <meta name="twitter:description" content="App gratuito para casais dividirem gastos com clareza e carinho." />
+
+  <!-- Schema.org -->
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@type": "SoftwareApplication",
+    "name": "Conta de Casal",
+    "description": "Controle financeiro simples e empático para casais. Divida gastos com clareza e mantenha o equilíbrio.",
+    "applicationCategory": "FinanceApplication",
+    "operatingSystem": "Web, iOS, Android",
+    "offers": { "@type": "Offer", "price": "0", "priceCurrency": "BRL" },
+    "aggregateRating": { "@type": "AggregateRating", "ratingValue": "4.9", "ratingCount": "150" }
+  }
+  </script>
+
+  <!-- Favicon -->
+  <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>💕</text></svg>" />
+
+  <!-- Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700&display=swap" rel="stylesheet" />
+
+  <style>
+    /* ── Reset ── */
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    /* ── Variables ── */
+    :root {
+      --primary: #E8845A;
+      --primary-light: #FDEEE7;
+      --secondary: #B3D9C0;
+      --secondary-dark: #1F3D28;
+      --accent: #DDD0F0;
+      --accent-dark: #4A3366;
+      --bg: #FDF8F6;
+      --bg-card: #FEFCFB;
+      --fg: #3D3330;
+      --fg-muted: #8C8278;
+      --border: #EAE5E1;
+      --coral: #F5A9B8;
+      --sage: #A8D5BA;
+      --lavender: #C4B5E0;
+      --sky: #A5D4E8;
+      --peach: #F8C8A8;
+      --mint: #98E4D0;
+      --radius: 16px;
+      --radius-lg: 24px;
+      --shadow: 0 8px 32px 0 rgba(0,0,0,0.04);
+      --shadow-lg: 0 12px 48px 0 rgba(0,0,0,0.08);
+      --font: 'Plus Jakarta Sans', system-ui, sans-serif;
+    }
+
+    /* ── Base ── */
+    html { scroll-behavior: smooth; }
+    body {
+      font-family: var(--font);
+      background: var(--bg);
+      color: var(--fg);
+      line-height: 1.6;
+      -webkit-font-smoothing: antialiased;
+      overflow-x: hidden;
+    }
+
+    a { color: var(--primary); text-decoration: none; transition: opacity 0.2s; }
+    a:hover { opacity: 0.8; }
+
+    /* ── Layout ── */
+    .container { max-width: 1200px; margin: 0 auto; padding: 0 24px; }
+    .section { padding: 80px 0; }
+    .section-alt { background: white; }
+
+    /* ── Typography ── */
+    h1 { font-size: clamp(2rem, 5vw, 3.5rem); font-weight: 700; line-height: 1.15; }
+    h2 { font-size: clamp(1.5rem, 3vw, 2.5rem); font-weight: 700; line-height: 1.2; }
+    h3 { font-size: 1.25rem; font-weight: 600; line-height: 1.3; }
+    p { color: var(--fg-muted); }
+    .text-center { text-align: center; }
+    .text-primary { color: var(--primary); }
+    .text-sm { font-size: 0.875rem; }
+
+    /* ── Buttons ── */
+    .btn {
+      display: inline-flex; align-items: center; gap: 8px;
+      padding: 14px 32px; border-radius: 100px; font-weight: 600;
+      font-size: 1rem; cursor: pointer; border: none;
+      transition: all 0.2s ease; font-family: var(--font);
+      text-decoration: none;
+    }
+    .btn-primary {
+      background: var(--primary); color: white;
+      box-shadow: 0 8px 32px -4px rgba(232,132,90,0.4);
+    }
+    .btn-primary:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 12px 40px -4px rgba(232,132,90,0.5);
+      opacity: 1;
+    }
+    .btn-secondary {
+      background: white; color: var(--fg); border: 2px solid var(--border);
+    }
+    .btn-secondary:hover { border-color: var(--primary); color: var(--primary); opacity: 1; }
+
+    /* ── Navbar ── */
+    .navbar {
+      position: fixed; top: 0; left: 0; right: 0; z-index: 100;
+      padding: 16px 0;
+      background: rgba(253,248,246,0.85);
+      backdrop-filter: blur(20px);
+      border-bottom: 1px solid rgba(0,0,0,0.05);
+      transition: all 0.3s;
+    }
+    .navbar .container { display: flex; align-items: center; justify-content: space-between; }
+    .navbar-brand { display: flex; align-items: center; gap: 10px; font-weight: 700; font-size: 1.2rem; color: var(--fg); }
+    .navbar-brand span { font-size: 1.5rem; }
+    .navbar-links { display: flex; align-items: center; gap: 32px; }
+    .navbar-links a { color: var(--fg-muted); font-weight: 500; font-size: 0.9rem; }
+    .navbar-links a:hover { color: var(--primary); opacity: 1; }
+    .navbar .btn { padding: 10px 24px; font-size: 0.9rem; }
+
+    /* ── Hero ── */
+    .hero {
+      padding-top: 140px; padding-bottom: 80px;
+      text-align: center; position: relative; overflow: hidden;
+    }
+    .hero::before {
+      content: ''; position: absolute; top: -200px; right: -200px;
+      width: 600px; height: 600px; border-radius: 50%;
+      background: radial-gradient(circle, rgba(232,132,90,0.1) 0%, transparent 70%);
+      pointer-events: none;
+    }
+    .hero::after {
+      content: ''; position: absolute; bottom: -100px; left: -150px;
+      width: 400px; height: 400px; border-radius: 50%;
+      background: radial-gradient(circle, rgba(179,217,192,0.15) 0%, transparent 70%);
+      pointer-events: none;
+    }
+    .hero h1 { margin-bottom: 20px; position: relative; }
+    .hero p { font-size: 1.2rem; max-width: 600px; margin: 0 auto 40px; position: relative; }
+    .hero-buttons { display: flex; gap: 16px; justify-content: center; flex-wrap: wrap; position: relative; }
+    .hero-badge {
+      display: inline-flex; align-items: center; gap: 8px;
+      background: var(--primary-light); color: var(--primary);
+      padding: 8px 16px; border-radius: 100px; font-size: 0.85rem;
+      font-weight: 600; margin-bottom: 24px; position: relative;
+    }
+
+    /* ── Cat Avatars Showcase ── */
+    .cats-row {
+      display: flex; justify-content: center; gap: 16px;
+      margin-top: 60px; flex-wrap: wrap; position: relative;
+    }
+    .cat-avatar {
+      width: 72px; height: 72px; border-radius: 50%;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 40px; transition: all 0.3s ease;
+      animation: cat-float 3s ease-in-out infinite;
+      box-shadow: var(--shadow);
+    }
+    .cat-avatar:nth-child(2) { animation-delay: 0.4s; }
+    .cat-avatar:nth-child(3) { animation-delay: 0.8s; }
+    .cat-avatar:nth-child(4) { animation-delay: 1.2s; }
+    .cat-avatar:nth-child(5) { animation-delay: 1.6s; }
+    .cat-avatar:nth-child(6) { animation-delay: 2.0s; }
+    .cat-avatar:nth-child(7) { animation-delay: 2.4s; }
+    .cat-avatar:nth-child(8) { animation-delay: 2.8s; }
+    .cat-avatar:hover {
+      transform: scale(1.15) rotate(-5deg);
+      box-shadow: var(--shadow-lg);
+    }
+
+    @keyframes cat-float {
+      0%, 100% { transform: translateY(0); }
+      50% { transform: translateY(-8px); }
+    }
+
+    /* ── Features Grid ── */
+    .features-grid {
+      display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+      gap: 24px; margin-top: 60px;
+    }
+    .feature-card {
+      background: var(--bg-card); border: 1px solid var(--border);
+      border-radius: var(--radius-lg); padding: 32px;
+      transition: all 0.3s ease; position: relative; overflow: hidden;
+    }
+    .feature-card:hover {
+      transform: translateY(-4px);
+      box-shadow: var(--shadow-lg);
+      border-color: var(--primary);
+    }
+    .feature-icon {
+      width: 56px; height: 56px; border-radius: 16px;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 28px; margin-bottom: 20px;
+    }
+    .feature-card h3 { margin-bottom: 8px; }
+    .feature-card p { font-size: 0.9rem; }
+
+    /* ── How It Works ── */
+    .steps {
+      display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+      gap: 32px; margin-top: 60px; text-align: center;
+    }
+    .step { position: relative; }
+    .step-number {
+      width: 48px; height: 48px; border-radius: 50%;
+      background: var(--primary); color: white;
+      display: flex; align-items: center; justify-content: center;
+      font-weight: 700; font-size: 1.2rem;
+      margin: 0 auto 16px; box-shadow: 0 4px 20px rgba(232,132,90,0.3);
+    }
+    .step h3 { margin-bottom: 8px; }
+    .step p { font-size: 0.875rem; }
+    .step-connector {
+      display: none; position: absolute; top: 24px; left: calc(50% + 32px);
+      width: calc(100% - 64px); height: 2px; background: var(--border);
+    }
+    @media (min-width: 768px) {
+      .step-connector { display: block; }
+    }
+
+    /* ── Testimonials ── */
+    .testimonials-grid {
+      display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+      gap: 24px; margin-top: 60px;
+    }
+    .testimonial {
+      background: white; border: 1px solid var(--border);
+      border-radius: var(--radius-lg); padding: 32px;
+      position: relative;
+    }
+    .testimonial::before {
+      content: '"'; position: absolute; top: 16px; left: 24px;
+      font-size: 4rem; color: var(--primary); opacity: 0.15;
+      font-family: Georgia, serif; line-height: 1;
+    }
+    .testimonial p { font-style: italic; margin-bottom: 16px; color: var(--fg); }
+    .testimonial-author {
+      display: flex; align-items: center; gap: 12px;
+    }
+    .testimonial-avatar {
+      width: 40px; height: 40px; border-radius: 50%;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 20px;
+    }
+    .testimonial-name { font-weight: 600; font-size: 0.9rem; }
+    .testimonial-role { font-size: 0.8rem; color: var(--fg-muted); }
+
+    /* ── AI Section ── */
+    .ai-section {
+      background: linear-gradient(135deg, #FFF5EE 0%, #FFF0E5 50%, #FFEBD9 100%);
+      border-radius: var(--radius-lg);
+      padding: 60px 40px; text-align: center;
+      position: relative; overflow: hidden;
+    }
+    .ai-section::before {
+      content: ''; position: absolute; width: 200px; height: 200px;
+      border-radius: 50%; background: rgba(232,132,90,0.1);
+      top: -50px; right: -50px;
+    }
+    .ai-section::after {
+      content: ''; position: absolute; width: 150px; height: 150px;
+      border-radius: 50%; background: rgba(179,217,192,0.1);
+      bottom: -30px; left: -30px;
+    }
+    .ai-cards {
+      display: flex; gap: 16px; justify-content: center; flex-wrap: wrap;
+      margin-top: 32px; position: relative;
+    }
+    .ai-card {
+      padding: 16px 20px; border-radius: 16px;
+      font-size: 0.875rem; font-weight: 500; max-width: 280px;
+      text-align: left; display: flex; align-items: flex-start; gap: 10px;
+      backdrop-filter: blur(8px);
+    }
+    .ai-card-green { background: rgba(74,222,128,0.2); color: #166534; border: 1px solid rgba(74,222,128,0.3); }
+    .ai-card-amber { background: rgba(251,191,36,0.2); color: #92400e; border: 1px solid rgba(251,191,36,0.3); }
+    .ai-card-white { background: rgba(255,255,255,0.5); color: #9a3412; border: 1px solid rgba(234,179,139,0.3); }
+
+    /* ── CTA Section ── */
+    .cta-section {
+      text-align: center; padding: 100px 0;
+      position: relative;
+    }
+    .cta-section h2 { margin-bottom: 16px; }
+    .cta-section p { max-width: 500px; margin: 0 auto 40px; font-size: 1.1rem; }
+    .cta-cats {
+      display: flex; gap: 8px; justify-content: center; margin-bottom: 40px;
+    }
+    .cta-cat {
+      width: 48px; height: 48px; border-radius: 50%;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 24px; animation: cat-float 2.5s ease-in-out infinite;
+    }
+    .cta-cat:nth-child(2) { animation-delay: 0.3s; }
+    .cta-cat:nth-child(3) { animation-delay: 0.6s; }
+    .cta-cat:nth-child(4) { animation-delay: 0.9s; }
+
+    /* ── Footer ── */
+    .footer {
+      background: var(--fg); color: rgba(255,255,255,0.7);
+      padding: 60px 0 40px;
+    }
+    .footer-grid {
+      display: grid; grid-template-columns: 2fr repeat(3, 1fr);
+      gap: 40px; margin-bottom: 40px;
+    }
+    .footer-brand { font-size: 1.2rem; font-weight: 700; color: white; margin-bottom: 12px; }
+    .footer-brand span { font-size: 1.4rem; }
+    .footer p { font-size: 0.875rem; }
+    .footer h4 { color: white; font-size: 0.9rem; margin-bottom: 16px; }
+    .footer ul { list-style: none; }
+    .footer ul li { margin-bottom: 8px; }
+    .footer ul a { color: rgba(255,255,255,0.6); font-size: 0.875rem; }
+    .footer ul a:hover { color: var(--primary); opacity: 1; }
+    .footer-bottom {
+      border-top: 1px solid rgba(255,255,255,0.1);
+      padding-top: 24px; display: flex;
+      justify-content: space-between; align-items: center;
+      flex-wrap: wrap; gap: 16px;
+    }
+    .footer-bottom p { font-size: 0.8rem; }
+    .footer-social { display: flex; gap: 16px; }
+    .footer-social a {
+      width: 36px; height: 36px; border-radius: 50%;
+      background: rgba(255,255,255,0.1);
+      display: flex; align-items: center; justify-content: center;
+      color: white; font-size: 0.9rem; transition: all 0.2s;
+    }
+    .footer-social a:hover { background: var(--primary); opacity: 1; }
+
+    /* ── Color stripe ── */
+    .color-stripe {
+      display: flex; height: 4px;
+    }
+    .color-stripe div { flex: 1; }
+
+    /* ── Responsive ── */
+    @media (max-width: 768px) {
+      .section { padding: 60px 0; }
+      .hero { padding-top: 120px; padding-bottom: 60px; }
+      .navbar-links { display: none; }
+      .features-grid { grid-template-columns: 1fr; }
+      .footer-grid { grid-template-columns: 1fr 1fr; }
+      .ai-section { padding: 40px 20px; }
+      .ai-cards { flex-direction: column; align-items: center; }
+    }
+
+    /* ── Animations ── */
+    @keyframes fadeUp {
+      from { opacity: 0; transform: translateY(20px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+    .animate-on-scroll { opacity: 0; animation: fadeUp 0.6s ease-out forwards; }
+    .delay-100 { animation-delay: 0.1s; }
+    .delay-200 { animation-delay: 0.2s; }
+    .delay-300 { animation-delay: 0.3s; }
+    .delay-400 { animation-delay: 0.4s; }
+  </style>
+</head>
+<body>
+
+  <!-- Color Stripe -->
+  <div class="color-stripe">
+    <div style="background: var(--coral)"></div>
+    <div style="background: var(--sage)"></div>
+    <div style="background: var(--lavender)"></div>
+    <div style="background: var(--sky)"></div>
+    <div style="background: var(--peach)"></div>
+    <div style="background: var(--mint)"></div>
+  </div>
+
+  <!-- Navbar -->
+  <nav class="navbar">
+    <div class="container">
+      <a href="#" class="navbar-brand">
+        <span>💕</span> Conta de Casal
+      </a>
+      <div class="navbar-links">
+        <a href="#features">Recursos</a>
+        <a href="#how-it-works">Como funciona</a>
+        <a href="#ai">IA</a>
+        <a href="#testimonials">Depoimentos</a>
+        <a href="#cta" class="btn btn-primary">Comece grátis</a>
+      </div>
+    </div>
+  </nav>
+
+  <!-- Hero -->
+  <section class="hero container">
+    <div class="hero-badge animate-on-scroll">✨ 100% gratuito — para sempre</div>
+    <h1 class="animate-on-scroll delay-100">
+      Divida gastos<br/>com <span class="text-primary">carinho</span> 💕
+    </h1>
+    <p class="animate-on-scroll delay-200">
+      O app de finanças compartilhadas que torna a divisão de gastos entre casais algo leve, claro e até divertido.
+    </p>
+    <div class="hero-buttons animate-on-scroll delay-300">
+      <a href="#cta" class="btn btn-primary">
+        🐱 Crie seu espaço
+      </a>
+      <a href="#how-it-works" class="btn btn-secondary">
+        Saiba mais →
+      </a>
+    </div>
+
+    <!-- Cat Avatars Row -->
+    <div class="cats-row animate-on-scroll delay-400">
+      <div class="cat-avatar" style="background: #FFE4EC">🐱</div>
+      <div class="cat-avatar" style="background: #E4F0FF">😺</div>
+      <div class="cat-avatar" style="background: #FFF4E4">😸</div>
+      <div class="cat-avatar" style="background: #F0E4FF">🐈‍⬛</div>
+      <div class="cat-avatar" style="background: #FFE8D9">🧡</div>
+      <div class="cat-avatar" style="background: #E4FFE8">😻</div>
+      <div class="cat-avatar" style="background: #FFFBE4">🐾</div>
+      <div class="cat-avatar" style="background: #E4FFF0">😽</div>
+    </div>
+  </section>
+
+  <!-- Features -->
+  <section id="features" class="section section-alt">
+    <div class="container">
+      <h2 class="text-center animate-on-scroll">Tudo que vocês precisam<br/>em um só lugar</h2>
+      <p class="text-center animate-on-scroll delay-100" style="max-width: 500px; margin: 16px auto 0;">
+        Projetado com carinho para casais que querem transparência financeira.
+      </p>
+
+      <div class="features-grid">
+        <div class="feature-card animate-on-scroll delay-100">
+          <div class="feature-icon" style="background: var(--primary-light)">💰</div>
+          <h3>Divisão inteligente</h3>
+          <p>50/50, percentual, valor fixo ou 100% — cada gasto do jeito que faz sentido para vocês.</p>
+        </div>
+
+        <div class="feature-card animate-on-scroll delay-200">
+          <div class="feature-icon" style="background: #E8F5E9">💳</div>
+          <h3>Cartões de crédito</h3>
+          <p>Gerencie cartões com dia de fechamento, parcelas e cálculo automático de fatura.</p>
+        </div>
+
+        <div class="feature-card animate-on-scroll delay-300">
+          <div class="feature-icon" style="background: #F3E5F5">📊</div>
+          <h3>Estatísticas bonitas</h3>
+          <p>Gráficos por categoria, por pessoa e evolução mensal. Exporte em CSV quando quiser.</p>
+        </div>
+
+        <div class="feature-card animate-on-scroll delay-100">
+          <div class="feature-icon" style="background: #E3F2FD">🔄</div>
+          <h3>Acordos recorrentes</h3>
+          <p>Cadastre o aluguel, internet e contas fixas uma vez. Eles aparecem todo mês automaticamente.</p>
+        </div>
+
+        <div class="feature-card animate-on-scroll delay-200">
+          <div class="feature-icon" style="background: #FFF3E0">🐱</div>
+          <h3>8 gatinhos animados</h3>
+          <p>Escolha seu avatar de gatinho! Eles se mexem, ronronam e celebram com você.</p>
+        </div>
+
+        <div class="feature-card animate-on-scroll delay-300">
+          <div class="feature-icon" style="background: #FFEEF2">🔒</div>
+          <h3>Seguro e privado</h3>
+          <p>Autenticação por PIN, sem coleta de dados desnecessários. Seu dinheiro, seus dados.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- How it Works -->
+  <section id="how-it-works" class="section">
+    <div class="container">
+      <h2 class="text-center animate-on-scroll">Comece em 1 minuto</h2>
+      <p class="text-center animate-on-scroll delay-100" style="max-width: 450px; margin: 16px auto 0;">
+        Sem cadastro complicado. Sem email obrigatório. Só diversão.
+      </p>
+
+      <div class="steps">
+        <div class="step animate-on-scroll delay-100">
+          <div class="step-connector"></div>
+          <div class="step-number">1</div>
+          <h3>Escolha seu gatinho</h3>
+          <p>Selecione entre 8 adoráveis avatares de gato e personalize seu perfil.</p>
+        </div>
+
+        <div class="step animate-on-scroll delay-200">
+          <div class="step-connector"></div>
+          <div class="step-number">2</div>
+          <h3>Convide seu amor</h3>
+          <p>Compartilhe o código do espaço. Seu parceiro(a) entra em segundos.</p>
+        </div>
+
+        <div class="step animate-on-scroll delay-300">
+          <div class="step-connector"></div>
+          <div class="step-number">3</div>
+          <h3>Registre gastos</h3>
+          <p>Adicione despesas, escolha como dividir e pronto. O app faz as contas.</p>
+        </div>
+
+        <div class="step animate-on-scroll delay-400">
+          <div class="step-number">4</div>
+          <h3>Vivam em equilíbrio</h3>
+          <p>Acompanhem o saldo, vejam insights de IA e nunca mais briguem por dinheiro. 💕</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- AI Section -->
+  <section id="ai" class="section section-alt">
+    <div class="container">
+      <div class="ai-section animate-on-scroll">
+        <div style="position: relative; z-index: 1;">
+          <p class="text-sm" style="color: var(--primary); font-weight: 600; margin-bottom: 8px;">✨ Powered by AI</p>
+          <h2>Insights inteligentes<br/>para o casal</h2>
+          <p style="max-width: 500px; margin: 16px auto 0; color: var(--fg-muted);">
+            Nossa IA analisa seus gastos e gera dicas personalizadas para ajudar vocês a economizar juntos.
+          </p>
+
+          <div class="ai-cards">
+            <div class="ai-card ai-card-green">
+              <span>🎉</span>
+              <span>Parabéns! Vocês gastaram 15% menos em alimentação este mês. Continuem assim!</span>
+            </div>
+            <div class="ai-card ai-card-amber">
+              <span>⚠️</span>
+              <span>Atenção: gastos com transporte aumentaram 30%. Vale revisar alternativas?</span>
+            </div>
+            <div class="ai-card ai-card-white">
+              <span>💡</span>
+              <span>Dica: Samuel está pagando 60% das contas. Que tal reequilibrar a divisão?</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Testimonials -->
+  <section id="testimonials" class="section">
+    <div class="container">
+      <h2 class="text-center animate-on-scroll">Casais que amam 💕</h2>
+      <p class="text-center animate-on-scroll delay-100" style="max-width: 450px; margin: 16px auto 0;">
+        Veja o que estão dizendo sobre o Conta de Casal.
+      </p>
+
+      <div class="testimonials-grid">
+        <div class="testimonial animate-on-scroll delay-100">
+          <p>"Antes a gente anotava tudo no WhatsApp e sempre dava confusão. Com o Conta de Casal, ficou tudo claro e ainda é divertido usar!"</p>
+          <div class="testimonial-author">
+            <div class="testimonial-avatar" style="background: #FFE4EC">🐱</div>
+            <div>
+              <div class="testimonial-name">Marina & Rafael</div>
+              <div class="testimonial-role">Juntos há 3 anos</div>
+            </div>
+          </div>
+        </div>
+
+        <div class="testimonial animate-on-scroll delay-200">
+          <p>"Os insights de IA são incríveis! Descobrimos que estávamos gastando muito com delivery e conseguimos economizar R$400 no mês."</p>
+          <div class="testimonial-author">
+            <div class="testimonial-avatar" style="background: #E4F0FF">😺</div>
+            <div>
+              <div class="testimonial-name">Juliana & Pedro</div>
+              <div class="testimonial-role">Morando juntos há 1 ano</div>
+            </div>
+          </div>
+        </div>
+
+        <div class="testimonial animate-on-scroll delay-300">
+          <p>"Meu namorado amou os gatinhos. Ele fica escolhendo animações diferentes todo dia 😂 E de quebra, nossas finanças estão organizadas!"</p>
+          <div class="testimonial-author">
+            <div class="testimonial-avatar" style="background: #FFF4E4">😸</div>
+            <div>
+              <div class="testimonial-name">Camila & Lucas</div>
+              <div class="testimonial-role">Namorando há 2 anos</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Language & Currency -->
+  <section class="section section-alt">
+    <div class="container text-center">
+      <h2 class="animate-on-scroll">Para casais do mundo todo 🌍</h2>
+      <p class="animate-on-scroll delay-100" style="max-width: 450px; margin: 16px auto 40px;">
+        Disponível em 3 idiomas e 3 moedas. Porque o amor não tem fronteiras.
+      </p>
+
+      <div style="display: flex; gap: 32px; justify-content: center; flex-wrap: wrap;">
+        <div class="animate-on-scroll delay-100" style="text-align: center;">
+          <div style="font-size: 2.5rem; margin-bottom: 8px;">🇧🇷</div>
+          <div style="font-weight: 600;">Português</div>
+          <div class="text-sm" style="color: var(--fg-muted)">R$ BRL</div>
+        </div>
+        <div class="animate-on-scroll delay-200" style="text-align: center;">
+          <div style="font-size: 2.5rem; margin-bottom: 8px;">🇺🇸</div>
+          <div style="font-weight: 600;">English</div>
+          <div class="text-sm" style="color: var(--fg-muted)">$ USD</div>
+        </div>
+        <div class="animate-on-scroll delay-300" style="text-align: center;">
+          <div style="font-size: 2.5rem; margin-bottom: 8px;">🇪🇸</div>
+          <div style="font-weight: 600;">Español</div>
+          <div class="text-sm" style="color: var(--fg-muted)">€ EUR</div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- CTA -->
+  <section id="cta" class="cta-section container">
+    <div class="cta-cats animate-on-scroll">
+      <div class="cta-cat" style="background: #FFE4EC">🐱</div>
+      <div class="cta-cat" style="background: #E4F0FF">😺</div>
+      <div class="cta-cat" style="background: #FFF4E4">😸</div>
+      <div class="cta-cat" style="background: #F0E4FF">🐈‍⬛</div>
+    </div>
+    <h2 class="animate-on-scroll delay-100">Pronto para dividir<br/>com carinho?</h2>
+    <p class="animate-on-scroll delay-200">
+      Crie seu espaço em menos de 1 minuto.<br/>Gratuito, sem pegadinhas.
+    </p>
+    <div class="hero-buttons animate-on-scroll delay-300">
+      <a href="https://contadecasal.com" class="btn btn-primary" style="font-size: 1.1rem; padding: 16px 40px;">
+        💕 Comece agora — é grátis
+      </a>
+    </div>
+    <p class="text-sm animate-on-scroll delay-400" style="margin-top: 16px; opacity: 0.6;">
+      Sem cartão de crédito. Sem spam. Sem complicação.
+    </p>
+  </section>
+
+  <!-- Footer -->
+  <footer class="footer">
+    <div class="container">
+      <div class="footer-grid">
+        <div>
+          <div class="footer-brand">
+            <span>💕</span> Conta de Casal
+          </div>
+          <p>Controle financeiro simples e empático para casais.</p>
+          <p style="margin-top: 8px;">Divida gastos com clareza e mantenha o equilíbrio.</p>
+        </div>
+
+        <div>
+          <h4>Produto</h4>
+          <ul>
+            <li><a href="#features">Recursos</a></li>
+            <li><a href="#how-it-works">Como funciona</a></li>
+            <li><a href="#ai">IA Insights</a></li>
+            <li><a href="#cta">Começar grátis</a></li>
+          </ul>
+        </div>
+
+        <div>
+          <h4>Empresa</h4>
+          <ul>
+            <li><a href="#">Sobre nós</a></li>
+            <li><a href="#">Blog</a></li>
+            <li><a href="#">Carreiras</a></li>
+            <li><a href="#">Contato</a></li>
+          </ul>
+        </div>
+
+        <div>
+          <h4>Legal</h4>
+          <ul>
+            <li><a href="#">Termos de uso</a></li>
+            <li><a href="#">Privacidade</a></li>
+            <li><a href="#">LGPD</a></li>
+            <li><a href="#">Cookies</a></li>
+          </ul>
+        </div>
+      </div>
+
+      <div class="footer-bottom">
+        <p>© 2026 Conta de Casal. Feito com 💕 para casais.</p>
+        <div class="footer-social">
+          <a href="https://instagram.com/contadecasal" aria-label="Instagram">📷</a>
+          <a href="https://tiktok.com/@contadecasal" aria-label="TikTok">🎵</a>
+          <a href="https://twitter.com/contadecasal" aria-label="Twitter">🐦</a>
+          <a href="https://youtube.com/@contadecasal" aria-label="YouTube">▶️</a>
+        </div>
+      </div>
+    </div>
+  </footer>
+
+  <!-- Color Stripe Bottom -->
+  <div class="color-stripe">
+    <div style="background: var(--mint)"></div>
+    <div style="background: var(--peach)"></div>
+    <div style="background: var(--sky)"></div>
+    <div style="background: var(--lavender)"></div>
+    <div style="background: var(--sage)"></div>
+    <div style="background: var(--coral)"></div>
+  </div>
+
+  <!-- Scroll Animation Script -->
+  <script>
+    // Intersection Observer for scroll animations
+    const observer = new IntersectionObserver((entries) => {
+      entries.forEach(entry => {
+        if (entry.isIntersecting) {
+          entry.target.style.opacity = '1';
+          entry.target.style.animationPlayState = 'running';
+        }
+      });
+    }, { threshold: 0.1, rootMargin: '0px 0px -50px 0px' });
+
+    document.querySelectorAll('.animate-on-scroll').forEach(el => {
+      el.style.animationPlayState = 'paused';
+      observer.observe(el);
+    });
+
+    // Smooth scroll for anchor links
+    document.querySelectorAll('a[href^="#"]').forEach(anchor => {
+      anchor.addEventListener('click', function(e) {
+        e.preventDefault();
+        const target = document.querySelector(this.getAttribute('href'));
+        if (target) {
+          target.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        }
+      });
+    });
+
+    // Navbar background on scroll
+    window.addEventListener('scroll', () => {
+      const navbar = document.querySelector('.navbar');
+      if (window.scrollY > 50) {
+        navbar.style.boxShadow = '0 4px 20px rgba(0,0,0,0.06)';
+      } else {
+        navbar.style.boxShadow = 'none';
+      }
+    });
+  </script>
+
+</body>
+</html>

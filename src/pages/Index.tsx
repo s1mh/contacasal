@@ -7,7 +7,7 @@ import { InputOTP, InputOTPGroup, InputOTPSlot, InputOTPSlotMasked } from "@/com
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { useAuthContext } from "@/contexts/AuthContext";
-import { CAT_AVATARS } from "@/lib/constants";
+import { Avatar } from "@/components/Avatar";
 import { devLog } from "@/lib/validation";
 import { cn } from "@/lib/utils";
 import { RecoveryModal } from "@/components/RecoveryModal";
@@ -229,18 +229,8 @@ export default function Index() {
       <div className="min-h-screen bg-background flex items-center justify-center">
         <div className="flex flex-col items-center gap-4 animate-fade-in">
           <div className="flex gap-2">
-            <img
-              src={CAT_AVATARS[0]}
-              alt=""
-              className="w-12 h-12 rounded-full shadow-lg animate-bounce-gentle"
-              style={{ animationDelay: "0ms" }}
-            />
-            <img
-              src={CAT_AVATARS[1]}
-              alt=""
-              className="w-12 h-12 rounded-full shadow-lg animate-bounce-gentle"
-              style={{ animationDelay: "200ms" }}
-            />
+            <Avatar avatarIndex={1} size="md" shadow animated animateOnHover={false} />
+            <Avatar avatarIndex={2} size="md" shadow animated animateOnHover={false} className="[animation-delay:200ms]" />
           </div>
           <Loader2 className="w-6 h-6 animate-spin text-primary" />
           <p className="text-sm text-muted-foreground">{t('Preparando o amor...')}</p>
@@ -323,13 +313,12 @@ export default function Index() {
         {/* Logo / Header */}
         <div className="text-center mb-8 animate-fade-slide-up">
           <div className="flex justify-center items-center gap-3 mb-4">
-            <img
-              src={CAT_AVATARS[0]}
-              alt=""
-              className={cn(
-                "w-16 h-16 rounded-full shadow-lg transition-all duration-500",
-                catsAnimating && "animate-jump",
-              )}
+            <Avatar
+              avatarIndex={1}
+              size="lg"
+              shadow
+              animateOnHover={false}
+              className={cn("transition-all duration-500", catsAnimating && "animate-jump")}
             />
             <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center">
               <Heart
@@ -339,14 +328,12 @@ export default function Index() {
                 )}
               />
             </div>
-            <img
-              src={CAT_AVATARS[1]}
-              alt=""
-              className={cn(
-                "w-16 h-16 rounded-full shadow-lg transition-all duration-500",
-                catsAnimating && "animate-jump",
-              )}
-              style={{ animationDelay: "100ms" }}
+            <Avatar
+              avatarIndex={2}
+              size="lg"
+              shadow
+              animateOnHover={false}
+              className={cn("transition-all duration-500", catsAnimating && "animate-jump [animation-delay:100ms]")}
             />
           </div>
           <h1 className="text-3xl font-bold text-foreground mb-2">{t('Conta de Casal')}</h1>
@@ -361,13 +348,13 @@ export default function Index() {
             style={{ animationDelay: "100ms" }}
           >
             <div className="flex flex-col items-center gap-3">
-              <div className="w-16 h-16 rounded-full overflow-hidden ring-2 ring-primary animate-bounce-gentle">
-                <img
-                  src={CAT_AVATARS[(lastSpace.avatarIndex || 1) - 1]}
-                  alt={lastSpace.name}
-                  className="w-full h-full object-cover"
-                />
-              </div>
+              <Avatar
+                avatarIndex={lastSpace.avatarIndex || 1}
+                size="lg"
+                animated
+                animateOnHover={false}
+                ringColor="hsl(var(--primary))"
+              />
               <div className="text-center">
                 <p className="text-xs text-muted-foreground">{t('Continuar como')}</p>
                 <p className="font-semibold text-lg">{lastSpace.name}</p>
