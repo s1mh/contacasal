@@ -1,15 +1,11 @@
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
-
-const corsHeaders = {
-  'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
-}
+import { getCorsHeaders, handleCorsOptions } from '../_shared/cors.ts'
 
 Deno.serve(async (req) => {
-  // Handle CORS preflight requests
-  if (req.method === 'OPTIONS') {
-    return new Response(null, { headers: corsHeaders })
-  }
+  const corsResponse = handleCorsOptions(req)
+  if (corsResponse) return corsResponse
+
+  const corsHeaders = getCorsHeaders(req)
 
   try {
     const supabaseUrl = Deno.env.get('SUPABASE_URL')!
@@ -34,7 +30,6 @@ Deno.serve(async (req) => {
       )
     }
 
-    // Check if username already exists
     let query = supabaseAdmin
       .from('profiles')
       .select('id')
@@ -47,7 +42,6 @@ Deno.serve(async (req) => {
     const { data: existingProfiles, error } = await query.limit(1)
 
     if (error) {
-      console.error('Error checking username:', error)
       return new Response(
         JSON.stringify({ error: 'Erro ao verificar username' }),
         { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
@@ -57,17 +51,13 @@ Deno.serve(async (req) => {
     const exists = existingProfiles && existingProfiles.length > 0
 
     return new Response(
-      JSON.stringify({ 
-        success: true,
-        exists,
-        username: cleanUsername 
-      }),
+      JSON.stringify({ success: true, exists, username: cleanUsername }),
       { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     )
   } catch (error) {
     console.error('Edge function error:', error)
     return new Response(
-      JSON.stringify({ error: 'Internal server error' }),
+      JSON.stringify({ error: 'Erro interno' }),
       { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     )
   }

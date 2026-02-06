@@ -1,35 +1,31 @@
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
+import { getCorsHeaders, handleCorsOptions } from '../_shared/cors.ts';
 
-const corsHeaders = {
-  'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
-};
-
-// Normalize name for username (remove accents, lowercase, replace spaces)
 function normalizeForUsername(name: string): string {
   return name
     .toLowerCase()
     .normalize('NFD')
-    .replace(/[\u0300-\u036f]/g, '') // Remove accents
-    .replace(/[^a-z0-9]/g, '') // Keep only alphanumeric
-    .substring(0, 12); // Limit to 12 chars
+    .replace(/[\u0300-\u036f]/g, '')
+    .replace(/[^a-z0-9]/g, '')
+    .substring(0, 12);
 }
 
-// Generate random 4-char suffix
 function generateSuffix(): string {
   const chars = 'abcdefghijklmnopqrstuvwxyz0123456789';
   let result = '';
+  const array = new Uint8Array(4);
+  crypto.getRandomValues(array);
   for (let i = 0; i < 4; i++) {
-    result += chars.charAt(Math.floor(Math.random() * chars.length));
+    result += chars.charAt(array[i] % chars.length);
   }
   return result;
 }
 
 Deno.serve(async (req) => {
-  // Handle CORS preflight
-  if (req.method === 'OPTIONS') {
-    return new Response(null, { headers: corsHeaders });
-  }
+  const corsResponse = handleCorsOptions(req);
+  if (corsResponse) return corsResponse;
+
+  const corsHeaders = getCorsHeaders(req);
 
   try {
     const { name } = await req.json();
@@ -41,13 +37,11 @@ Deno.serve(async (req) => {
       );
     }
 
-    // Create Supabase client with service role
     const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
     const serviceRoleKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
     const supabase = createClient(supabaseUrl, serviceRoleKey);
 
     const baseName = normalizeForUsername(name);
-    
     if (baseName.length < 2) {
       return new Response(
         JSON.stringify({ success: false, error: 'Nome muito curto' }),
@@ -55,41 +49,25 @@ Deno.serve(async (req) => {
       );
     }
 
-    // Try to generate unique username (max 10 attempts)
     let username = '';
     let attempts = 0;
-    
     while (attempts < 10) {
-      const suffix = generateSuffix();
-      username = `${baseName}_${suffix}`;
-      
-      // Check if username exists
+      username = `${baseName}_${generateSuffix()}`;
       const { data: existing } = await supabase
         .from('profiles')
         .select('id')
         .eq('username', username)
         .maybeSingle();
-      
-      if (!existing) {
-        break;
-      }
-      
+      if (!existing) break;
       attempts++;
     }
 
     if (attempts >= 10) {
-      // Fallback: use timestamp
       username = `${baseName}_${Date.now().toString(36).slice(-5)}`;
     }
 
-    console.log(`[generate-username] Generated username: ${username} for name: ${name}`);
-
     return new Response(
-      JSON.stringify({ 
-        success: true, 
-        username,
-        display: `@${username}`
-      }),
+      JSON.stringify({ success: true, username, display: `@${username}` }),
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
   } catch (error) {

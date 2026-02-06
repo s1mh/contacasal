@@ -1,88 +1,55 @@
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
-
-const corsHeaders = {
-  'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
-};
+import { getCorsHeaders, handleCorsOptions } from '../_shared/cors.ts';
+import { isValidEmail } from '../_shared/sanitize.ts';
 
 Deno.serve(async (req) => {
-  // Handle CORS preflight
-  if (req.method === 'OPTIONS') {
-    return new Response(null, { headers: corsHeaders });
-  }
+  const corsResponse = handleCorsOptions(req);
+  if (corsResponse) return corsResponse;
+
+  const corsHeaders = getCorsHeaders(req);
 
   try {
     const { email, couple_id } = await req.json();
 
-    if (!email || typeof email !== 'string') {
-      return new Response(
-        JSON.stringify({ success: false, error: 'E-mail é obrigatório' }),
-        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
-    }
-
-    // Validate email format
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    if (!emailRegex.test(email.trim())) {
+    if (!email || typeof email !== 'string' || !isValidEmail(email.trim())) {
       return new Response(
         JSON.stringify({ success: false, error: 'E-mail inválido' }),
         { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
 
-    // Create Supabase client with service role
     const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
     const serviceRoleKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
     const supabase = createClient(supabaseUrl, serviceRoleKey);
 
     const normalizedEmail = email.trim().toLowerCase();
 
-    // Check if email exists in any profile (case insensitive)
     const { data: existingProfile, error: queryError } = await supabase
       .from('profiles')
-      .select('id, name, couple_id')
+      .select('id, couple_id')
       .ilike('email', normalizedEmail)
       .maybeSingle();
 
     if (queryError) {
-      console.error('[check-email] Query error:', queryError);
       throw queryError;
     }
 
     if (!existingProfile) {
       return new Response(
-        JSON.stringify({ 
-          success: true,
-          exists: false
-        }),
+        JSON.stringify({ success: true, exists: false }),
         { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
 
-    // Email exists - check if it's in the same couple space
+    // Reduced info leakage - only say if it exists and if it's same couple
     const isSameCouple = couple_id && existingProfile.couple_id === couple_id;
 
-    // Get share_code for the existing profile's couple (masked)
-    const { data: coupleData } = await supabase
-      .from('couples')
-      .select('share_code')
-      .eq('id', existingProfile.couple_id)
-      .single();
-
-    const maskedCode = coupleData?.share_code 
-      ? `****${coupleData.share_code.slice(-4)}`
-      : null;
-
-    console.log(`[check-email] Email ${normalizedEmail} exists in profile ${existingProfile.id}`);
-
     return new Response(
-      JSON.stringify({ 
+      JSON.stringify({
         success: true,
         exists: true,
         same_couple: isSameCouple,
         can_recover: true,
-        masked_space: maskedCode,
-        profile_name: existingProfile.name
       }),
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );

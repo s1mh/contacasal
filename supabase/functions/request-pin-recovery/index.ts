@@ -1,11 +1,6 @@
-import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { Resend } from "https://esm.sh/resend@2.0.0";
-
-const corsHeaders = {
-  "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
-};
+import { getCorsHeaders, handleCorsOptions } from "../_shared/cors.ts";
 
 const TOKEN_EXPIRY_MINUTES = 15;
 
@@ -33,11 +28,11 @@ interface ProfileWithCouple {
   } | null;
 }
 
-const handler = async (req: Request): Promise<Response> => {
-  // Handle CORS preflight requests
-  if (req.method === "OPTIONS") {
-    return new Response(null, { headers: corsHeaders });
-  }
+Deno.serve(async (req) => {
+  const corsResponse = handleCorsOptions(req);
+  if (corsResponse) return corsResponse;
+
+  const corsHeaders = getCorsHeaders(req);
 
   try {
     const resendApiKey = Deno.env.get("RESEND_API_KEY");
@@ -283,13 +278,10 @@ const handler = async (req: Request): Promise<Response> => {
       { status: 200, headers: { "Content-Type": "application/json", ...corsHeaders } }
     );
   } catch (error: unknown) {
-    console.error("Error in request-pin-recovery function:", error);
-    const message = error instanceof Error ? error.message : "Unknown error";
+    console.error("Error in request-pin-recovery:", error);
     return new Response(
-      JSON.stringify({ success: false, error: message }),
+      JSON.stringify({ success: false, error: "Erro interno" }),
       { status: 500, headers: { "Content-Type": "application/json", ...corsHeaders } }
     );
   }
-};
-
-serve(handler);
+});
