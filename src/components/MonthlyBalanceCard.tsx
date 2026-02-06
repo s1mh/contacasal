@@ -26,34 +26,50 @@ interface Settlement_DTO {
   amount: number;
 }
 
-export function MonthlyBalanceCard({ profiles, expenses, agreements, settlements }: MonthlyBalanceCardProps) {
+export function MonthlyBalanceCard({ profiles = [], expenses = [], agreements = [], settlements = [] }: MonthlyBalanceCardProps) {
   const { t: prefT, valuesHidden } = usePreferences();
   const { formatCurrency } = useI18n();
 
-  const configuredProfiles = profiles.filter(isConfiguredProfile);
+  // Defensive checks for undefined arrays
+  const safeProfiles = profiles || [];
+  const safeExpenses = expenses || [];
+  const safeAgreements = agreements || [];
+  const safeSettlements = settlements || [];
+
+  const configuredProfiles = safeProfiles.filter(p => p && isConfiguredProfile(p));
 
   // Calculate monthly balance for all people
   const { monthlySettlements, currentMonth } = useMemo(() => {
     const now = new Date();
-    const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
-    const monthName = startOfMonth.toLocaleString('pt-BR', { month: 'long' });
+    const startOfMonthDate = new Date(now.getFullYear(), now.getMonth(), 1);
+    const monthName = startOfMonthDate.toLocaleString('pt-BR', { month: 'long' });
 
     // Filter expenses for current month only
-    const monthExpenses = expenses.filter(e => {
-      const expenseDate = new Date(e.expense_date);
-      return expenseDate >= startOfMonth;
+    const monthExpenses = safeExpenses.filter(e => {
+      if (!e?.expense_date) return false;
+      try {
+        const expenseDate = new Date(e.expense_date);
+        return expenseDate >= startOfMonthDate;
+      } catch {
+        return false;
+      }
     });
 
     // Filter settlements for current month
-    const monthSettlements = settlements.filter(s => {
-      const settlementDate = new Date(s.settled_at);
-      return settlementDate >= startOfMonth;
+    const monthSettlementsData = safeSettlements.filter(s => {
+      if (!s?.settled_at) return false;
+      try {
+        const settlementDate = new Date(s.settled_at);
+        return settlementDate >= startOfMonthDate;
+      } catch {
+        return false;
+      }
     });
 
     // Balance tracking: positive = owes money, negative = is owed money (creditor)
     const balances: Map<string, number> = new Map();
     configuredProfiles.forEach(p => {
-      balances.set(p.id, 0);
+      if (p?.id) balances.set(p.id, 0);
     });
 
     // Helper to process an expense and update balances
@@ -76,6 +92,7 @@ export function MonthlyBalanceCard({ profiles, expenses, agreements, settlements
       if (!payerProfile) return;
 
       const numPeople = configuredProfiles.length;
+      if (numPeople === 0) return;
 
       // Calculate each person's share
       const shares: Map<string, number> = new Map();
@@ -83,11 +100,12 @@ export function MonthlyBalanceCard({ profiles, expenses, agreements, settlements
       if (splitType === 'equal') {
         const sharePerPerson = totalAmount / numPeople;
         configuredProfiles.forEach(p => {
-          shares.set(p.id, sharePerPerson);
+          if (p?.id) shares.set(p.id, sharePerPerson);
         });
       } else if (splitType === 'percentage') {
         const sv = splitValue as Record<string, number>;
         configuredProfiles.forEach(p => {
+          if (!p?.id) return;
           const key = `person${p.position}`;
           const percentage = sv[key] ?? (100 / numPeople);
           shares.set(p.id, (totalAmount * percentage) / 100);
@@ -95,6 +113,7 @@ export function MonthlyBalanceCard({ profiles, expenses, agreements, settlements
       } else if (splitType === 'fixed') {
         const sv = splitValue as Record<string, number>;
         configuredProfiles.forEach(p => {
+          if (!p?.id) return;
           const key = `person${p.position}`;
           shares.set(p.id, sv[key] ?? 0);
         });
@@ -102,6 +121,7 @@ export function MonthlyBalanceCard({ profiles, expenses, agreements, settlements
         // One person pays 100% - they owe the full amount, others owe nothing
         const sv = splitValue as Record<string, number>;
         configuredProfiles.forEach(p => {
+          if (!p?.id) return;
           const key = `person${p.position}`;
           if (sv[key] === 100) {
             shares.set(p.id, totalAmount);
@@ -116,6 +136,7 @@ export function MonthlyBalanceCard({ profiles, expenses, agreements, settlements
 
       // Each person owes their share
       configuredProfiles.forEach(p => {
+        if (!p?.id) return;
         const share = shares.get(p.id) || 0;
         balances.set(p.id, (balances.get(p.id) || 0) + share);
       });
@@ -123,28 +144,31 @@ export function MonthlyBalanceCard({ profiles, expenses, agreements, settlements
 
     // Process monthly expenses
     monthExpenses.forEach(expense => {
+      if (!expense) return;
       processExpense(
-        expense.total_amount,
-        expense.split_type,
-        expense.split_value,
-        expense.paid_by,
+        expense.total_amount || 0,
+        expense.split_type || 'equal',
+        expense.split_value || { person1: 50, person2: 50 },
+        expense.paid_by || 1,
         expense.paid_by_profile_id
       );
     });
 
     // Process active agreements (recurring payments)
-    agreements.filter(a => a.is_active).forEach(agreement => {
+    safeAgreements.filter(a => a?.is_active).forEach(agreement => {
+      if (!agreement) return;
       processExpense(
-        agreement.amount,
-        agreement.split_type,
-        agreement.split_value,
-        agreement.paid_by,
+        agreement.amount || 0,
+        agreement.split_type || 'equal',
+        agreement.split_value || { person1: 50, person2: 50 },
+        agreement.paid_by || 1,
         agreement.paid_by_profile_id
       );
     });
 
     // Process monthly settlements (when someone pays back)
-    monthSettlements.forEach(s => {
+    monthSettlementsData.forEach(s => {
+      if (!s) return;
       let payerProfile: Profile | undefined;
       let receiverProfile: Profile | undefined;
 
@@ -211,7 +235,7 @@ export function MonthlyBalanceCard({ profiles, expenses, agreements, settlements
       monthlySettlements: settlementsNeeded,
       currentMonth: monthName.charAt(0).toUpperCase() + monthName.slice(1)
     };
-  }, [expenses, agreements, settlements, configuredProfiles]);
+  }, [safeExpenses, safeAgreements, safeSettlements, configuredProfiles]);
 
   // Don't show if less than 2 configured profiles
   if (configuredProfiles.length < 2) {
