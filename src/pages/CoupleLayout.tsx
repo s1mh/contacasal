@@ -158,6 +158,20 @@ function CoupleLayoutContent() {
     }
   }, [couple, shareCode, myPosition]);
 
+  // Show onboarding guide when space becomes ready (2+ members) and user hasn't seen it
+  const cfgProfilesCount = couple?.profiles?.filter(isConfiguredProfile).length ?? 0;
+  useEffect(() => {
+    if (!couple || !shareCode || cfgProfilesCount < 2) return;
+    if (localStorage.getItem(`onboarding_complete_${shareCode}`)) return;
+
+    const pendingName = localStorage.getItem(`onboarding_pending_${shareCode}`);
+    if (pendingName) {
+      localStorage.removeItem(`onboarding_pending_${shareCode}`);
+      setGuideName(pendingName);
+      setShowGuide(true);
+    }
+  }, [couple, shareCode, cfgProfilesCount]);
+
   // Handler: Complete onboarding (sign in + join space)
   const handleOnboardingComplete = async (
     position: number, 
@@ -425,20 +439,6 @@ function CoupleLayoutContent() {
       </div>
     );
   }
-
-  // Show onboarding guide when space becomes ready (2+ members) and user hasn't seen it
-  const cfgProfiles = couple.profiles.filter(isConfiguredProfile);
-  useEffect(() => {
-    if (!shareCode || cfgProfiles.length < 2) return;
-    if (localStorage.getItem(`onboarding_complete_${shareCode}`)) return;
-
-    const pendingName = localStorage.getItem(`onboarding_pending_${shareCode}`);
-    if (pendingName) {
-      localStorage.removeItem(`onboarding_pending_${shareCode}`);
-      setGuideName(pendingName);
-      setShowGuide(true);
-    }
-  }, [shareCode, cfgProfiles.length]);
 
   // Check if space has at least 2 configured profiles before unlocking app
   const configuredProfiles = couple.profiles.filter(isConfiguredProfile);
