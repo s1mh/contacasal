@@ -41,8 +41,8 @@ Deno.serve(async (req) => {
 
   try {
     const authHeader = req.headers.get("Authorization");
-    if (!authHeader) {
-      return new Response(JSON.stringify({ error: "Missing authorization" }), {
+    if (!authHeader?.startsWith("Bearer ")) {
+      return new Response(JSON.stringify({ error: "Unauthorized" }), {
         status: 401,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
@@ -311,7 +311,7 @@ Tipos: "celebration" (positivo), "tip" (dica de economia), "alert" (gasto alto)`
         });
       }
       const errorText = await aiResponse.text();
-      console.error("AI gateway error:", aiResponse.status, errorText);
+      console.error("[generate-insights] AI gateway error:", aiResponse.status);
       return new Response(JSON.stringify({ error: "AI gateway error" }), {
         status: 500,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
@@ -374,8 +374,8 @@ Tipos: "celebration" (positivo), "tip" (dica de economia), "alert" (gasto alto)`
     });
 
   } catch (e) {
-    console.error("generate-insights error:", e);
-    return new Response(JSON.stringify({ error: e instanceof Error ? e.message : "Unknown error" }), {
+    console.error("[generate-insights] Error");
+    return new Response(JSON.stringify({ error: "Erro ao gerar insights" }), {
       status: 500,
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });

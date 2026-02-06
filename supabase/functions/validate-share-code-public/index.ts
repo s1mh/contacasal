@@ -1,5 +1,6 @@
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 import { getCorsHeaders, handleCorsOptions } from '../_shared/cors.ts';
+import { checkRateLimit, rateLimitResponse } from '../_shared/rate-limit.ts';
 
 Deno.serve(async (req) => {
   const corsResponse = handleCorsOptions(req);
@@ -8,6 +9,14 @@ Deno.serve(async (req) => {
   const corsHeaders = getCorsHeaders(req);
 
   try {
+    const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
+    const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
+    const supabaseAdmin = createClient(supabaseUrl, supabaseServiceKey);
+
+    // Rate limit: 15 requests per minute
+    const { allowed } = await checkRateLimit(supabaseAdmin, req, 'validate-share-code-public', 15, 1);
+    if (!allowed) return rateLimitResponse(corsHeaders);
+
     const { share_code } = await req.json();
 
     if (!share_code || typeof share_code !== 'string' || !/^[a-f0-9]{16}$/i.test(share_code.trim())) {
@@ -16,10 +25,6 @@ Deno.serve(async (req) => {
         { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
-
-    const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
-    const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
-    const supabaseAdmin = createClient(supabaseUrl, supabaseServiceKey);
 
     const { data: space, error: spaceError } = await supabaseAdmin
       .from('couples')
@@ -76,7 +81,7 @@ Deno.serve(async (req) => {
     );
 
   } catch (error) {
-    console.error('Error in validate-share-code-public:', error);
+    console.error('[validate-share-code-public] Error');
     return new Response(
       JSON.stringify({ success: false, error: 'Erro interno' }),
       { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }

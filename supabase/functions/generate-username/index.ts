@@ -1,5 +1,7 @@
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 import { getCorsHeaders, handleCorsOptions } from '../_shared/cors.ts';
+import { sanitizeName } from '../_shared/sanitize.ts';
+import { checkRateLimit, rateLimitResponse } from '../_shared/rate-limit.ts';
 
 function normalizeForUsername(name: string): string {
   return name
@@ -41,7 +43,12 @@ Deno.serve(async (req) => {
     const serviceRoleKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
     const supabase = createClient(supabaseUrl, serviceRoleKey);
 
-    const baseName = normalizeForUsername(name);
+    // Rate limit: 10 requests per minute
+    const { allowed } = await checkRateLimit(supabase, req, 'generate-username', 10, 1);
+    if (!allowed) return rateLimitResponse(corsHeaders);
+
+    const sanitizedName = sanitizeName(name, 30);
+    const baseName = normalizeForUsername(sanitizedName);
     if (baseName.length < 2) {
       return new Response(
         JSON.stringify({ success: false, error: 'Nome muito curto' }),
@@ -71,7 +78,7 @@ Deno.serve(async (req) => {
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
   } catch (error) {
-    console.error('[generate-username] Error:', error);
+    console.error('[generate-username] Error');
     return new Response(
       JSON.stringify({ success: false, error: 'Erro ao gerar username' }),
       { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }

@@ -39,7 +39,6 @@ Deno.serve(async (req) => {
     }
 
     const userId = claims.claims.sub
-    console.log('User authenticated:', userId)
 
     // Parse request body
     const { share_code } = await req.json()
@@ -55,7 +54,6 @@ Deno.serve(async (req) => {
     // Validate share code format (16 hex characters)
     const shareCodeRegex = /^[a-f0-9]{16}$/i
     if (!shareCodeRegex.test(share_code)) {
-      console.log('Invalid share_code format:', share_code)
       return new Response(
         JSON.stringify({ error: 'Invalid share code format' }),
         { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
@@ -73,14 +71,11 @@ Deno.serve(async (req) => {
       .single()
 
     if (coupleError || !couple) {
-      console.log('Couple not found for share_code:', share_code)
       return new Response(
         JSON.stringify({ error: 'Código não encontrado' }),
         { status: 404, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       )
     }
-
-    console.log('Found couple:', couple.id)
 
     // Check if user already has a profile in this space by user_id
     const { data: existingProfile, error: profileError } = await supabaseAdmin
@@ -91,7 +86,6 @@ Deno.serve(async (req) => {
       .maybeSingle()
 
     const isMember = !!existingProfile
-    console.log('Is member:', isMember, existingProfile?.name)
 
     // Update the user's app_metadata with the couple_id
     const { error: updateError } = await supabaseAdmin.auth.admin.updateUserById(
@@ -102,14 +96,12 @@ Deno.serve(async (req) => {
     )
 
     if (updateError) {
-      console.error('Failed to update user metadata:', updateError.message)
+      console.error('[validate-share-code] Metadata update failed')
       return new Response(
         JSON.stringify({ error: 'Failed to validate share code' }),
         { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       )
     }
-
-    console.log('Successfully set couple_id in user metadata')
 
     return new Response(
       JSON.stringify({ 
@@ -124,9 +116,9 @@ Deno.serve(async (req) => {
     )
 
   } catch (error) {
-    console.error('Edge function error:', error)
+    console.error('[validate-share-code] Error')
     return new Response(
-      JSON.stringify({ error: 'Internal server error' }),
+      JSON.stringify({ error: 'Erro interno' }),
       { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     )
   }

@@ -1,6 +1,9 @@
 // Shared PIN hashing - consistent across all functions
-// Salt loaded from environment variable, with fallback for backward compatibility
-const PIN_SALT = Deno.env.get('PIN_HASH_SALT') || 'couple_pin_salt_v1_';
+// Salt MUST be set via environment variable (Supabase secrets)
+const PIN_SALT = Deno.env.get('PIN_HASH_SALT');
+if (!PIN_SALT) {
+  throw new Error('PIN_HASH_SALT environment variable is required');
+}
 
 export async function hashPin(pin: string): Promise<string> {
   const encoder = new TextEncoder();

@@ -39,14 +39,20 @@ Deno.serve(async (req) => {
     const userId = claims.claims.sub
     const { share_code } = await req.json()
 
-    if (!share_code) {
+    if (!share_code || typeof share_code !== 'string') {
       return new Response(JSON.stringify({ error: 'share_code is required' }), {
         status: 400,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       })
     }
 
-    console.log('User attempting to join space:', userId, 'with code:', share_code)
+    // Validate share_code format
+    if (!/^[a-f0-9]{16}$/i.test(share_code)) {
+      return new Response(JSON.stringify({ error: 'Código inválido' }), {
+        status: 400,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      })
+    }
 
     const supabaseAdmin = createClient(supabaseUrl, supabaseServiceKey)
 
@@ -58,7 +64,6 @@ Deno.serve(async (req) => {
       .single()
 
     if (spaceError || !space) {
-      console.log('Space not found:', spaceError?.message)
       return new Response(JSON.stringify({ error: 'Espaço não encontrado' }), {
         status: 404,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
@@ -78,7 +83,6 @@ Deno.serve(async (req) => {
       // Check if expired
       if (existingPending.pending_expires_at && new Date(existingPending.pending_expires_at) < new Date()) {
         // Expired - delete and proceed as new
-        console.log('Existing pending profile expired, deleting:', existingPending.id)
         await supabaseAdmin.from('profiles').delete().eq('id', existingPending.id)
       } else {
         // Still valid - renew expiration and return as returning user
@@ -88,7 +92,7 @@ Deno.serve(async (req) => {
           .update({ pending_expires_at: newExpiration })
           .eq('id', existingPending.id)
         
-        console.log('Renewed pending profile expiration:', existingPending.id)
+        // Renewed pending profile expiration
         
         // Update user's app_metadata with couple_id
         await supabaseAdmin.auth.admin.updateUserById(userId, {
@@ -159,7 +163,7 @@ Deno.serve(async (req) => {
       .single()
 
     if (profileError || !newProfile) {
-      console.error('Failed to create pending profile:', profileError?.message)
+      console.error('[join-space] Profile creation failed')
       return new Response(JSON.stringify({ error: 'Falha ao criar perfil' }), {
         status: 500,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
@@ -174,14 +178,12 @@ Deno.serve(async (req) => {
     })
 
     if (updateError) {
-      console.error('Failed to update user metadata:', updateError.message)
+      console.error('[join-space] Metadata update failed')
       return new Response(JSON.stringify({ error: 'Falha ao vincular usuário ao espaço' }), {
         status: 500,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       })
     }
-
-    console.log('Created pending profile:', newProfile.id, 'expires at:', pendingExpiresAt)
 
     return new Response(
       JSON.stringify({ 
@@ -194,8 +196,8 @@ Deno.serve(async (req) => {
       { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } },
     )
   } catch (error) {
-    console.error('Edge function error:', error)
-    return new Response(JSON.stringify({ error: 'Internal server error' }), {
+    console.error('[join-space] Error')
+    return new Response(JSON.stringify({ error: 'Erro interno' }), {
       status: 500,
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
     })
