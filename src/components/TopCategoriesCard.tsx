@@ -40,43 +40,52 @@
    music: Music,
  };
  
- export function TopCategoriesCard({ expenses, tags }: TopCategoriesCardProps) {
-   const { t: prefT, valuesHidden } = usePreferences();
-   const { formatCurrency } = useI18n();
-   
-   const topCategories = useMemo(() => {
-     const now = new Date();
-     const currentStart = startOfMonth(now);
-     const currentEnd = endOfMonth(now);
-     
-     const currentExpenses = expenses.filter(e => {
-       const date = e.billing_month ? parseISO(e.billing_month) : parseISO(e.expense_date);
-       return isWithinInterval(date, { start: currentStart, end: currentEnd });
-     });
-     
-     const byCategory: Record<string, number> = {};
-     currentExpenses.forEach(e => {
-       const tagId = e.tag_id || 'other';
-       byCategory[tagId] = (byCategory[tagId] || 0) + e.total_amount;
-     });
-     
-     const total = Object.values(byCategory).reduce((sum, val) => sum + val, 0);
-     
-     return Object.entries(byCategory)
-       .map(([tagId, amount]) => {
-         const tag = tags.find(t => t.id === tagId);
-         return {
-           tagId,
-           name: tag?.name || prefT('Outros'),
-           icon: tag?.icon || 'tag',
-           color: tag?.color || '#888888',
-           amount,
-           percentage: total > 0 ? Math.round((amount / total) * 100) : 0,
-         };
-       })
-       .sort((a, b) => b.amount - a.amount)
-       .slice(0, 3);
-   }, [expenses, tags, prefT]);
+export function TopCategoriesCard({ expenses = [], tags = [] }: TopCategoriesCardProps) {
+  const { t: prefT, valuesHidden } = usePreferences();
+  const { formatCurrency } = useI18n();
+  
+  const topCategories = useMemo(() => {
+    // Defensive check for undefined arrays
+    const safeExpenses = expenses || [];
+    const safeTags = tags || [];
+    
+    const now = new Date();
+    const currentStart = startOfMonth(now);
+    const currentEnd = endOfMonth(now);
+    
+    const currentExpenses = safeExpenses.filter(e => {
+      if (!e?.expense_date) return false;
+      try {
+        const date = e.billing_month ? parseISO(e.billing_month) : parseISO(e.expense_date);
+        return isWithinInterval(date, { start: currentStart, end: currentEnd });
+      } catch {
+        return false;
+      }
+    });
+    
+    const byCategory: Record<string, number> = {};
+    currentExpenses.forEach(e => {
+      const tagId = e?.tag_id || 'other';
+      byCategory[tagId] = (byCategory[tagId] || 0) + (e?.total_amount || 0);
+    });
+    
+    const total = Object.values(byCategory).reduce((sum, val) => sum + val, 0);
+    
+    return Object.entries(byCategory)
+      .map(([tagId, amount]) => {
+        const tag = safeTags.find(t => t?.id === tagId);
+        return {
+          tagId,
+          name: tag?.name || prefT('Outros'),
+          icon: tag?.icon || 'tag',
+          color: tag?.color || '#888888',
+          amount,
+          percentage: total > 0 ? Math.round((amount / total) * 100) : 0,
+        };
+      })
+      .sort((a, b) => b.amount - a.amount)
+      .slice(0, 3);
+  }, [expenses, tags, prefT]);
    
    if (topCategories.length === 0) {
      return null;
