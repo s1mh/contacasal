@@ -1,0 +1,8 @@
+# iOS app (Xcode project)
+ios/
+*.xcodeproj
+*.xcworkspace
+*.swift
+*.pbxproj
+*.xcuserstate
+*.xcscheme

@@ -33,3 +33,17 @@ supabase/.temp/
 *.njsproj
 *.sln
 *.sw?
+
+# iOS / Xcode
+ios/ContaCasal.xcodeproj/project.xcworkspace/xcuserdata/
+ios/ContaCasal.xcodeproj/xcuserdata/
+ios/ContaCasal.xcworkspace/xcuserdata/
+ios/**/xcuserdata/
+ios/**/*.xcuserstate
+ios/DerivedData/
+ios/build/
+ios/.build/
+ios/Pods/
+*.ipa
+*.dSYM.zip
+*.dSYM
