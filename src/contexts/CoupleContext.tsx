@@ -268,7 +268,7 @@ export function CoupleProvider({ children, shareCode }: CoupleProviderProps) {
     
     const validationError = validateProfile(validationData);
     if (validationError) {
-      toast({ title: validationError, variant: 'destructive' });
+      toast({ title: '⚠️ ' + validationError, variant: 'destructive' });
       return;
     }
 
@@ -334,7 +334,7 @@ export function CoupleProvider({ children, shareCode }: CoupleProviderProps) {
     
     const validationError = validateExpense(expense);
     if (validationError) {
-      toast({ title: validationError, variant: 'destructive' });
+      toast({ title: '⚠️ ' + validationError, variant: 'destructive' });
       return;
     }
 
@@ -394,7 +394,7 @@ export function CoupleProvider({ children, shareCode }: CoupleProviderProps) {
     for (const expense of expenses) {
       const validationError = validateExpense(expense);
       if (validationError) {
-        toast({ title: validationError, variant: 'destructive' });
+        toast({ title: '⚠️ ' + validationError, variant: 'destructive' });
         return;
       }
     }
@@ -571,7 +571,7 @@ export function CoupleProvider({ children, shareCode }: CoupleProviderProps) {
     
     const validationError = validateTag(tag);
     if (validationError) {
-      toast({ title: validationError, variant: 'destructive' });
+      toast({ title: '⚠️ ' + validationError, variant: 'destructive' });
       return;
     }
 
@@ -637,7 +637,7 @@ export function CoupleProvider({ children, shareCode }: CoupleProviderProps) {
   const addCard = async (card: Omit<Card, 'id' | 'created_at'>) => {
     const validationError = validateCard(card);
     if (validationError) {
-      toast({ title: validationError, variant: 'destructive' });
+      toast({ title: '⚠️ ' + validationError, variant: 'destructive' });
       return;
     }
 
@@ -703,7 +703,7 @@ export function CoupleProvider({ children, shareCode }: CoupleProviderProps) {
   const addAgreement = async (agreement: Omit<Agreement, 'id' | 'created_at'>) => {
     const validationError = validateAgreement(agreement);
     if (validationError) {
-      toast({ title: validationError, variant: 'destructive' });
+      toast({ title: '⚠️ ' + validationError, variant: 'destructive' });
       return;
     }
 
@@ -799,7 +799,7 @@ export function CoupleProvider({ children, shareCode }: CoupleProviderProps) {
     
     const validationError = validateSettlement(settlement);
     if (validationError) {
-      toast({ title: validationError, variant: 'destructive' });
+      toast({ title: '⚠️ ' + validationError, variant: 'destructive' });
       return;
     }
 
@@ -911,8 +911,14 @@ export function CoupleProvider({ children, shareCode }: CoupleProviderProps) {
 
   const isAdmin = useCallback((profileId: string): boolean => {
     if (!couple) return false;
-    const role = couple.roles.find(r => r.profile_id === profileId);
-    return role?.role === 'admin';
+    // Check space_roles table first
+    if (couple.roles.length > 0) {
+      const role = couple.roles.find(r => r.profile_id === profileId);
+      return role?.role === 'admin';
+    }
+    // Fallback: if no roles data, first profile (position 1 / creator) is admin
+    const sorted = [...couple.profiles].sort((a, b) => a.position - b.position);
+    return sorted.length > 0 && sorted[0].id === profileId;
   }, [couple]);
 
   const getConfiguredProfiles = useCallback((): Profile[] => {

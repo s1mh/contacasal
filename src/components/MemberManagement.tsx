@@ -51,7 +51,7 @@ export function MemberManagement({ profiles, roles, myProfileId, onRefresh }: Me
 
       if (!data.success) {
         toast({
-          title: 'Erro',
+          title: '❌ Erro',
           description: data.error || 'Falha na operação',
           variant: 'destructive',
         });

@@ -28,7 +28,15 @@ export class ErrorBoundary extends Component<Props, State> {
   }
 
   public componentDidCatch(error: Error, errorInfo: ErrorInfo) {
-    console.error('ErrorBoundary caught an error:', error, errorInfo);
+    // Log error details explicitly because JSON.stringify(Error) returns "{}"
+    // (Error.message and Error.stack are non-enumerable)
+    console.error(
+      'ErrorBoundary caught an error:',
+      'MESSAGE:', error?.message || 'no message',
+      'NAME:', error?.name || 'no name',
+      'STACK:', error?.stack || 'no stack',
+      'COMPONENT_STACK:', errorInfo?.componentStack || 'no component stack'
+    );
   }
 
   private handleTitleTap = () => {

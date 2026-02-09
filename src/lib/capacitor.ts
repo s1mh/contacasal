@@ -31,9 +31,29 @@ interface BiometricAuthPlugin {
   }>;
 }
 
+interface NativeSharePlugin {
+  share(options: { title?: string; text?: string; url?: string }): Promise<{
+    completed: boolean;
+    activityType?: string;
+    error?: string;
+  }>;
+}
+
 // Register native plugins (only available on native, no-op on web)
-const NativeNav = isNative ? registerPlugin<NativeNavPlugin>('NativeNav') : null;
-const BiometricAuth = isNative ? registerPlugin<BiometricAuthPlugin>('BiometricAuth') : null;
+// Wrapped in try-catch to prevent crashes if plugin registration fails
+function safeRegister<T>(name: string): T | null {
+  if (!isNative) return null;
+  try {
+    return registerPlugin<T>(name);
+  } catch (e) {
+    console.warn(`Failed to register plugin ${name}:`, e);
+    return null;
+  }
+}
+
+const NativeNav = safeRegister<NativeNavPlugin>('NativeNav');
+const BiometricAuth = safeRegister<BiometricAuthPlugin>('BiometricAuth');
+const NativeShare = safeRegister<NativeSharePlugin>('NativeShare');
 
 // ─── Haptics ────────────────────────────────────────────────────────
 
@@ -96,6 +116,37 @@ export function getWebOrigin(): string {
 export function buildShareUrl(shareCode: string, inviterName?: string): string {
   const baseUrl = `${getWebOrigin()}/c/${shareCode}`;
   return inviterName ? `${baseUrl}?from=${encodeURIComponent(inviterName)}` : baseUrl;
+}
+
+/**
+ * Share content using the native iOS share sheet (UIActivityViewController).
+ * Falls back to navigator.share on web, then to clipboard.
+ */
+export async function nativeShare(options: { title?: string; text?: string; url?: string }): Promise<boolean> {
+  if (NativeShare) {
+    try {
+      const result = await NativeShare.share(options);
+      return result.completed;
+    } catch {
+      return false;
+    }
+  }
+  // Web fallback
+  if (navigator.share) {
+    try {
+      await navigator.share(options);
+      return true;
+    } catch {
+      return false;
+    }
+  }
+  // Last resort: copy to clipboard
+  const text = options.url || options.text || '';
+  if (text) {
+    await navigator.clipboard.writeText(text);
+    return true;
+  }
+  return false;
 }
 
 // ─── Native Navigation ──────────────────────────────────────────────
@@ -211,7 +262,7 @@ export interface CoupleSession {
 }
 
 /**
- * Save couple session to both localStorage and native Preferences.
+ * Save couple session to localStorage and native Preferences.
  */
 export async function saveCoupleSession(shareCode: string, data: CoupleSession) {
   const key = `couple_${shareCode}`;
@@ -259,7 +310,7 @@ export async function removeCoupleSession(shareCode: string) {
 
 /**
  * Load all couple sessions. Checks localStorage first, then
- * restores from Preferences if localStorage is empty (native only).
+ * Preferences as fallback (native only).
  */
 export async function loadCoupleSessions(): Promise<{ shareCode: string; data: CoupleSession }[]> {
   const sessions: { shareCode: string; data: CoupleSession }[] = [];
@@ -279,7 +330,7 @@ export async function loadCoupleSessions(): Promise<{ shareCode: string; data: C
     }
   }
 
-  // 2. On native, if localStorage is empty, restore from Preferences
+  // 2. On native, if localStorage is empty, try Preferences
   if (isNative && sessions.length === 0) {
     try {
       const { Preferences } = await import('@capacitor/preferences');
@@ -292,7 +343,6 @@ export async function loadCoupleSessions(): Promise<{ shareCode: string; data: C
           try {
             const data = JSON.parse(result.value);
             if (data.position && data.name) {
-              // Restore to localStorage
               localStorage.setItem(`couple_${shareCode}`, result.value);
               sessions.push({ shareCode, data });
             }

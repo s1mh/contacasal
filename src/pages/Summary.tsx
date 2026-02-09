@@ -12,7 +12,7 @@ import { TopCategoriesCard } from '@/components/TopCategoriesCard';
 import { isConfiguredProfile } from '@/lib/utils';
 import { usePreferences } from '@/contexts/PreferencesContext';
 import { MonthlyBalanceCard } from '@/components/MonthlyBalanceCard';
-import { buildShareUrl } from '@/lib/capacitor';
+import { buildShareUrl, nativeShare } from '@/lib/capacitor';
 
 export default function Summary() {
   const { couple, myPosition } = useOutletContext<{ couple: Couple; myPosition: number | null }>();
@@ -39,21 +39,15 @@ export default function Summary() {
 
   const handleShare = async () => {
     const url = buildShareUrl(shareCode!, currentUserProfile?.name);
-
-    if (navigator.share) {
-      try {
-        await navigator.share({
-          title: prefT('Conta de Casal'),
-          text: prefT('Entre no nosso espaço compartilhado!'),
-          url,
-        });
-      } catch (err) {
-        // User cancelled or error
-      }
-    } else {
+    const shared = await nativeShare({
+      title: prefT('Conta de Casal'),
+      text: prefT('Entre no nosso espaço compartilhado!'),
+      url,
+    });
+    if (!shared) {
       await navigator.clipboard.writeText(url);
       toast({
-        title: prefT('Link copiado!'),
+        title: prefT('📋 Link copiado!'),
         description: prefT('Compartilhe com seu parceiro(a).'),
       });
     }
