@@ -111,20 +111,26 @@ Deno.serve(async (req) => {
     const cachedInsights = cachedInsightsRes.data;
 
     if (cachedInsights && cachedInsights.length > 0) {
-      // If the frontend sent an expenseCount, verify it matches the actual DB count.
-      // If they differ (e.g. user deleted expenses), invalidate cache and regenerate.
+      // If the frontend sent an expenseCount, check if data changed or is below minimum.
+      // If so, invalidate cache and let the flow continue to re-evaluate.
       let cacheStillValid = true;
 
       if (bodyExpenseCount !== null && serviceClient) {
-        const { count: dbCount } = await serviceClient
-          .from('expenses')
-          .select('*', { count: 'exact', head: true })
-          .eq('couple_id', coupleId);
-
-        if (dbCount !== null && dbCount !== bodyExpenseCount) {
-          // Data changed — invalidate server cache
+        // If frontend says 0 expenses (or below the minimum of 3), cache is always stale
+        if (bodyExpenseCount < 3) {
           await serviceClient.from('ai_insights').delete().eq('couple_id', coupleId);
           cacheStillValid = false;
+        } else {
+          const { count: dbCount } = await serviceClient
+            .from('expenses')
+            .select('*', { count: 'exact', head: true })
+            .eq('couple_id', coupleId);
+
+          if (dbCount !== null && dbCount !== bodyExpenseCount) {
+            // Data changed — invalidate server cache
+            await serviceClient.from('ai_insights').delete().eq('couple_id', coupleId);
+            cacheStillValid = false;
+          }
         }
       }
 
