@@ -6,6 +6,7 @@ import { isConfiguredProfile } from '@/lib/utils';
 import { format, subMonths, startOfMonth, endOfMonth, isWithinInterval } from 'date-fns';
 import { getCurrencySymbol, getDateFnsLocale } from '@/lib/preferences';
 import { usePreferences } from '@/contexts/PreferencesContext';
+import { colorFallbacks } from '@/design-system/tokens';
 
 interface ChartsProps {
   expenses: Expense[];
@@ -28,7 +29,7 @@ export function ExpensesByTagChart({ expenses, tags }: { expenses: Expense[]; ta
         return {
           name: tag?.name || 'Outros',
           value: amount,
-          color: tag?.color || '#6B7280',
+          color: tag?.color || colorFallbacks.neutral500,
         };
       })
       .sort((a, b) => b.value - a.value);

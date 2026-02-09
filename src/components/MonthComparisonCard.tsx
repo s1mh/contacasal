@@ -11,53 +11,67 @@
    agreements: Agreement[];
  }
  
- export function MonthComparisonCard({ expenses, agreements }: MonthComparisonCardProps) {
-   const { t: prefT, valuesHidden, setValuesHidden } = usePreferences();
-   const { formatCurrency } = useI18n();
-   
-   const { currentTotal, previousTotal, percentChange, trend } = useMemo(() => {
-     const now = new Date();
-     const currentStart = startOfMonth(now);
-     const currentEnd = endOfMonth(now);
-     const prevMonth = subMonths(now, 1);
-     const prevStart = startOfMonth(prevMonth);
-     const prevEnd = endOfMonth(prevMonth);
-     
-     const agreementsTotal = agreements
-       .filter(a => a.is_active)
-       .reduce((sum, a) => sum + a.amount, 0);
-     
-     const currentExpenses = expenses
-       .filter(e => {
-         const date = e.billing_month ? parseISO(e.billing_month) : parseISO(e.expense_date);
-         return isWithinInterval(date, { start: currentStart, end: currentEnd });
-       })
-       .reduce((sum, e) => sum + e.total_amount, 0);
-     
-     const prevExpenses = expenses
-       .filter(e => {
-         const date = e.billing_month ? parseISO(e.billing_month) : parseISO(e.expense_date);
-         return isWithinInterval(date, { start: prevStart, end: prevEnd });
-       })
-       .reduce((sum, e) => sum + e.total_amount, 0);
-     
-     const current = currentExpenses + agreementsTotal;
-     const previous = prevExpenses + agreementsTotal;
-     
-     if (previous === 0) {
-       return { currentTotal: current, previousTotal: previous, percentChange: 0, trend: 'neutral' as const };
-     }
-     
-     const change = ((current - previous) / previous) * 100;
-     const trendValue = change > 2 ? 'up' : change < -2 ? 'down' : 'neutral';
-     
-     return { 
-       currentTotal: current, 
-       previousTotal: previous, 
-       percentChange: Math.abs(Math.round(change)),
-       trend: trendValue as 'up' | 'down' | 'neutral'
-     };
-   }, [expenses, agreements]);
+export function MonthComparisonCard({ expenses = [], agreements = [] }: MonthComparisonCardProps) {
+  const { t: prefT, valuesHidden, setValuesHidden } = usePreferences();
+  const { formatCurrency } = useI18n();
+  
+  const { currentTotal, previousTotal, percentChange, trend } = useMemo(() => {
+    // Defensive check for undefined arrays
+    const safeExpenses = expenses || [];
+    const safeAgreements = agreements || [];
+    
+    const now = new Date();
+    const currentStart = startOfMonth(now);
+    const currentEnd = endOfMonth(now);
+    const prevMonth = subMonths(now, 1);
+    const prevStart = startOfMonth(prevMonth);
+    const prevEnd = endOfMonth(prevMonth);
+    
+    const agreementsTotal = safeAgreements
+      .filter(a => a?.is_active)
+      .reduce((sum, a) => sum + (a?.amount || 0), 0);
+    
+    const currentExpenses = safeExpenses
+      .filter(e => {
+        if (!e?.expense_date) return false;
+        try {
+          const date = e.billing_month ? parseISO(e.billing_month) : parseISO(e.expense_date);
+          return isWithinInterval(date, { start: currentStart, end: currentEnd });
+        } catch {
+          return false;
+        }
+      })
+      .reduce((sum, e) => sum + (e?.total_amount || 0), 0);
+    
+    const prevExpenses = safeExpenses
+      .filter(e => {
+        if (!e?.expense_date) return false;
+        try {
+          const date = e.billing_month ? parseISO(e.billing_month) : parseISO(e.expense_date);
+          return isWithinInterval(date, { start: prevStart, end: prevEnd });
+        } catch {
+          return false;
+        }
+      })
+      .reduce((sum, e) => sum + (e?.total_amount || 0), 0);
+    
+    const current = currentExpenses + agreementsTotal;
+    const previous = prevExpenses + agreementsTotal;
+    
+    if (previous === 0) {
+      return { currentTotal: current, previousTotal: previous, percentChange: 0, trend: 'neutral' as const };
+    }
+    
+    const change = ((current - previous) / previous) * 100;
+    const trendValue = change > 2 ? 'up' : change < -2 ? 'down' : 'neutral';
+    
+    return { 
+      currentTotal: current, 
+      previousTotal: previous, 
+      percentChange: Math.abs(Math.round(change)),
+      trend: trendValue as 'up' | 'down' | 'neutral'
+    };
+  }, [expenses, agreements]);
    
    const TrendIcon = trend === 'up' ? TrendingUp : trend === 'down' ? TrendingDown : Minus;
    

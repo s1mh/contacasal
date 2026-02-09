@@ -1,50 +1,36 @@
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
-
-const corsHeaders = {
-  'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
-};
+import { getCorsHeaders, handleCorsOptions } from '../_shared/cors.ts';
+import { hashPin, isValidPin } from '../_shared/pin.ts';
 
 const MAX_ATTEMPTS = 5;
 const LOCK_DURATION_MINUTES = 15;
 
-// Simple hash function for PIN verification
-async function hashPin(pin: string): Promise<string> {
-  const encoder = new TextEncoder();
-  const data = encoder.encode(pin);
-  const hashBuffer = await crypto.subtle.digest('SHA-256', data);
-  const hashArray = Array.from(new Uint8Array(hashBuffer));
-  return hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
-}
-
 Deno.serve(async (req) => {
-  // Handle CORS preflight
-  if (req.method === 'OPTIONS') {
-    return new Response(null, { headers: corsHeaders });
-  }
+  const corsResponse = handleCorsOptions(req);
+  if (corsResponse) return corsResponse;
+
+  const corsHeaders = getCorsHeaders(req);
 
   try {
     const { username, pin } = await req.json();
 
     if (!username || !pin) {
       return new Response(
-        JSON.stringify({ success: false, error: 'Username e PIN são obrigatórios' }),
+        JSON.stringify({ success: false, error: 'Credenciais inválidas' }),
         { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
 
-    // Validate PIN format
-    if (!/^\d{4}$/.test(pin)) {
+    if (!isValidPin(pin)) {
       return new Response(
-        JSON.stringify({ success: false, error: 'PIN deve ter 4 dígitos' }),
+        JSON.stringify({ success: false, error: 'Credenciais inválidas' }),
         { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
 
-    // Normalize username (remove @ if present, lowercase)
+    // Normalize username
     const normalizedUsername = username.replace(/^@/, '').toLowerCase().trim();
 
-    // Create Supabase client with service role
     const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
     const serviceRoleKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
     const supabase = createClient(supabaseUrl, serviceRoleKey);
@@ -62,7 +48,7 @@ Deno.serve(async (req) => {
     }
 
     if (!profile) {
-      // Don't reveal if username exists - generic error
+      // Generic error - don't reveal if username exists
       return new Response(
         JSON.stringify({ success: false, error: 'Credenciais inválidas' }),
         { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
@@ -73,60 +59,49 @@ Deno.serve(async (req) => {
     if (profile.pin_locked_until) {
       const lockDate = new Date(profile.pin_locked_until);
       if (lockDate > new Date()) {
-        console.log(`[login-with-username] Account locked for ${normalizedUsername}`);
         return new Response(
-          JSON.stringify({ 
-            success: false, 
+          JSON.stringify({
+            success: false,
             error: 'Conta temporariamente bloqueada',
             locked: true,
-            locked_until: profile.pin_locked_until
           }),
           { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
         );
       }
     }
 
-    // Verify PIN
+    // Verify PIN using shared hashing (WITH salt)
     const hashedInputPin = await hashPin(pin);
     const storedPin = profile.pin_code;
-    
+
     let isValid = false;
 
     if (!storedPin) {
-      // No PIN set - shouldn't happen but handle gracefully
       return new Response(
-        JSON.stringify({ success: false, error: 'Configure seu perfil primeiro' }),
+        JSON.stringify({ success: false, error: 'Credenciais inválidas' }),
         { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
 
-    // Check if stored PIN is hashed (64 chars) or plain (4 chars)
     if (storedPin.length === 64) {
       // Compare hashes
       isValid = hashedInputPin === storedPin;
     } else if (storedPin.length === 4) {
-      // Plain text comparison (and upgrade to hash)
+      // Legacy plain text - compare and upgrade
       isValid = pin === storedPin;
-      
       if (isValid) {
-        // Upgrade to hashed PIN
         await supabase
           .from('profiles')
           .update({ pin_code: hashedInputPin })
           .eq('id', profile.id);
-        console.log(`[login-with-username] Upgraded PIN to hash for ${normalizedUsername}`);
       }
     }
 
     if (!isValid) {
-      // Increment attempts
       const newAttempts = (profile.pin_attempts || 0) + 1;
       const shouldLock = newAttempts >= MAX_ATTEMPTS;
-      
-      const updateData: Record<string, unknown> = {
-        pin_attempts: newAttempts,
-      };
-      
+
+      const updateData: Record<string, unknown> = { pin_attempts: newAttempts };
       if (shouldLock) {
         const lockUntil = new Date();
         lockUntil.setMinutes(lockUntil.getMinutes() + LOCK_DURATION_MINUTES);
@@ -134,20 +109,13 @@ Deno.serve(async (req) => {
         updateData.pin_attempts = 0;
       }
 
-      await supabase
-        .from('profiles')
-        .update(updateData)
-        .eq('id', profile.id);
-
-      console.log(`[login-with-username] Failed attempt for ${normalizedUsername}, attempts: ${newAttempts}`);
+      await supabase.from('profiles').update(updateData).eq('id', profile.id);
 
       return new Response(
-        JSON.stringify({ 
-          success: false, 
+        JSON.stringify({
+          success: false,
           error: shouldLock ? 'Conta bloqueada temporariamente' : 'Credenciais inválidas',
-          attempts_remaining: shouldLock ? 0 : MAX_ATTEMPTS - newAttempts,
           locked: shouldLock,
-          locked_until: shouldLock ? updateData.pin_locked_until : null
         }),
         { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
@@ -159,27 +127,25 @@ Deno.serve(async (req) => {
       .update({ pin_attempts: 0, pin_locked_until: null })
       .eq('id', profile.id);
 
-    // Get share code for the couple
+    // Get share code
     const { data: couple } = await supabase
       .from('couples')
       .select('share_code')
       .eq('id', profile.couple_id)
       .single();
 
-    console.log(`[login-with-username] Login successful for ${normalizedUsername}`);
-
     return new Response(
-      JSON.stringify({ 
+      JSON.stringify({
         success: true,
         profile: {
           id: profile.id,
           name: profile.name,
           avatar_index: profile.avatar_index,
           color: profile.color,
-          position: profile.position
+          position: profile.position,
         },
         share_code: couple?.share_code,
-        couple_id: profile.couple_id
+        couple_id: profile.couple_id,
       }),
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );

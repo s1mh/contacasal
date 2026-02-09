@@ -1,15 +1,13 @@
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
-
-const corsHeaders = {
-  'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
-}
+import { getCorsHeaders, handleCorsOptions } from '../_shared/cors.ts'
+import { hashPin, isValidPin } from '../_shared/pin.ts'
+import { sanitizeName, isValidEmail, isValidUsername, isValidUUID } from '../_shared/sanitize.ts'
 
 Deno.serve(async (req) => {
-  // Handle CORS preflight requests
-  if (req.method === 'OPTIONS') {
-    return new Response(null, { headers: corsHeaders })
-  }
+  const corsResponse = handleCorsOptions(req)
+  if (corsResponse) return corsResponse
+
+  const corsHeaders = getCorsHeaders(req)
 
   try {
     const authHeader = req.headers.get('Authorization')
@@ -24,7 +22,6 @@ Deno.serve(async (req) => {
     const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
     const supabaseAnonKey = Deno.env.get('SUPABASE_ANON_KEY')!
 
-    // Verify JWT
     const supabaseUser = createClient(supabaseUrl, supabaseAnonKey, {
       global: { headers: { Authorization: authHeader } },
     })
@@ -33,7 +30,6 @@ Deno.serve(async (req) => {
     const { data: claims, error: claimsError } = await supabaseUser.auth.getClaims(token)
 
     if (claimsError || !claims?.claims) {
-      console.log('Invalid JWT:', claimsError?.message)
       return new Response(JSON.stringify({ error: 'Unauthorized' }), {
         status: 401,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
@@ -41,28 +37,17 @@ Deno.serve(async (req) => {
     }
 
     const userId = claims.claims.sub
-    const { 
-      profile_id, 
-      name, 
-      avatar_index, 
-      color, 
-      pin_code, 
-      email, 
-      username 
-    } = await req.json()
+    const { profile_id, name, avatar_index, color, pin_code, email, username } = await req.json()
 
-    if (!profile_id) {
-      return new Response(JSON.stringify({ error: 'profile_id is required' }), {
+    if (!profile_id || !isValidUUID(profile_id)) {
+      return new Response(JSON.stringify({ error: 'profile_id inválido' }), {
         status: 400,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       })
     }
 
-    console.log('Activating profile:', profile_id, 'for user:', userId)
-
     const supabaseAdmin = createClient(supabaseUrl, supabaseServiceKey)
 
-    // Get the profile and verify it belongs to this user
     const { data: profile, error: profileError } = await supabaseAdmin
       .from('profiles')
       .select('id, status, pending_expires_at, couple_id, user_id')
@@ -70,30 +55,23 @@ Deno.serve(async (req) => {
       .single()
 
     if (profileError || !profile) {
-      console.log('Profile not found:', profileError?.message)
       return new Response(JSON.stringify({ error: 'Perfil não encontrado' }), {
         status: 404,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       })
     }
 
-    // Verify the profile belongs to the user
     if (profile.user_id !== userId) {
-      console.log('Profile does not belong to user:', profile.user_id, '!=', userId)
       return new Response(JSON.stringify({ error: 'Perfil não pertence a este usuário' }), {
         status: 403,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       })
     }
 
-    // Check if profile is pending and expired
     if (profile.status === 'pending' && profile.pending_expires_at) {
       if (new Date(profile.pending_expires_at) < new Date()) {
-        // Expired - delete and return error
-        console.log('Pending profile expired, deleting:', profile_id)
         await supabaseAdmin.from('profiles').delete().eq('id', profile_id)
-        
-        return new Response(JSON.stringify({ 
+        return new Response(JSON.stringify({
           error: 'Reserva expirou. Por favor, entre novamente pelo link de convite.',
           expired: true
         }), {
@@ -103,34 +81,32 @@ Deno.serve(async (req) => {
       }
     }
 
-    // Build update object
     const updateData: Record<string, unknown> = {
       status: 'active',
       pending_expires_at: null,
     }
 
-    if (name) updateData.name = name
+    if (name) updateData.name = sanitizeName(name)
     if (avatar_index) updateData.avatar_index = avatar_index
     if (color) updateData.color = color
-    if (pin_code) updateData.pin_code = pin_code
-    if (email) updateData.email = email
-    if (username) updateData.username = username
+    if (pin_code && isValidPin(pin_code)) updateData.pin_code = await hashPin(pin_code)
+    if (email && isValidEmail(email)) updateData.email = email.trim().toLowerCase()
+    if (username && isValidUsername(username.replace(/^@/, '').toLowerCase().trim())) {
+      updateData.username = username.replace(/^@/, '').toLowerCase().trim()
+    }
 
-    // Activate the profile
     const { error: updateError } = await supabaseAdmin
       .from('profiles')
       .update(updateData)
       .eq('id', profile_id)
 
     if (updateError) {
-      console.error('Failed to activate profile:', updateError.message)
       return new Response(JSON.stringify({ error: 'Falha ao ativar perfil' }), {
         status: 500,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       })
     }
 
-    // Create 'member' role for this profile
     const { error: roleError } = await supabaseAdmin
       .from('space_roles')
       .insert({
@@ -141,13 +117,10 @@ Deno.serve(async (req) => {
 
     if (roleError) {
       console.error('Failed to assign role:', roleError.message)
-      // Continue anyway - profile was activated
     }
 
-    console.log('Profile activated successfully:', profile_id)
-
     return new Response(
-      JSON.stringify({ 
+      JSON.stringify({
         success: true,
         profile_id: profile_id,
         couple_id: profile.couple_id,
@@ -156,7 +129,7 @@ Deno.serve(async (req) => {
     )
   } catch (error) {
     console.error('Edge function error:', error)
-    return new Response(JSON.stringify({ error: 'Internal server error' }), {
+    return new Response(JSON.stringify({ error: 'Erro interno' }), {
       status: 500,
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
     })

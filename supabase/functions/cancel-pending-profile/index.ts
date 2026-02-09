@@ -1,15 +1,12 @@
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
-
-const corsHeaders = {
-  'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
-}
+import { getCorsHeaders, handleCorsOptions } from '../_shared/cors.ts'
+import { isValidUUID } from '../_shared/sanitize.ts'
 
 Deno.serve(async (req) => {
-  // Handle CORS preflight requests
-  if (req.method === 'OPTIONS') {
-    return new Response(null, { headers: corsHeaders })
-  }
+  const corsResponse = handleCorsOptions(req)
+  if (corsResponse) return corsResponse
+
+  const corsHeaders = getCorsHeaders(req)
 
   try {
     const authHeader = req.headers.get('Authorization')
@@ -43,14 +40,14 @@ Deno.serve(async (req) => {
     const userId = claims.claims.sub
     const { profile_id } = await req.json()
 
-    if (!profile_id) {
+    if (!profile_id || !isValidUUID(profile_id)) {
       return new Response(JSON.stringify({ error: 'profile_id is required' }), {
         status: 400,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       })
     }
 
-    console.log('Cancelling pending profile:', profile_id, 'for user:', userId)
+    // Validate and proceed
 
     const supabaseAdmin = createClient(supabaseUrl, supabaseServiceKey)
 
@@ -62,7 +59,6 @@ Deno.serve(async (req) => {
       .single()
 
     if (profileError || !profile) {
-      console.log('Profile not found:', profileError?.message)
       return new Response(JSON.stringify({ error: 'Perfil não encontrado' }), {
         status: 404,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
@@ -71,7 +67,6 @@ Deno.serve(async (req) => {
 
     // Verify the profile belongs to the user
     if (profile.user_id !== userId) {
-      console.log('Profile does not belong to user:', profile.user_id, '!=', userId)
       return new Response(JSON.stringify({ error: 'Perfil não pertence a este usuário' }), {
         status: 403,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
@@ -80,7 +75,6 @@ Deno.serve(async (req) => {
 
     // Only allow cancelling pending profiles
     if (profile.status !== 'pending') {
-      console.log('Profile is not pending:', profile.status)
       return new Response(JSON.stringify({ error: 'Apenas perfis pendentes podem ser cancelados' }), {
         status: 400,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
@@ -94,7 +88,7 @@ Deno.serve(async (req) => {
       .eq('id', profile_id)
 
     if (deleteError) {
-      console.error('Failed to delete pending profile:', deleteError.message)
+      console.error('[cancel-pending-profile] Delete failed')
       return new Response(JSON.stringify({ error: 'Falha ao cancelar perfil' }), {
         status: 500,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
@@ -107,18 +101,16 @@ Deno.serve(async (req) => {
     })
 
     if (updateError) {
-      console.error('Failed to clear user metadata:', updateError.message)
+      console.error('[cancel-pending-profile] Metadata clear failed')
       // Continue anyway - profile was deleted
     }
-
-    console.log('Pending profile cancelled successfully:', profile_id)
 
     return new Response(
       JSON.stringify({ success: true }),
       { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } },
     )
   } catch (error) {
-    console.error('Edge function error:', error)
+    console.error('[cancel-pending-profile] Error')
     return new Response(JSON.stringify({ error: 'Internal server error' }), {
       status: 500,
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },

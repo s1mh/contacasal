@@ -8,6 +8,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { CreditCard, Plus, Trash2, Calendar } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Card, Profile } from '@/hooks/useCouple';
+import { cardColorOptions } from '@/design-system/tokens';
 
 interface CardManagerProps {
   profile: Profile;
@@ -16,22 +17,13 @@ interface CardManagerProps {
   onDeleteCard: (cardId: string) => Promise<void>;
 }
 
-const CARD_COLORS = [
-  { name: 'Roxo', value: '#8B5CF6' },
-  { name: 'Rosa', value: '#EC4899' },
-  { name: 'Azul', value: '#3B82F6' },
-  { name: 'Verde', value: '#10B981' },
-  { name: 'Laranja', value: '#F59E0B' },
-  { name: 'Cinza', value: '#6B7280' },
-];
-
 export function CardManager({ profile, cards, onAddCard, onDeleteCard }: CardManagerProps) {
   const [isOpen, setIsOpen] = useState(false);
   const [name, setName] = useState('');
   const [type, setType] = useState<'credit' | 'debit'>('credit');
   const [closingDay, setClosingDay] = useState('');
   const [dueDay, setDueDay] = useState('');
-  const [color, setColor] = useState(CARD_COLORS[0].value);
+  const [color, setColor] = useState(cardColorOptions[0].value);
   const [isLoading, setIsLoading] = useState(false);
 
   const profileCards = cards.filter(c => c.profile_id === profile.id);
@@ -62,7 +54,7 @@ export function CardManager({ profile, cards, onAddCard, onDeleteCard }: CardMan
     setType('credit');
     setClosingDay('');
     setDueDay('');
-    setColor(CARD_COLORS[0].value);
+    setColor(cardColorOptions[0].value);
   };
 
   return (
@@ -144,7 +136,7 @@ export function CardManager({ profile, cards, onAddCard, onDeleteCard }: CardMan
               <div className="space-y-2">
                 <Label>Cor</Label>
                 <div className="flex gap-2">
-                  {CARD_COLORS.map((c) => (
+                  {cardColorOptions.map((c) => (
                     <button
                       key={c.value}
                       onClick={() => setColor(c.value)}

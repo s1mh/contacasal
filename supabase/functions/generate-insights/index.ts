@@ -1,10 +1,5 @@
-import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
-
-const corsHeaders = {
-  "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
-};
+import { getCorsHeaders, handleCorsOptions } from "../_shared/cors.ts";
 
 interface SplitValue {
   person1?: number;
@@ -38,15 +33,16 @@ interface Tag {
   name: string;
 }
 
-serve(async (req) => {
-  if (req.method === "OPTIONS") {
-    return new Response(null, { headers: corsHeaders });
-  }
+Deno.serve(async (req) => {
+  const corsResponse = handleCorsOptions(req);
+  if (corsResponse) return corsResponse;
+
+  const corsHeaders = getCorsHeaders(req);
 
   try {
     const authHeader = req.headers.get("Authorization");
-    if (!authHeader) {
-      return new Response(JSON.stringify({ error: "Missing authorization" }), {
+    if (!authHeader?.startsWith("Bearer ")) {
+      return new Response(JSON.stringify({ error: "Unauthorized" }), {
         status: 401,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
@@ -71,6 +67,36 @@ serve(async (req) => {
     if (!coupleId) {
       return new Response(JSON.stringify({ error: "No couple_id found" }), {
         status: 400,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
+    // Check for cached insights (valid within last 24 hours)
+    const serviceClient = createClient(
+      Deno.env.get("SUPABASE_URL") ?? "",
+      Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? ""
+    );
+
+    const { data: cachedInsights } = await serviceClient
+      .from('ai_insights')
+      .select('insight_type, message, priority, created_at')
+      .eq('couple_id', coupleId)
+      .gte('valid_until', new Date().toISOString())
+      .order('priority', { ascending: false })
+      .limit(5);
+
+    if (cachedInsights && cachedInsights.length > 0) {
+      // Return cached insights without calling the AI
+      return new Response(JSON.stringify({
+        success: true,
+        learning: false,
+        cached: true,
+        insights: cachedInsights.map(i => ({
+          type: i.insight_type,
+          message: i.message,
+          priority: i.priority,
+        })),
+      }), {
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
@@ -232,10 +258,10 @@ serve(async (req) => {
       };
     });
 
-    // Generate insights using AI with BETTER context
-    const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
-    if (!LOVABLE_API_KEY) {
-      return new Response(JSON.stringify({ error: "LOVABLE_API_KEY not configured" }), {
+    // Generate insights using AI
+    const GOOGLE_AI_API_KEY = Deno.env.get("GOOGLE_AI_API_KEY");
+    if (!GOOGLE_AI_API_KEY) {
+      return new Response(JSON.stringify({ error: "AI not configured" }), {
         status: 500,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
@@ -286,63 +312,86 @@ Responda APENAS em JSON válido:
 
 Tipos: "celebration" (positivo), "tip" (dica de economia), "alert" (gasto alto)`;
 
-    const aiResponse = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
-      method: "POST",
-      headers: {
-        Authorization: `Bearer ${LOVABLE_API_KEY}`,
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        model: "google/gemini-3-flash-preview",
-        messages: [
-          { role: "system", content: "Você gera insights financeiros em JSON. Responda APENAS com o array JSON, sem markdown. REGRA ABSOLUTA: NUNCA sugira que uma pessoa pague a próxima conta, saída, ou qualquer coisa para equilibrar. O app divide tudo automaticamente. Foque em tendências de gastos e economia, nunca em quem deve pagar o quê." },
-          { role: "user", content: prompt },
-        ],
-      }),
-    });
+    const systemInstruction = "Você gera insights financeiros em JSON. Responda APENAS com o array JSON, sem markdown. REGRA ABSOLUTA: NUNCA sugira que uma pessoa pague a próxima conta, saída, ou qualquer coisa para equilibrar. O app divide tudo automaticamente. Foque em tendências de gastos e economia, nunca em quem deve pagar o quê.";
+
+    const aiResponse = await fetch(
+      `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${GOOGLE_AI_API_KEY}`,
+      {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          system_instruction: { parts: [{ text: systemInstruction }] },
+          contents: [{ parts: [{ text: prompt }] }],
+          generationConfig: {
+            temperature: 0.7,
+            maxOutputTokens: 8192,
+            responseMimeType: "application/json",
+            thinkingConfig: {
+              thinkingBudget: 1024,
+            },
+          },
+        }),
+      }
+    );
 
     if (!aiResponse.ok) {
+      const errorBody = await aiResponse.text().catch(() => "unable to read body");
+      console.error("[generate-insights] AI API error:", aiResponse.status, errorBody);
       if (aiResponse.status === 429) {
         return new Response(JSON.stringify({ error: "Rate limit exceeded" }), {
           status: 429,
           headers: { ...corsHeaders, "Content-Type": "application/json" },
         });
       }
-      if (aiResponse.status === 402) {
-        return new Response(JSON.stringify({ error: "Payment required" }), {
-          status: 402,
-          headers: { ...corsHeaders, "Content-Type": "application/json" },
-        });
-      }
-      const errorText = await aiResponse.text();
-      console.error("AI gateway error:", aiResponse.status, errorText);
-      return new Response(JSON.stringify({ error: "AI gateway error" }), {
+      return new Response(JSON.stringify({ error: "AI service error" }), {
         status: 500,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
 
     const aiData = await aiResponse.json();
-    const content = aiData.choices?.[0]?.message?.content || "[]";
+    
+    // Gemini 2.5 (thinking model) may return multiple parts: thought parts + actual response
+    const parts = aiData.candidates?.[0]?.content?.parts || [];
+    let content = "[]";
+    
+    // Find the last non-thought part (the actual response)
+    for (const part of parts) {
+      if (part.text && !part.thought) {
+        content = part.text;
+      }
+    }
+    
+    // Fallback: if no non-thought part found, use the last part with text
+    if (content === "[]" && parts.length > 0) {
+      const lastTextPart = [...parts].reverse().find((p: { text?: string }) => p.text);
+      if (lastTextPart) content = lastTextPart.text;
+    }
 
     let insights = [];
     try {
-      const cleanContent = content.replace(/```json\n?|\n?```/g, '').trim();
-      insights = JSON.parse(cleanContent);
+      // Clean up potential markdown wrapping
+      const cleanContent = content
+        .replace(/```json\n?/g, '')
+        .replace(/\n?```/g, '')
+        .trim();
+      
+      // Try to extract JSON array from the response
+      const jsonMatch = cleanContent.match(/\[[\s\S]*\]/);
+      if (jsonMatch) {
+        insights = JSON.parse(jsonMatch[0]);
+      } else {
+        insights = JSON.parse(cleanContent);
+      }
     } catch (parseError) {
-      console.error("Failed to parse AI response:", content);
+      console.error("[generate-insights] Parse failed:", String(parseError));
       insights = [
         { type: "tip", message: "Continue registrando seus gastos!", priority: 5 }
       ];
     }
 
-    // Save insights to database
-    const serviceClient = createClient(
-      Deno.env.get("SUPABASE_URL") ?? "",
-      Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? ""
-    );
-
-    // Delete old insights
+    // Save insights to database — delete old and insert new
+    // (serviceClient already created above for cache check)
     await serviceClient
       .from('ai_insights')
       .delete()
@@ -378,8 +427,8 @@ Tipos: "celebration" (positivo), "tip" (dica de economia), "alert" (gasto alto)`
     });
 
   } catch (e) {
-    console.error("generate-insights error:", e);
-    return new Response(JSON.stringify({ error: e instanceof Error ? e.message : "Unknown error" }), {
+    console.error("[generate-insights] Error:", e instanceof Error ? e.message : String(e));
+    return new Response(JSON.stringify({ error: "Erro ao gerar insights" }), {
       status: 500,
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
