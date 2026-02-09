@@ -1,15 +1,10 @@
 # iOS app (Xcode project)
-ios/
-*.xcodeproj
-*.xcworkspace
-*.swift
-*.pbxproj
-*.xcuserstate
-*.xcscheme
+/ios/
+/ios/**/*
 
 # Not needed for web deploy context
-.cursor/
-.lovable/
-supabase/
-brand/
-docs/
+/.cursor/
+/.lovable/
+/supabase/
+/brand/
+/docs/
