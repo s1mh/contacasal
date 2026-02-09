@@ -28,7 +28,7 @@ const CACHE_KEY_PREFIX = 'ai_insights_';
 const CACHE_DURATION_MS = 24 * 60 * 60 * 1000; // 24 hours
 const LEARNING_CACHE_DURATION_MS = 2 * 60 * 60 * 1000; // 2 hours
 
-function getCachedInsights(coupleId: string) {
+function getCachedInsights(coupleId: string, opts?: { allowStale?: boolean }) {
   try {
     const raw = localStorage.getItem(CACHE_KEY_PREFIX + coupleId);
     if (!raw) return null;
@@ -36,6 +36,9 @@ function getCachedInsights(coupleId: string) {
     const maxAge = cached.learning ? LEARNING_CACHE_DURATION_MS : CACHE_DURATION_MS;
     if (Date.now() - cached.timestamp < maxAge) {
       return cached;
+    }
+    if (opts?.allowStale) {
+      return { ...cached, stale: true };
     }
     localStorage.removeItem(CACHE_KEY_PREFIX + coupleId);
   } catch { /* ignore */ }
@@ -79,6 +82,13 @@ export function AIInsightsCard({ coupleId }: AIInsightsCardProps) {
       const { data, error: fnError } = await supabase.functions.invoke('generate-insights');
 
       if (fnError) {
+        const stale = getCachedInsights(coupleId, { allowStale: true });
+        if (stale && !stale.learning) {
+          setLearning(false);
+          setInsights(stale.insights || []);
+          setError(null);
+          return;
+        }
         setError(t('Não foi possível gerar insights'));
         return;
       }
@@ -94,6 +104,13 @@ export function AIInsightsCard({ coupleId }: AIInsightsCardProps) {
         setCachedInsights(coupleId, { learning: false, insights: data.insights || [] });
       }
     } catch {
+      const stale = getCachedInsights(coupleId, { allowStale: true });
+      if (stale && !stale.learning) {
+        setLearning(false);
+        setInsights(stale.insights || []);
+        setError(null);
+        return;
+      }
       setError(t('Erro ao conectar'));
     } finally {
       setLoading(false);

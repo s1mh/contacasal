@@ -91,6 +91,7 @@ Deno.serve(async (req) => {
         success: true,
         learning: false,
         cached: true,
+        stale: false,
         insights: cachedInsights.map(i => ({
           type: i.insight_type,
           message: i.message,
@@ -100,6 +101,22 @@ Deno.serve(async (req) => {
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
+
+    const getStaleInsights = async () => {
+      const { data } = await serviceClient
+        .from('ai_insights')
+        .select('insight_type, message, priority, created_at')
+        .eq('couple_id', coupleId)
+        .order('created_at', { ascending: false })
+        .limit(5);
+
+      if (!data || data.length === 0) return null;
+      return data.map(i => ({
+        type: i.insight_type,
+        message: i.message,
+        priority: i.priority,
+      }));
+    };
 
     // Fetch expenses and profiles
     const now = new Date();
@@ -261,6 +278,19 @@ Deno.serve(async (req) => {
     // Generate insights using AI
     const GOOGLE_AI_API_KEY = Deno.env.get("GOOGLE_AI_API_KEY");
     if (!GOOGLE_AI_API_KEY) {
+      const stale = await getStaleInsights();
+      if (stale && stale.length > 0) {
+        return new Response(JSON.stringify({
+          success: true,
+          learning: false,
+          cached: true,
+          stale: true,
+          insights: stale,
+          warning: "AI not configured; returning last known insights",
+        }), {
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
       return new Response(JSON.stringify({ error: "AI not configured" }), {
         status: 500,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
@@ -314,35 +344,105 @@ Tipos: "celebration" (positivo), "tip" (dica de economia), "alert" (gasto alto)`
 
     const systemInstruction = "Você gera insights financeiros em JSON. Responda APENAS com o array JSON, sem markdown. REGRA ABSOLUTA: NUNCA sugira que uma pessoa pague a próxima conta, saída, ou qualquer coisa para equilibrar. O app divide tudo automaticamente. Foque em tendências de gastos e economia, nunca em quem deve pagar o quê.";
 
-    const aiResponse = await fetch(
-      `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${GOOGLE_AI_API_KEY}`,
-      {
+    const modelUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${GOOGLE_AI_API_KEY}`;
+
+    const responseSchema = {
+      type: "array",
+      items: {
+        type: "object",
+        properties: {
+          type: { type: "string", enum: ["celebration", "tip", "alert"] },
+          message: { type: "string" },
+          priority: { type: "integer" },
+        },
+        required: ["type", "message", "priority"],
+      },
+    };
+
+    const callGemini = async (
+      inputPrompt: string,
+      opts?: { strict?: boolean; maxTokens?: number; temperature?: number }
+    ) => {
+      const body: Record<string, unknown> = {
+        system_instruction: { parts: [{ text: systemInstruction }] },
+        contents: [{ parts: [{ text: inputPrompt }] }],
+        generationConfig: {
+          temperature: opts?.temperature ?? 0.35,
+          maxOutputTokens: opts?.maxTokens ?? 768,
+          responseMimeType: "application/json",
+          ...(opts?.strict ? { responseSchema } : {}),
+        },
+      };
+
+      let res = await fetch(modelUrl, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          system_instruction: { parts: [{ text: systemInstruction }] },
-          contents: [{ parts: [{ text: prompt }] }],
+        body: JSON.stringify(body),
+      });
+
+      // Alguns ambientes/modelos rejeitam `responseSchema`. Se acontecer, cai para JSON sem schema.
+      if (!res.ok && opts?.strict && res.status === 400) {
+        const fallbackBody: Record<string, unknown> = {
+          ...body,
           generationConfig: {
-            temperature: 0.7,
-            maxOutputTokens: 8192,
-            responseMimeType: "application/json",
-            thinkingConfig: {
-              thinkingBudget: 1024,
-            },
+            ...(body.generationConfig as Record<string, unknown>),
           },
-        }),
+        };
+        delete (fallbackBody.generationConfig as Record<string, unknown>).responseSchema;
+
+        res = await fetch(modelUrl, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(fallbackBody),
+        });
       }
-    );
+
+      return res;
+    };
+
+    const aiResponse = await callGemini(prompt, { strict: true, maxTokens: 768, temperature: 0.35 });
 
     if (!aiResponse.ok) {
       const errorBody = await aiResponse.text().catch(() => "unable to read body");
       console.error("[generate-insights] AI API error:", aiResponse.status, errorBody);
+
+      // Não “mata” a feature: retorna o último insight conhecido quando possível.
       if (aiResponse.status === 429) {
+        const stale = await getStaleInsights();
+        if (stale && stale.length > 0) {
+          return new Response(JSON.stringify({
+            success: true,
+            learning: false,
+            cached: true,
+            stale: true,
+            insights: stale,
+            warning: "AI rate limited; returning last known insights",
+          }), {
+            status: 200,
+            headers: { ...corsHeaders, "Content-Type": "application/json" },
+          });
+        }
         return new Response(JSON.stringify({ error: "Rate limit exceeded" }), {
           status: 429,
           headers: { ...corsHeaders, "Content-Type": "application/json" },
         });
       }
+
+      const stale = await getStaleInsights();
+      if (stale && stale.length > 0) {
+        return new Response(JSON.stringify({
+          success: true,
+          learning: false,
+          cached: true,
+          stale: true,
+          insights: stale,
+          warning: "AI service error; returning last known insights",
+        }), {
+          status: 200,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+
       return new Response(JSON.stringify({ error: "AI service error" }), {
         status: 500,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
@@ -350,45 +450,87 @@ Tipos: "celebration" (positivo), "tip" (dica de economia), "alert" (gasto alto)`
     }
 
     const aiData = await aiResponse.json();
-    
-    // Gemini 2.5 (thinking model) may return multiple parts: thought parts + actual response
-    const parts = aiData.candidates?.[0]?.content?.parts || [];
-    let content = "[]";
-    
-    // Find the last non-thought part (the actual response)
-    for (const part of parts) {
-      if (part.text && !part.thought) {
-        content = part.text;
-      }
-    }
-    
-    // Fallback: if no non-thought part found, use the last part with text
-    if (content === "[]" && parts.length > 0) {
-      const lastTextPart = [...parts].reverse().find((p: { text?: string }) => p.text);
-      if (lastTextPart) content = lastTextPart.text;
-    }
+    const finishReason = aiData.candidates?.[0]?.finishReason;
 
-    let insights = [];
+    // Gemini pode retornar múltiplas parts. Preferir o último texto que pareça JSON.
+    const parts = aiData.candidates?.[0]?.content?.parts || [];
+    const textParts: string[] = parts
+      .map((p: { text?: string }) => (typeof p?.text === "string" ? p.text : ""))
+      .filter(Boolean);
+
+    let content = textParts[textParts.length - 1] || "[]";
+    const jsonLooking = [...textParts].reverse().find((t) => {
+      const s = String(t).trim();
+      return s.startsWith("[") || s.startsWith("{");
+    });
+    if (jsonLooking) content = jsonLooking;
+
+    let insights: Array<{ type: string; message: string; priority: number }> = [];
     try {
-      // Clean up potential markdown wrapping
-      const cleanContent = content
+      const cleanContent = String(content)
         .replace(/```json\n?/g, '')
         .replace(/\n?```/g, '')
         .trim();
-      
-      // Try to extract JSON array from the response
+
       const jsonMatch = cleanContent.match(/\[[\s\S]*\]/);
-      if (jsonMatch) {
-        insights = JSON.parse(jsonMatch[0]);
-      } else {
-        insights = JSON.parse(cleanContent);
-      }
+      const parsed = JSON.parse(jsonMatch ? jsonMatch[0] : cleanContent);
+      insights = Array.isArray(parsed) ? parsed : [];
     } catch (parseError) {
-      console.error("[generate-insights] Parse failed:", String(parseError));
-      insights = [
-        { type: "tip", message: "Continue registrando seus gastos!", priority: 5 }
-      ];
+      console.error("[generate-insights] Parse failed:", String(parseError), "finishReason:", String(finishReason));
+
+      // Retry único: prompt curto/estrito para evitar truncamento e “texto fora do JSON”
+      try {
+        const retryPrompt = `Gere 2-3 insights curtos (máx 70 caracteres cada) em pt-BR.\n\nDados:\n- Total gasto: R$ ${totalMonth.toFixed(2)}\n- Total mês anterior: R$ ${totalPreviousMonth.toFixed(2)}\n- Tendência: ${trend === 'N/A' ? 'Primeiro mês com dados' : trend + '%'}\n- Top categorias: ${topCategories.map(c => `${c.name} (R$ ${c.amount.toFixed(2)})`).join(', ')}\n\nResponda APENAS com o array JSON válido.`;
+        const retryRes = await callGemini(retryPrompt, { strict: true, maxTokens: 512, temperature: 0.2 });
+        if (retryRes.ok) {
+          const retryData = await retryRes.json();
+          const retryParts = retryData.candidates?.[0]?.content?.parts || [];
+          const retryTexts: string[] = retryParts
+            .map((p: { text?: string }) => (typeof p?.text === "string" ? p.text : ""))
+            .filter(Boolean);
+          const retryContent = retryTexts[retryTexts.length - 1] || "[]";
+          const retryClean = String(retryContent).trim();
+          const retryMatch = retryClean.match(/\[[\s\S]*\]/);
+          const retryParsed = JSON.parse(retryMatch ? retryMatch[0] : retryClean);
+          insights = Array.isArray(retryParsed) ? retryParsed : [];
+        }
+      } catch (retryErr) {
+        console.error("[generate-insights] Retry failed:", String(retryErr));
+      }
+
+      // Se ainda falhar, devolve último insight conhecido do DB antes do fallback genérico.
+      if (!insights || insights.length === 0) {
+        const stale = await getStaleInsights();
+        if (stale && stale.length > 0) {
+          return new Response(JSON.stringify({
+            success: true,
+            learning: false,
+            cached: true,
+            stale: true,
+            insights: stale,
+            warning: "AI parse failed; returning last known insights",
+            finishReason,
+          }), {
+            status: 200,
+            headers: { ...corsHeaders, "Content-Type": "application/json" },
+          });
+        }
+      }
+
+      insights = insights && insights.length > 0
+        ? insights
+        : [{ type: "tip", message: "Continue registrando seus gastos!", priority: 5 }];
     }
+
+    // Validação/normalização básica
+    insights = (Array.isArray(insights) ? insights : [])
+      .filter((i) => i && typeof i.message === "string")
+      .slice(0, 5)
+      .map((i) => ({
+        type: (i.type === "celebration" || i.type === "alert" || i.type === "tip") ? i.type : "tip",
+        message: String(i.message).trim().slice(0, 120),
+        priority: Number.isFinite(Number(i.priority)) ? Number(i.priority) : 5,
+      }));
 
     // Save insights to database — delete old and insert new
     // (serviceClient already created above for cache check)
