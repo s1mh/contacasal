@@ -130,7 +130,9 @@ export function AIInsightsCard({ coupleId, expenseCount }: AIInsightsCardProps) 
     try {
       // Evita header custom (pode causar preflight/CORS). O backend já suporta ?debug=1.
       const fnName = (opts?.debug || debugEnabled) ? 'generate-insights?debug=1' : 'generate-insights';
-      const { data, error: fnError } = await supabase.functions.invoke(fnName);
+      const { data, error: fnError } = await supabase.functions.invoke(fnName, {
+        body: { expenseCount: expenseCount ?? null },
+      });
 
       if (fnError) {
         const stale = getCachedInsights(coupleId, { allowStale: true });

@@ -81,6 +81,17 @@ Deno.serve(async (req) => {
       });
     }
 
+    // Parse request body to get expenseCount from frontend
+    let bodyExpenseCount: number | null = null;
+    try {
+      const body = await req.json();
+      if (body && typeof body.expenseCount === 'number') {
+        bodyExpenseCount = body.expenseCount;
+      }
+    } catch {
+      // No body or invalid JSON — ok, just skip
+    }
+
     // Check for cached insights (valid within last 24 hours)
     const serviceRoleKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "";
     const serviceClient = serviceRoleKey
@@ -100,19 +111,45 @@ Deno.serve(async (req) => {
     const cachedInsights = cachedInsightsRes.data;
 
     if (cachedInsights && cachedInsights.length > 0) {
-      return json({
-        success: true,
-        learning: false,
-        cached: true,
-        stale: false,
-        requestId,
-        insights: cachedInsights.map(i => ({
-          type: i.insight_type,
-          message: i.message,
-          priority: i.priority,
-        })),
-        ...(debugEnabled ? { _debug: { requestId, path: "cache_hit" } } : {}),
-      });
+      // If the frontend sent an expenseCount, check if data changed or is below minimum.
+      // If so, invalidate cache and let the flow continue to re-evaluate.
+      let cacheStillValid = true;
+
+      if (bodyExpenseCount !== null && serviceClient) {
+        // If frontend says 0 expenses (or below the minimum of 3), cache is always stale
+        if (bodyExpenseCount < 3) {
+          await serviceClient.from('ai_insights').delete().eq('couple_id', coupleId);
+          cacheStillValid = false;
+        } else {
+          const { count: dbCount } = await serviceClient
+            .from('expenses')
+            .select('*', { count: 'exact', head: true })
+            .eq('couple_id', coupleId);
+
+          if (dbCount !== null && dbCount !== bodyExpenseCount) {
+            // Data changed — invalidate server cache
+            await serviceClient.from('ai_insights').delete().eq('couple_id', coupleId);
+            cacheStillValid = false;
+          }
+        }
+      }
+
+      if (cacheStillValid) {
+        return json({
+          success: true,
+          learning: false,
+          cached: true,
+          stale: false,
+          requestId,
+          insights: cachedInsights.map(i => ({
+            type: i.insight_type,
+            message: i.message,
+            priority: i.priority,
+          })),
+          ...(debugEnabled ? { _debug: { requestId, path: "cache_hit", bodyExpenseCount } } : {}),
+        });
+      }
+      // If cache was invalidated, fall through to regenerate insights
     }
 
     const getStaleInsights = async () => {
