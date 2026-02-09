@@ -380,7 +380,8 @@ Tipos: "celebration" (positivo), "tip" (dica de economia), "alert" (gasto alto)`
 
     const systemInstruction = "Você gera insights financeiros em JSON. Responda APENAS com o array JSON, sem markdown. REGRA ABSOLUTA: NUNCA sugira que uma pessoa pague a próxima conta, saída, ou qualquer coisa para equilibrar. O app divide tudo automaticamente. Foque em tendências de gastos e economia, nunca em quem deve pagar o quê.";
 
-    const modelUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${GOOGLE_AI_API_KEY}`;
+    // gemini-2.0-flash: rápido, barato, sem "thinking" (evita truncamento por MAX_TOKENS)
+    const modelUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${GOOGLE_AI_API_KEY}`;
 
     const responseSchema = {
       type: "array",
@@ -611,17 +612,21 @@ Tipos: "celebration" (positivo), "tip" (dica de economia), "alert" (gasto alto)`
       learning: false,
       requestId,
       insights,
-      ...(debugEnabled ? {
-        _debug: {
-          requestId,
-          finishReason,
-          parseFailed,
-          retryUsed,
-          partsCount: Array.isArray(parts) ? parts.length : 0,
-          contentPreview: String(content).slice(0, 400),
-          isGenericFallbackOnly,
-        }
-      } : {}),
+      // Sempre incluir _debug para facilitar diagnóstico (dados não sensíveis)
+      _debug: {
+        requestId,
+        finishReason,
+        parseFailed,
+        retryUsed,
+        partsCount: Array.isArray(parts) ? parts.length : 0,
+        contentPreview: String(content).slice(0, 600),
+        isGenericFallbackOnly,
+        expensesCount: expenses.length,
+        uniquePurchasesCount: uniquePurchases.length,
+        uniqueDays,
+        uniqueCategories,
+        model: "gemini-2.0-flash",
+      },
       stats: {
         totalMonth,
         totalPreviousMonth,
