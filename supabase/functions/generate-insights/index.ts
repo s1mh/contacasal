@@ -134,15 +134,19 @@ Deno.serve(async (req) => {
     };
 
     // Fetch expenses and profiles
+    // Usa serviceClient (bypass RLS) porque o usuário já foi autenticado acima.
+    // Com verify_jwt=false, o supabaseClient do usuário pode não ter contexto RLS completo.
+    const queryClient = serviceClient ?? supabaseClient;
+
     const now = new Date();
     const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1).toISOString().split('T')[0];
     const startOfPrevMonth = new Date(now.getFullYear(), now.getMonth() - 1, 1).toISOString().split('T')[0];
     const endOfPrevMonth = new Date(now.getFullYear(), now.getMonth(), 0).toISOString().split('T')[0];
 
     const [expensesRes, profilesRes, tagsRes] = await Promise.all([
-      supabaseClient.from('expenses').select('*').eq('couple_id', coupleId),
-      supabaseClient.from('profiles').select('*').eq('couple_id', coupleId),
-      supabaseClient.from('tags').select('*').eq('couple_id', coupleId),
+      queryClient.from('expenses').select('*').eq('couple_id', coupleId),
+      queryClient.from('profiles').select('*').eq('couple_id', coupleId),
+      queryClient.from('tags').select('*').eq('couple_id', coupleId),
     ]);
 
     const expenses: Expense[] = expensesRes.data || [];
