@@ -100,7 +100,6 @@ Deno.serve(async (req) => {
     const cachedInsights = cachedInsightsRes.data;
 
     if (cachedInsights && cachedInsights.length > 0) {
-      // Return cached insights without calling the AI
       return json({
         success: true,
         learning: false,
@@ -135,7 +134,6 @@ Deno.serve(async (req) => {
 
     // Fetch expenses and profiles
     // Usa serviceClient (bypass RLS) porque o usuário já foi autenticado acima.
-    // Com verify_jwt=false, o supabaseClient do usuário pode não ter contexto RLS completo.
     const queryClient = serviceClient ?? supabaseClient;
 
     const now = new Date();
@@ -161,7 +159,6 @@ Deno.serve(async (req) => {
     // Check learning progress
     const uniqueDays = new Set(uniquePurchases.map(e => e.expense_date)).size;
     const uniqueCategories = new Set(uniquePurchases.filter(e => e.tag_id).map(e => e.tag_id)).size;
-    // Thresholds reduzidos para MVP — a IA precisa de poucos dados para gerar insights úteis
     const MIN_DAYS = 3;
     const MIN_PURCHASES = 3;
     const MIN_CATEGORIES = 2;
@@ -194,7 +191,7 @@ Deno.serve(async (req) => {
       });
     }
 
-    // Calculate spending data with correct split understanding
+    // Calculate spending data
     const thisMonthExpenses = expenses.filter(e => e.expense_date >= startOfMonth);
     const thisMonthPurchases = thisMonthExpenses.filter(e =>
       !e.installment_number || e.installment_number === 1
@@ -222,31 +219,24 @@ Deno.serve(async (req) => {
       });
 
     // Calculate ACTUAL shares per person (considering splits!)
-    // This is key: we need to calculate what each person actually paid vs what they should have paid
     const personShares: Record<number, { paid: number; shouldPay: number; categories: Record<string, number> }> = {};
 
     profiles.forEach(p => {
       personShares[p.position] = { paid: 0, shouldPay: 0, categories: {} };
     });
 
-    // Process this month's expenses with proper split calculations
     thisMonthExpenses.forEach(expense => {
       const { total_amount, paid_by, split_type, split_value, tag_id } = expense;
 
-      // Add to paid amount for the payer
       if (personShares[paid_by]) {
         personShares[paid_by].paid += total_amount;
-
-        // Track categories for the payer
         const category = tags.find(t => t.id === tag_id)?.name || 'Outros';
         personShares[paid_by].categories[category] = (personShares[paid_by].categories[category] || 0) + total_amount;
       }
 
-      // Calculate what each person should pay based on split
       const numPeople = profiles.length || 2;
 
       if (split_type === 'equal') {
-        // 50/50 (or equal split among all configured people)
         const sharePerPerson = total_amount / numPeople;
         profiles.forEach(p => {
           if (personShares[p.position]) {
@@ -270,7 +260,6 @@ Deno.serve(async (req) => {
           }
         });
       } else if (split_type === 'full') {
-        // One person pays 100% - no division
         profiles.forEach(p => {
           const key = `person${p.position}` as keyof SplitValue;
           if (split_value[key] === 100 && personShares[p.position]) {
@@ -280,16 +269,12 @@ Deno.serve(async (req) => {
       }
     });
 
-    // Calculate split statistics
     const equalSplitCount = thisMonthExpenses.filter(e => e.split_type === 'equal').length;
-    const fullPayCount = thisMonthExpenses.filter(e => e.split_type === 'full').length;
-    const percentageSplitCount = thisMonthExpenses.filter(e => e.split_type === 'percentage').length;
 
     const equalSplitPercentage = thisMonthPurchases.length > 0
       ? Math.round((equalSplitCount / thisMonthExpenses.length) * 100)
       : 0;
 
-    // Build profile summary for AI
     const profileSummary = profiles.map(p => {
       const shares = personShares[p.position];
       const balance = shares.paid - shares.shouldPay;
@@ -301,15 +286,18 @@ Deno.serve(async (req) => {
         position: p.position,
         totalPaid: shares.paid,
         shouldHavePaid: shares.shouldPay,
-        balance: balance, // positive = paid more than should, negative = owes
+        balance,
         topCategory: topCategory ? topCategory[0] : null,
         topCategoryAmount: topCategory ? topCategory[1] : 0,
       };
     });
 
-    // Generate insights using AI
+    // ======================== AI PROVIDERS ========================
+
     const GOOGLE_AI_API_KEY = Deno.env.get("GOOGLE_AI_API_KEY");
-    if (!GOOGLE_AI_API_KEY) {
+    const GROQ_API_KEY = Deno.env.get("GROQ_API_KEY");
+
+    if (!GOOGLE_AI_API_KEY && !GROQ_API_KEY) {
       const stale = await getStaleInsights();
       if (stale && stale.length > 0) {
         return json({
@@ -320,7 +308,7 @@ Deno.serve(async (req) => {
           requestId,
           insights: stale,
           warning: "AI not configured; returning last known insights",
-          ...(debugEnabled ? { _debug: { requestId, path: "ai_not_configured_stale", missingEnv: ["GOOGLE_AI_API_KEY"] } } : {}),
+          _debug: { requestId, path: "ai_not_configured_stale", missingEnv: ["GOOGLE_AI_API_KEY", "GROQ_API_KEY"] },
         });
       }
       return json({
@@ -329,7 +317,7 @@ Deno.serve(async (req) => {
         requestId,
         insights: [],
         error: "AI not configured",
-        ...(debugEnabled ? { _debug: { requestId, path: "ai_not_configured", missingEnv: ["GOOGLE_AI_API_KEY"] } } : {}),
+        _debug: { requestId, path: "ai_not_configured", missingEnv: ["GOOGLE_AI_API_KEY", "GROQ_API_KEY"] },
       });
     }
 
@@ -380,8 +368,10 @@ Tipos: "celebration" (positivo), "tip" (dica de economia), "alert" (gasto alto)`
 
     const systemInstruction = "Você gera insights financeiros em JSON. Responda APENAS com o array JSON, sem markdown. REGRA ABSOLUTA: NUNCA sugira que uma pessoa pague a próxima conta, saída, ou qualquer coisa para equilibrar. O app divide tudo automaticamente. Foque em tendências de gastos e economia, nunca em quem deve pagar o quê.";
 
-    // gemini-2.0-flash: rápido, barato, sem "thinking" (evita truncamento por MAX_TOKENS)
-    const modelUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${GOOGLE_AI_API_KEY}`;
+    // ---------- Gemini ----------
+    const geminiModelUrl = GOOGLE_AI_API_KEY
+      ? `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${GOOGLE_AI_API_KEY}`
+      : null;
 
     const responseSchema = {
       type: "array",
@@ -399,7 +389,9 @@ Tipos: "celebration" (positivo), "tip" (dica de economia), "alert" (gasto alto)`
     const callGemini = async (
       inputPrompt: string,
       opts?: { strict?: boolean; maxTokens?: number; temperature?: number }
-    ) => {
+    ): Promise<Response | null> => {
+      if (!geminiModelUrl) return null;
+
       const body: Record<string, unknown> = {
         system_instruction: { parts: [{ text: systemInstruction }] },
         contents: [{ parts: [{ text: inputPrompt }] }],
@@ -411,13 +403,13 @@ Tipos: "celebration" (positivo), "tip" (dica de economia), "alert" (gasto alto)`
         },
       };
 
-      let res = await fetch(modelUrl, {
+      let res = await fetch(geminiModelUrl, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(body),
       });
 
-      // Alguns ambientes/modelos rejeitam `responseSchema`. Se acontecer, cai para JSON sem schema.
+      // Se responseSchema for rejeitado (400), tenta sem
       if (!res.ok && opts?.strict && res.status === 400) {
         const fallbackBody: Record<string, unknown> = {
           ...body,
@@ -427,7 +419,7 @@ Tipos: "celebration" (positivo), "tip" (dica de economia), "alert" (gasto alto)`
         };
         delete (fallbackBody.generationConfig as Record<string, unknown>).responseSchema;
 
-        res = await fetch(modelUrl, {
+        res = await fetch(geminiModelUrl, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify(fallbackBody),
@@ -437,36 +429,93 @@ Tipos: "celebration" (positivo), "tip" (dica de economia), "alert" (gasto alto)`
       return res;
     };
 
-    const aiResponse = await callGemini(prompt, { strict: true, maxTokens: 768, temperature: 0.35 });
+    // ---------- Groq (free tier: 14.400 req/dia, 30 req/min) ----------
+    const callGroq = async (
+      inputPrompt: string,
+      opts?: { maxTokens?: number; temperature?: number }
+    ): Promise<Response | null> => {
+      if (!GROQ_API_KEY) return null;
 
-    if (!aiResponse.ok) {
-      const errorBody = await aiResponse.text().catch(() => "unable to read body");
-      console.error("[generate-insights] AI API error:", aiResponse.status, errorBody);
+      const res = await fetch("https://api.groq.com/openai/v1/chat/completions", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": `Bearer ${GROQ_API_KEY}`,
+        },
+        body: JSON.stringify({
+          model: "llama-3.3-70b-versatile",
+          messages: [
+            { role: "system", content: systemInstruction },
+            { role: "user", content: inputPrompt },
+          ],
+          temperature: opts?.temperature ?? 0.35,
+          max_tokens: opts?.maxTokens ?? 768,
+          response_format: { type: "json_object" },
+        }),
+      });
 
-      // Não “mata” a feature: retorna o último insight conhecido quando possível.
-      if (aiResponse.status === 429) {
-        const stale = await getStaleInsights();
-        if (stale && stale.length > 0) {
-          return json({
-            success: true,
-            learning: false,
-            cached: true,
-            stale: true,
-            requestId,
-            insights: stale,
-            warning: "AI rate limited; returning last known insights",
-            ...(debugEnabled ? { _debug: { requestId, path: "ai_429_stale", status: aiResponse.status } } : {}),
-          });
-        }
-        return json({
-          success: false,
-          learning: false,
-          requestId,
-          insights: [],
-          error: "Rate limit exceeded",
-          ...(debugEnabled ? { _debug: { requestId, path: "ai_429_no_cache", status: aiResponse.status, errorBodyPreview: String(errorBody).slice(0, 400) } } : {}),
-        });
+      return res;
+    };
+
+    // Helper: extrai conteúdo JSON de qualquer provider
+    const extractContent = (
+      data: Record<string, unknown>,
+      provider: string
+    ): { content: string; finishReason: string } => {
+      if (provider.startsWith("groq")) {
+        // Formato OpenAI-compatible
+        const choices = (data as { choices?: Array<{ message?: { content?: string }; finish_reason?: string }> }).choices;
+        return {
+          content: choices?.[0]?.message?.content || "[]",
+          finishReason: choices?.[0]?.finish_reason || "unknown",
+        };
       }
+      // Formato Gemini
+      const candidates = (data as { candidates?: Array<{ finishReason?: string; content?: { parts?: Array<{ text?: string }> } }> }).candidates;
+      const fr = candidates?.[0]?.finishReason || "unknown";
+      const parts = candidates?.[0]?.content?.parts || [];
+      const textParts: string[] = parts
+        .map((p) => (typeof p?.text === "string" ? p.text : ""))
+        .filter(Boolean);
+      let c = textParts[textParts.length - 1] || "[]";
+      const jsonLooking = [...textParts].reverse().find((t) => {
+        const s = String(t).trim();
+        return s.startsWith("[") || s.startsWith("{");
+      });
+      if (jsonLooking) c = jsonLooking;
+      return { content: c, finishReason: fr };
+    };
+
+    // ======================== CHAMADA PRINCIPAL ========================
+    // Estratégia: Gemini primeiro → se 429, Groq fallback → se nenhum, cache/erro
+    let aiResponse: Response | null = null;
+    let aiProvider = "none";
+
+    // 1) Tenta Gemini
+    if (GOOGLE_AI_API_KEY) {
+      aiResponse = await callGemini(prompt, { strict: true, maxTokens: 768, temperature: 0.35 });
+      aiProvider = "gemini-2.0-flash";
+    }
+
+    // 2) Se Gemini não existe ou deu 429, tenta Groq
+    if ((!aiResponse || !aiResponse.ok) && GROQ_API_KEY) {
+      const isRateLimit = aiResponse && aiResponse.status === 429;
+      const noGemini = !GOOGLE_AI_API_KEY;
+      if (isRateLimit || noGemini || !aiResponse) {
+        console.log(`[generate-insights] ${isRateLimit ? 'Gemini 429' : 'Gemini indisponível'}, tentando Groq...`);
+        const groqRes = await callGroq(prompt, { maxTokens: 768, temperature: 0.35 });
+        if (groqRes && groqRes.ok) {
+          aiResponse = groqRes;
+          aiProvider = "groq-llama-3.3-70b";
+        }
+      }
+    }
+
+    // 3) Se nenhum provider funcionou
+    if (!aiResponse || !aiResponse.ok) {
+      const errorBody = aiResponse ? await aiResponse.text().catch(() => "unable to read body") : "no provider available";
+      const status = aiResponse?.status ?? 0;
+      console.error("[generate-insights] All AI providers failed:", status, errorBody);
 
       const stale = await getStaleInsights();
       if (stale && stale.length > 0) {
@@ -477,8 +526,8 @@ Tipos: "celebration" (positivo), "tip" (dica de economia), "alert" (gasto alto)`
           stale: true,
           requestId,
           insights: stale,
-          warning: "AI service error; returning last known insights",
-          ...(debugEnabled ? { _debug: { requestId, path: "ai_error_stale", status: aiResponse.status, errorBodyPreview: String(errorBody).slice(0, 400) } } : {}),
+          warning: "All AI providers failed; returning last known insights",
+          _debug: { requestId, path: "all_providers_failed_stale", status, provider: aiProvider, errorBodyPreview: String(errorBody).slice(0, 400) },
         });
       }
 
@@ -487,26 +536,15 @@ Tipos: "celebration" (positivo), "tip" (dica de economia), "alert" (gasto alto)`
         learning: false,
         requestId,
         insights: [],
-        error: "AI service error",
-        ...(debugEnabled ? { _debug: { requestId, path: "ai_error_no_cache", status: aiResponse.status, errorBodyPreview: String(errorBody).slice(0, 400) } } : {}),
+        error: status === 429 ? "Rate limit exceeded" : "AI service error",
+        _debug: { requestId, path: "all_providers_failed", status, provider: aiProvider, errorBodyPreview: String(errorBody).slice(0, 400) },
       });
     }
 
+    // ======================== PARSE DA RESPOSTA ========================
     const aiData = await aiResponse.json();
-    const finishReason = aiData.candidates?.[0]?.finishReason;
-
-    // Gemini pode retornar múltiplas parts. Preferir o último texto que pareça JSON.
-    const parts = aiData.candidates?.[0]?.content?.parts || [];
-    const textParts: string[] = parts
-      .map((p: { text?: string }) => (typeof p?.text === "string" ? p.text : ""))
-      .filter(Boolean);
-
-    let content = textParts[textParts.length - 1] || "[]";
-    const jsonLooking = [...textParts].reverse().find((t) => {
-      const s = String(t).trim();
-      return s.startsWith("[") || s.startsWith("{");
-    });
-    if (jsonLooking) content = jsonLooking;
+    const { content: rawContent, finishReason } = extractContent(aiData as Record<string, unknown>, aiProvider);
+    let content = rawContent;
 
     let insights: Array<{ type: string; message: string; priority: number }> = [];
     let parseFailed = false;
@@ -522,20 +560,41 @@ Tipos: "celebration" (positivo), "tip" (dica de economia), "alert" (gasto alto)`
       insights = Array.isArray(parsed) ? parsed : [];
     } catch (parseError) {
       parseFailed = true;
-      console.error("[generate-insights] Parse failed:", String(parseError), "finishReason:", String(finishReason));
+      console.error("[generate-insights] Parse failed:", String(parseError), "finishReason:", finishReason, "provider:", aiProvider);
 
-      // Retry único: prompt curto/estrito para evitar truncamento e “texto fora do JSON”
+      // Retry: tenta com prompt mais curto, usando o mesmo provider ou o fallback
       try {
         retryUsed = true;
         const retryPrompt = `Gere 2-3 insights curtos (máx 70 caracteres cada) em pt-BR.\n\nDados:\n- Total gasto: R$ ${totalMonth.toFixed(2)}\n- Total mês anterior: R$ ${totalPreviousMonth.toFixed(2)}\n- Tendência: ${trend === 'N/A' ? 'Primeiro mês com dados' : trend + '%'}\n- Top categorias: ${topCategories.map(c => `${c.name} (R$ ${c.amount.toFixed(2)})`).join(', ')}\n\nResponda APENAS com o array JSON válido.`;
-        const retryRes = await callGemini(retryPrompt, { strict: true, maxTokens: 512, temperature: 0.2 });
-        if (retryRes.ok) {
-          const retryData = await retryRes.json();
-          const retryParts = retryData.candidates?.[0]?.content?.parts || [];
-          const retryTexts: string[] = retryParts
-            .map((p: { text?: string }) => (typeof p?.text === "string" ? p.text : ""))
-            .filter(Boolean);
-          const retryContent = retryTexts[retryTexts.length - 1] || "[]";
+
+        let retryContent: string | null = null;
+
+        // Tenta com o provider que funcionou, ou tenta Groq como último recurso
+        if (aiProvider.startsWith("groq")) {
+          const res = await callGroq(retryPrompt, { maxTokens: 512, temperature: 0.2 });
+          if (res?.ok) {
+            const d = await res.json();
+            retryContent = extractContent(d as Record<string, unknown>, "groq").content;
+          }
+        } else {
+          // Tenta Gemini primeiro
+          const gemRes = await callGemini(retryPrompt, { strict: true, maxTokens: 512, temperature: 0.2 });
+          if (gemRes?.ok) {
+            const d = await gemRes.json();
+            retryContent = extractContent(d as Record<string, unknown>, "gemini").content;
+          }
+          // Se Gemini falhou no retry, tenta Groq
+          if (!retryContent && GROQ_API_KEY) {
+            const groqRes = await callGroq(retryPrompt, { maxTokens: 512, temperature: 0.2 });
+            if (groqRes?.ok) {
+              const d = await groqRes.json();
+              retryContent = extractContent(d as Record<string, unknown>, "groq").content;
+              aiProvider = "groq-llama-3.3-70b (retry)";
+            }
+          }
+        }
+
+        if (retryContent) {
           const retryClean = String(retryContent).trim();
           const retryMatch = retryClean.match(/\[[\s\S]*\]/);
           const retryParsed = JSON.parse(retryMatch ? retryMatch[0] : retryClean);
@@ -545,7 +604,7 @@ Tipos: "celebration" (positivo), "tip" (dica de economia), "alert" (gasto alto)`
         console.error("[generate-insights] Retry failed:", String(retryErr));
       }
 
-      // Se ainda falhar, devolve último insight conhecido do DB antes do fallback genérico.
+      // Se ainda falhar, devolve último insight conhecido do DB
       if (!insights || insights.length === 0) {
         const stale = await getStaleInsights();
         if (stale && stale.length > 0) {
@@ -557,8 +616,7 @@ Tipos: "celebration" (positivo), "tip" (dica de economia), "alert" (gasto alto)`
             requestId,
             insights: stale,
             warning: "AI parse failed; returning last known insights",
-            finishReason,
-            ...(debugEnabled ? { _debug: { requestId, path: "parse_failed_stale", finishReason, partsCount: Array.isArray(parts) ? parts.length : 0 } } : {}),
+            _debug: { requestId, path: "parse_failed_stale", finishReason, provider: aiProvider },
           });
         }
       }
@@ -568,7 +626,7 @@ Tipos: "celebration" (positivo), "tip" (dica de economia), "alert" (gasto alto)`
         : [{ type: "tip", message: "Continue registrando seus gastos!", priority: 5 }];
     }
 
-    // Validação/normalização básica
+    // Validação/normalização
     insights = (Array.isArray(insights) ? insights : [])
       .filter((i) => i && typeof i.message === "string")
       .slice(0, 5)
@@ -583,8 +641,7 @@ Tipos: "celebration" (positivo), "tip" (dica de economia), "alert" (gasto alto)`
       insights[0]?.type === "tip" &&
       insights[0]?.message === "Continue registrando seus gastos!";
 
-    // Save insights to database — delete old and insert new
-    // (serviceClient already created above for cache check)
+    // Save insights to database
     if (serviceClient) {
       await serviceClient
         .from('ai_insights')
@@ -593,8 +650,7 @@ Tipos: "celebration" (positivo), "tip" (dica de economia), "alert" (gasto alto)`
         .lt('created_at', new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString());
     }
 
-    // Insert new insights
-    // Não sobrescrever o cache com o fallback genérico (evita “travar” 24h no texto genérico).
+    // Não sobrescrever o cache com o fallback genérico
     if (serviceClient && insights.length > 0 && !isGenericFallbackOnly) {
       await serviceClient.from('ai_insights').insert(
         insights.map((insight: { type: string; message: string; priority: number }) => ({
@@ -612,20 +668,18 @@ Tipos: "celebration" (positivo), "tip" (dica de economia), "alert" (gasto alto)`
       learning: false,
       requestId,
       insights,
-      // Sempre incluir _debug para facilitar diagnóstico (dados não sensíveis)
       _debug: {
         requestId,
         finishReason,
         parseFailed,
         retryUsed,
-        partsCount: Array.isArray(parts) ? parts.length : 0,
         contentPreview: String(content).slice(0, 600),
         isGenericFallbackOnly,
         expensesCount: expenses.length,
         uniquePurchasesCount: uniquePurchases.length,
         uniqueDays,
         uniqueCategories,
-        model: "gemini-2.0-flash",
+        model: aiProvider,
       },
       stats: {
         totalMonth,
