@@ -4,8 +4,17 @@ import type { Database } from './types';
 const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL;
 const SUPABASE_PUBLISHABLE_KEY = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY;
 
-if (!SUPABASE_URL || !SUPABASE_PUBLISHABLE_KEY) {
-  throw new Error('Missing Supabase environment variables. Check your .env file.');
+const missingVars = [
+  !SUPABASE_URL ? 'VITE_SUPABASE_URL' : null,
+  !SUPABASE_PUBLISHABLE_KEY ? 'VITE_SUPABASE_PUBLISHABLE_KEY' : null,
+].filter(Boolean) as string[];
+
+if (missingVars.length > 0) {
+  throw new Error(
+    `Configuração do Supabase ausente: ${missingVars.join(', ')}. ` +
+      `Defina essas variáveis no ambiente (ex.: Vercel > Project Settings > Environment Variables) ` +
+      `ou em um arquivo .env local (não commitar).`
+  );
 }
 
 // Import the supabase client like this:

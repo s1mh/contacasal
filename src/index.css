@@ -141,16 +141,25 @@
     @apply bg-background text-foreground font-sans antialiased;
     font-family: 'Plus Jakarta Sans', system-ui, sans-serif;
     /* Safe area is handled by Capacitor's contentInset: 'automatic' — no manual padding needed */
-    /* Prevent text selection on native app feel */
-    -webkit-user-select: none;
-    user-select: none;
     /* Prevent tap highlight */
     -webkit-tap-highlight-color: transparent;
     /* Smooth scrolling */
     -webkit-overflow-scrolling: touch;
   }
 
-  /* Allow text selection on inputs and textareas */
+  /* Web: permitir selecionar/copiar texto normalmente */
+  body {
+    -webkit-user-select: text;
+    user-select: text;
+  }
+
+  /* Native (Capacitor): mantém “feel” de app desabilitando seleção global */
+  html[data-native='1'] body {
+    -webkit-user-select: none;
+    user-select: none;
+  }
+
+  /* Sempre permitir seleção em campos editáveis */
   input, textarea, [contenteditable] {
     -webkit-user-select: text;
     user-select: text;
