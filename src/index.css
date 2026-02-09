@@ -140,10 +140,7 @@
   body {
     @apply bg-background text-foreground font-sans antialiased;
     font-family: 'Plus Jakarta Sans', system-ui, sans-serif;
-    /* Apply safe area padding for Capacitor (top and sides only - bottom handled by native tab bar) */
-    padding-top: var(--safe-area-top);
-    padding-left: var(--safe-area-left);
-    padding-right: var(--safe-area-right);
+    /* Safe area is handled by Capacitor's contentInset: 'automatic' — no manual padding needed */
     /* Prevent text selection on native app feel */
     -webkit-user-select: none;
     user-select: none;
@@ -631,30 +628,30 @@
     animation: cat-stretching 2.5s ease-in-out infinite;
   }
 
-  /* Cat playing animation - pounce motion */
+  /* Cat playing animation - gentle bounce (stays within frame) */
   @keyframes cat-playing {
     0%, 100% {
       transform: translateY(0) scale(1) rotate(0deg);
     }
-    10% {
-      transform: translateY(3px) scale(0.95) rotate(-3deg);
+    15% {
+      transform: translateY(1px) scale(0.97) rotate(-2deg);
     }
-    30% {
-      transform: translateY(-15px) scale(1.1) rotate(5deg);
+    35% {
+      transform: translateY(-4px) scale(1.02) rotate(2deg);
     }
-    50% {
-      transform: translateY(-5px) scale(1.05) rotate(-2deg);
+    55% {
+      transform: translateY(-1px) scale(1.01) rotate(-1deg);
     }
-    70% {
-      transform: translateY(-10px) scale(1.08) rotate(3deg);
+    75% {
+      transform: translateY(-3px) scale(1.02) rotate(1.5deg);
     }
     90% {
-      transform: translateY(2px) scale(0.98) rotate(-1deg);
+      transform: translateY(1px) scale(0.99) rotate(-0.5deg);
     }
   }
 
   .animate-cat-playing {
-    animation: cat-playing 1.5s ease-in-out infinite;
+    animation: cat-playing 2s ease-in-out infinite;
   }
 
   /* Cat lying down animation - relaxed sway */

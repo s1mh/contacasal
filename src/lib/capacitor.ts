@@ -225,4 +225,27 @@ export async function initCapacitor() {
   } catch (e) {
     console.warn('Keyboard plugin not available:', e);
   }
+
+  // Track keyboard visibility via VisualViewport API so dialogs can adjust
+  setupKeyboardTracking();
+}
+
+/**
+ * Use the VisualViewport API to detect keyboard and set a CSS variable.
+ * When the keyboard opens, --keyboard-offset holds the height lost.
+ */
+function setupKeyboardTracking() {
+  if (!window.visualViewport) return;
+
+  const update = () => {
+    const vv = window.visualViewport!;
+    const keyboardHeight = window.innerHeight - vv.height;
+    document.documentElement.style.setProperty(
+      '--keyboard-offset',
+      `${Math.max(0, keyboardHeight)}px`
+    );
+  };
+
+  window.visualViewport.addEventListener('resize', update);
+  window.visualViewport.addEventListener('scroll', update);
 }

@@ -1,6 +1,6 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useOutletContext, useParams, useNavigate } from 'react-router-dom';
-import { User, Palette, Tag, Plus, Trash2, Check, Copy, LogOut, UserX, AtSign, RefreshCw, Users, Crown, Globe, Coins } from 'lucide-react';
+import { User, Palette, Tag, Plus, Trash2, Check, Copy, LogOut, UserX, AtSign, RefreshCw, Users, Crown, Globe, Coins, Fingerprint, ShieldCheck } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
@@ -20,6 +20,7 @@ import { usePreferences } from '@/contexts/PreferencesContext';
 import { useI18n } from '@/contexts/I18nContext';
 import { SupportedLocale } from '@/lib/i18n';
 import { SupportedCurrency } from '@/lib/preferences';
+import { isNative, isBiometricAvailable, authenticateBiometric, hapticNotification } from '@/lib/capacitor';
 
 export default function Settings() {
   const { couple, myPosition } = useOutletContext<{ couple: Couple; myPosition: number | null }>();
@@ -53,6 +54,39 @@ export default function Settings() {
   const [newTagIcon, setNewTagIcon] = useState('tag');
   const [newTagColor, setNewTagColor] = useState('#94A3B8');
   const [showAddTag, setShowAddTag] = useState(false);
+
+  // Biometric state
+  const [biometricAvailable, setBiometricAvailable] = useState(false);
+  const [biometryType, setBiometryType] = useState('none');
+  const [biometricEnabled, setBiometricEnabled] = useState(() => localStorage.getItem('biometric_enabled') !== 'false');
+
+  useEffect(() => {
+    if (!isNative) return;
+    isBiometricAvailable().then(({ available, biometryType: type }) => {
+      setBiometricAvailable(available);
+      setBiometryType(type);
+    });
+  }, []);
+
+  const handleToggleBiometric = async () => {
+    if (!biometricEnabled) {
+      // Activating: verify identity first
+      const success = await authenticateBiometric(
+        biometryType === 'faceId' ? 'Ativar Face ID' : 'Ativar biometria'
+      );
+      if (success) {
+        localStorage.setItem('biometric_enabled', 'true');
+        setBiometricEnabled(true);
+        hapticNotification('success');
+        toast({ title: prefT('Biometria ativada') });
+      }
+    } else {
+      // Deactivating
+      localStorage.setItem('biometric_enabled', 'false');
+      setBiometricEnabled(false);
+      toast({ title: prefT('Biometria desativada') });
+    }
+  };
 
   // Get only MY profile
   const myProfile = couple.profiles.find(p => p.position === myPosition);
@@ -404,6 +438,32 @@ export default function Settings() {
                 </SelectContent>
               </Select>
             </div>
+
+            {/* Biometric toggle - only on native with biometric hardware */}
+            {isNative && biometricAvailable && (
+              <div className="pt-2 border-t border-border/30">
+                <button
+                  onClick={handleToggleBiometric}
+                  className="w-full flex items-center justify-between py-2"
+                >
+                  <div className="flex items-center gap-2">
+                    <Fingerprint className="w-4 h-4 text-muted-foreground" />
+                    <span className="text-sm text-muted-foreground">
+                      {biometryType === 'faceId' ? 'Face ID' : biometryType === 'touchId' ? 'Touch ID' : prefT('Biometria')}
+                    </span>
+                  </div>
+                  <div className={cn(
+                    'w-11 h-6 rounded-full transition-colors relative',
+                    biometricEnabled ? 'bg-primary' : 'bg-muted'
+                  )}>
+                    <div className={cn(
+                      'absolute top-0.5 w-5 h-5 rounded-full bg-white shadow-sm transition-transform',
+                      biometricEnabled ? 'translate-x-[22px]' : 'translate-x-0.5'
+                    )} />
+                  </div>
+                </button>
+              </div>
+            )}
           </div>
         </div>
       </AnimatedItem>

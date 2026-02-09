@@ -34,6 +34,15 @@ class MyViewController: CAPBridgeViewController, UITabBarDelegate {
 
     override func viewDidLayoutSubviews() {
         super.viewDidLayoutSubviews()
+        updateLayout()
+    }
+
+    override func viewSafeAreaInsetsDidChange() {
+        super.viewSafeAreaInsetsDidChange()
+        updateLayout()
+    }
+
+    private func updateLayout() {
         layoutTabBar()
         layoutFAB()
         adjustWebViewForTabBar()
@@ -112,10 +121,14 @@ class MyViewController: CAPBridgeViewController, UITabBarDelegate {
     }
 
     private func layoutFAB() {
-        let tabBarTop = nativeTabBar.frame.origin.y
+        // The visible tab bar content is 49pt tall, sitting above the safe area.
+        // Center the FAB within that 49pt area.
+        let safeBottom = view.safeAreaInsets.bottom
+        let tabBarContentTop = view.bounds.height - 49 - safeBottom
+        let centerY = tabBarContentTop + (49 - fabSize) / 2
         fabButton.frame = CGRect(
             x: (view.bounds.width - fabSize) / 2,
-            y: tabBarTop - fabSize / 2 + 4,
+            y: centerY,
             width: fabSize,
             height: fabSize
         )
