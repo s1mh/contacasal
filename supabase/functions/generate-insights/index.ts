@@ -324,21 +324,25 @@ Tipos: "celebration" (positivo), "tip" (dica de economia), "alert" (gasto alto)`
           contents: [{ parts: [{ text: prompt }] }],
           generationConfig: {
             temperature: 0.7,
-            maxOutputTokens: 4096,
+            maxOutputTokens: 8192,
             responseMimeType: "application/json",
+            thinkingConfig: {
+              thinkingBudget: 1024,
+            },
           },
         }),
       }
     );
 
     if (!aiResponse.ok) {
+      const errorBody = await aiResponse.text().catch(() => "unable to read body");
+      console.error("[generate-insights] AI API error:", aiResponse.status, errorBody);
       if (aiResponse.status === 429) {
         return new Response(JSON.stringify({ error: "Rate limit exceeded" }), {
           status: 429,
           headers: { ...corsHeaders, "Content-Type": "application/json" },
         });
       }
-      console.error("[generate-insights] AI API error:", aiResponse.status);
       return new Response(JSON.stringify({ error: "AI service error" }), {
         status: 500,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
@@ -423,7 +427,7 @@ Tipos: "celebration" (positivo), "tip" (dica de economia), "alert" (gasto alto)`
     });
 
   } catch (e) {
-    console.error("[generate-insights] Error");
+    console.error("[generate-insights] Error:", e instanceof Error ? e.message : String(e));
     return new Response(JSON.stringify({ error: "Erro ao gerar insights" }), {
       status: 500,
       headers: { ...corsHeaders, "Content-Type": "application/json" },
