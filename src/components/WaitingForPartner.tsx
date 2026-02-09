@@ -7,7 +7,7 @@ import { Avatar } from '@/components/Avatar';
 import { Profile } from '@/contexts/CoupleContext';
 import { usePreferences } from '@/contexts/PreferencesContext';
 import { useToast } from '@/hooks/use-toast';
-import { buildShareUrl } from '@/lib/capacitor';
+import { buildShareUrl, removeCoupleSession } from '@/lib/capacitor';
 
 interface WaitingForPartnerProps {
   shareCode: string;
@@ -142,8 +142,8 @@ export function WaitingForPartner({ shareCode, myProfile }: WaitingForPartnerPro
             <Button
               variant="destructive"
               onClick={() => {
-                // Clear localStorage for this space
-                localStorage.removeItem(`couple_${shareCode}`);
+                // Clear localStorage + native Preferences for this space
+                removeCoupleSession(shareCode);
                 localStorage.removeItem(`onboarding_pending_${shareCode}`);
                 localStorage.removeItem(`onboarding_complete_${shareCode}`);
                 setShowExitConfirm(false);

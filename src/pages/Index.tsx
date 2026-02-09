@@ -17,7 +17,7 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { SupportedLocale } from "@/lib/i18n";
 import { SupportedCurrency } from "@/lib/preferences";
 import { OnboardingTutorial, useTutorialState } from "@/components/OnboardingTutorial";
-import { isNative, isBiometricAvailable, authenticateBiometric, hapticNotification } from "@/lib/capacitor";
+import { isNative, isBiometricAvailable, authenticateBiometric, hapticNotification, loadCoupleSessions, saveCoupleSession } from "@/lib/capacitor";
 
 interface LastSpace {
   shareCode: string;
@@ -118,36 +118,25 @@ export default function Index() {
   }, [hasSeenTutorial, lastSpace]);
 
   // Check for saved space on mount - get the most recent one
+  // Uses loadCoupleSessions which checks localStorage first, then Preferences (native backup)
   useEffect(() => {
-    const spaces: LastSpace[] = [];
-    
-    for (let i = 0; i < localStorage.length; i++) {
-      const key = localStorage.key(i);
-      if (key?.startsWith("couple_")) {
-        try {
-          const data = JSON.parse(localStorage.getItem(key) || "{}");
-          if (data.position && data.name) {
-            spaces.push({
-              shareCode: key.replace("couple_", ""),
-              position: data.position,
-              name: data.name,
-              avatarIndex: data.avatarIndex || 1,
-              username: data.username,
-              timestamp: data.timestamp || 0,
-            });
-          }
-        } catch (e) {
-          // Ignore invalid data
-        }
+    loadCoupleSessions().then((sessions) => {
+      const spaces: LastSpace[] = sessions.map(s => ({
+        shareCode: s.shareCode,
+        position: s.data.position,
+        name: s.data.name,
+        avatarIndex: s.data.avatarIndex || 1,
+        username: s.data.username,
+        timestamp: s.data.timestamp || 0,
+      }));
+
+      // Sort by timestamp descending (most recent first)
+      spaces.sort((a, b) => (b.timestamp || 0) - (a.timestamp || 0));
+
+      if (spaces.length > 0) {
+        setLastSpace(spaces[0]);
       }
-    }
-    
-    // Sort by timestamp descending (most recent first)
-    spaces.sort((a, b) => (b.timestamp || 0) - (a.timestamp || 0));
-    
-    if (spaces.length > 0) {
-      setLastSpace(spaces[0]);
-    }
+    });
   }, []);
 
   // Animate cats on mount
@@ -273,17 +262,14 @@ export default function Index() {
       const shareCode = data.share_code;
       const profile = data.profile;
 
-      localStorage.setItem(
-        `couple_${shareCode}`,
-        JSON.stringify({
-          position: profile.position,
-          name: profile.name,
-          avatarIndex: profile.avatar_index,
-          color: profile.color,
-          username: username.trim().replace(/^@/, ""),
-          timestamp: Date.now(),
-        }),
-      );
+      saveCoupleSession(shareCode, {
+        position: profile.position,
+        name: profile.name,
+        avatarIndex: profile.avatar_index,
+        color: profile.color,
+        username: username.trim().replace(/^@/, ""),
+        timestamp: Date.now(),
+      });
 
       // Validate the share code to set up the session
       await validateShareCode(shareCode);

@@ -10,7 +10,7 @@ import { Check, Heart, Sparkles, Lock, ArrowRight, ArrowLeft, Mail, SkipForward,
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { usePreferences } from '@/contexts/PreferencesContext';
-import { isNative, isBiometricAvailable, authenticateBiometric, hapticNotification } from '@/lib/capacitor';
+import { isNative, isBiometricAvailable, authenticateBiometric, hapticNotification, saveCoupleSession } from '@/lib/capacitor';
 
 // Validation functions
 const isValidName = (name: string): boolean => {
@@ -285,15 +285,15 @@ export default function CreateSpace() {
           .update(updateData)
           .eq('id', profiles[0].id);
 
-        // Save to localStorage
-        localStorage.setItem(`couple_${shareCode}`, JSON.stringify({
+        // Save to localStorage + native Preferences
+        saveCoupleSession(shareCode, {
           position: 1,
           name: formattedName,
           avatarIndex,
           color,
           username,
           timestamp: Date.now()
-        }));
+        });
       }
 
       toast({

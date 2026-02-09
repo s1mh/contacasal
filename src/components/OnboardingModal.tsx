@@ -9,6 +9,7 @@ import { Profile } from '@/contexts/CoupleContext';
 import { Check, Heart, Sparkles, Lock, ArrowRight, ArrowLeft, AtSign, Loader2, Eye, EyeOff, PartyPopper } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { usePreferences } from '@/contexts/PreferencesContext';
+import { saveCoupleSession } from '@/lib/capacitor';
 
 interface OnboardingModalProps {
   open: boolean;
@@ -213,14 +214,14 @@ export function OnboardingModal({ open, onClose, onComplete, profiles, shareCode
         .map(word => word.charAt(0).toUpperCase() + word.slice(1))
         .join(' ');
 
-      localStorage.setItem(`couple_${shareCode}`, JSON.stringify({
+      saveCoupleSession(shareCode!, {
         position,
         name: formattedName,
         avatarIndex,
         color,
         username,
         timestamp: Date.now()
-      }));
+      });
 
       onComplete(position, formattedName, avatarIndex, color, pinCode, undefined, username || undefined);
     }

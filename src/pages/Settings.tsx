@@ -20,7 +20,7 @@ import { usePreferences } from '@/contexts/PreferencesContext';
 import { useI18n } from '@/contexts/I18nContext';
 import { SupportedLocale } from '@/lib/i18n';
 import { SupportedCurrency } from '@/lib/preferences';
-import { isNative, isBiometricAvailable, authenticateBiometric, hapticNotification } from '@/lib/capacitor';
+import { isNative, isBiometricAvailable, authenticateBiometric, hapticNotification, removeCoupleSession } from '@/lib/capacitor';
 
 export default function Settings() {
   const { couple, myPosition } = useOutletContext<{ couple: Couple; myPosition: number | null }>();
@@ -218,7 +218,7 @@ export default function Settings() {
 
   const handleLogout = () => {
     if (shareCode) {
-      localStorage.removeItem(`couple_${shareCode}`);
+      removeCoupleSession(shareCode);
       toast({ 
         title: prefT('Até logo! 👋'),
         description: prefT('Volte quando quiser com seu código')

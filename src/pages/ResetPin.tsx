@@ -7,6 +7,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { CAT_AVATARS } from '@/lib/constants';
 import { cn } from '@/lib/utils';
+import { saveCoupleSession } from '@/lib/capacitor';
 
 interface ProfileData {
   name: string;
@@ -113,15 +114,15 @@ export default function ResetPin() {
 
       setSuccess(true);
 
-      // Save to localStorage for auto-login
+      // Save to localStorage + native Preferences for auto-login
       if (shareCode && data.profile) {
-        localStorage.setItem(`couple_${shareCode}`, JSON.stringify({
+        saveCoupleSession(shareCode, {
           position: data.profile.position,
           name: data.profile.name,
           avatarIndex: data.profile.avatar_index,
           color: data.profile.color,
           timestamp: Date.now(),
-        }));
+        });
       }
 
       toast({

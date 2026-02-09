@@ -122,10 +122,10 @@ class MyViewController: CAPBridgeViewController, UITabBarDelegate {
 
     private func layoutFAB() {
         // The visible tab bar content is 49pt tall, sitting above the safe area.
-        // Center the FAB within that 49pt area.
+        // Center the FAB within that 49pt area (+ 1pt optical correction).
         let safeBottom = view.safeAreaInsets.bottom
         let tabBarContentTop = view.bounds.height - 49 - safeBottom
-        let centerY = tabBarContentTop + (49 - fabSize) / 2
+        let centerY = tabBarContentTop + (49 - fabSize) / 2 + 1
         fabButton.frame = CGRect(
             x: (view.bounds.width - fabSize) / 2,
             y: centerY,

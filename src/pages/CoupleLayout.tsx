@@ -16,7 +16,7 @@ import { CAT_AVATARS } from '@/lib/constants';
 import { isConfiguredProfile } from '@/lib/utils';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
-import { isNative, updateNativeTab, onNativeTabSelected, onNativeFabTapped, setNativeTabBarVisible } from '@/lib/capacitor';
+import { isNative, updateNativeTab, onNativeTabSelected, onNativeFabTapped, setNativeTabBarVisible, saveCoupleSession, removeCoupleSession } from '@/lib/capacitor';
 
 interface SpaceInfo {
   coupleId: string;
@@ -198,10 +198,7 @@ function CoupleLayoutContent() {
 
           // Only update if more than 1 minute has passed
           if (!data.timestamp || now - data.timestamp > 60000) {
-            localStorage.setItem(`couple_${shareCode}`, JSON.stringify({
-              ...data,
-              timestamp: now
-            }));
+            saveCoupleSession(shareCode, { ...data, timestamp: now });
           }
           timestampUpdatedRef.current = true;
         } catch {
@@ -276,15 +273,15 @@ function CoupleLayoutContent() {
       // Step 3: Refresh session to get updated JWT with couple_id
       await supabase.auth.refreshSession();
       
-      // Step 4: Save to localStorage
-      localStorage.setItem(`couple_${shareCode}`, JSON.stringify({
+      // Step 4: Save to localStorage + native Preferences
+      saveCoupleSession(shareCode, {
         position: joinResult.position,
         name,
         avatarIndex,
         color,
         username,
         timestamp: Date.now()
-      }));
+      });
       
       setMyPosition(joinResult.position);
       setShowOnboarding(false);
@@ -313,14 +310,14 @@ function CoupleLayoutContent() {
     // PIN verification is done via edge function in ReconnectModal
     // This function just handles the localStorage and state update
     
-    localStorage.setItem(`couple_${shareCode}`, JSON.stringify({
+    saveCoupleSession(shareCode!, {
       position: profile.position,
       name: profile.name,
       avatarIndex: profile.avatar_index,
       color: profile.color,
       username: (profile as Profile & { username?: string }).username,
       timestamp: Date.now()
-    }));
+    });
     
     setMyPosition(profile.position);
     setShowReconnect(false);
@@ -335,7 +332,7 @@ function CoupleLayoutContent() {
 
   const handleRemoveAccess = () => {
     if (shareCode) {
-      localStorage.removeItem(`couple_${shareCode}`);
+      removeCoupleSession(shareCode);
     }
     setProfileNotFound(false);
     navigate('/');
@@ -343,7 +340,7 @@ function CoupleLayoutContent() {
 
   const handleReconnectFromNotFound = () => {
     if (shareCode) {
-      localStorage.removeItem(`couple_${shareCode}`);
+      removeCoupleSession(shareCode);
     }
     setProfileNotFound(false);
     setShowReconnect(true);
@@ -533,7 +530,7 @@ function CoupleLayoutContent() {
   }
 
   return (
-    <div className={`min-h-screen bg-background ${isNative ? 'pb-4' : 'pb-24'}`}>
+    <div className={`min-h-screen bg-background ${isNative ? 'pb-20' : 'pb-24'}`}>
       <SyncIndicator isSyncing={isSyncing} />
       <Outlet context={{ couple, myPosition }} />
       <BottomNav />

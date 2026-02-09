@@ -2,6 +2,7 @@ import { createContext, useContext, useState, useEffect, useCallback, ReactNode,
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { isConfiguredProfile } from '@/lib/utils';
+import { removeCoupleSession } from '@/lib/capacitor';
 import {
   validateExpense,
   validateProfile,
@@ -310,7 +311,7 @@ export function CoupleProvider({ children, shareCode }: CoupleProviderProps) {
       }).eq('id', profileId);
       if (error) throw error;
       
-      localStorage.removeItem(`couple_${code}`);
+      removeCoupleSession(code);
       
       toast({ 
         title: 'Até logo! 👋',

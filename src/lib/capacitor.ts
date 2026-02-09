@@ -197,6 +197,118 @@ export async function authenticateBiometric(reason?: string): Promise<boolean> {
   }
 }
 
+// ─── Persistent Session Storage ─────────────────────────────────────
+// Uses Capacitor Preferences (UserDefaults) as backup for localStorage
+// to ensure login data survives across app restarts/updates.
+
+export interface CoupleSession {
+  position: number;
+  name: string;
+  avatarIndex: number;
+  color?: string;
+  username?: string;
+  timestamp?: number;
+}
+
+/**
+ * Save couple session to both localStorage and native Preferences.
+ */
+export async function saveCoupleSession(shareCode: string, data: CoupleSession) {
+  const key = `couple_${shareCode}`;
+  const json = JSON.stringify(data);
+  localStorage.setItem(key, json);
+
+  if (isNative) {
+    try {
+      const { Preferences } = await import('@capacitor/preferences');
+      await Preferences.set({ key, value: json });
+      // Also maintain an index of all saved share codes
+      const indexResult = await Preferences.get({ key: 'couple_sessions_index' });
+      const index: string[] = indexResult.value ? JSON.parse(indexResult.value) : [];
+      if (!index.includes(shareCode)) {
+        index.push(shareCode);
+        await Preferences.set({ key: 'couple_sessions_index', value: JSON.stringify(index) });
+      }
+    } catch {
+      // Preferences not available, localStorage is the fallback
+    }
+  }
+}
+
+/**
+ * Remove couple session from both localStorage and native Preferences.
+ */
+export async function removeCoupleSession(shareCode: string) {
+  const key = `couple_${shareCode}`;
+  localStorage.removeItem(key);
+
+  if (isNative) {
+    try {
+      const { Preferences } = await import('@capacitor/preferences');
+      await Preferences.remove({ key });
+      // Update index
+      const indexResult = await Preferences.get({ key: 'couple_sessions_index' });
+      const index: string[] = indexResult.value ? JSON.parse(indexResult.value) : [];
+      const filtered = index.filter(c => c !== shareCode);
+      await Preferences.set({ key: 'couple_sessions_index', value: JSON.stringify(filtered) });
+    } catch {
+      // Preferences not available
+    }
+  }
+}
+
+/**
+ * Load all couple sessions. Checks localStorage first, then
+ * restores from Preferences if localStorage is empty (native only).
+ */
+export async function loadCoupleSessions(): Promise<{ shareCode: string; data: CoupleSession }[]> {
+  const sessions: { shareCode: string; data: CoupleSession }[] = [];
+
+  // 1. Read from localStorage
+  for (let i = 0; i < localStorage.length; i++) {
+    const key = localStorage.key(i);
+    if (key?.startsWith('couple_') && !key.includes('_preferences_') && !key.includes('_complete_') && !key.includes('_pending_')) {
+      try {
+        const data = JSON.parse(localStorage.getItem(key) || '{}');
+        if (data.position && data.name) {
+          sessions.push({ shareCode: key.replace('couple_', ''), data });
+        }
+      } catch {
+        // Ignore invalid data
+      }
+    }
+  }
+
+  // 2. On native, if localStorage is empty, restore from Preferences
+  if (isNative && sessions.length === 0) {
+    try {
+      const { Preferences } = await import('@capacitor/preferences');
+      const indexResult = await Preferences.get({ key: 'couple_sessions_index' });
+      const index: string[] = indexResult.value ? JSON.parse(indexResult.value) : [];
+
+      for (const shareCode of index) {
+        const result = await Preferences.get({ key: `couple_${shareCode}` });
+        if (result.value) {
+          try {
+            const data = JSON.parse(result.value);
+            if (data.position && data.name) {
+              // Restore to localStorage
+              localStorage.setItem(`couple_${shareCode}`, result.value);
+              sessions.push({ shareCode, data });
+            }
+          } catch {
+            // Skip invalid
+          }
+        }
+      }
+    } catch {
+      // Preferences not available
+    }
+  }
+
+  return sessions;
+}
+
 // ─── Initialization ─────────────────────────────────────────────────
 
 /**
