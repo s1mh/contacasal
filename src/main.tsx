@@ -1,6 +1,7 @@
 import { createRoot } from "react-dom/client";
 import App from "./App.tsx";
 import "./index.css";
+import { initCapacitor } from "./lib/capacitor";
 
 // Production security hardening
 if (!import.meta.env.DEV) {
@@ -83,5 +84,8 @@ if (!import.meta.env.DEV) {
     }
   });
 }
+
+// Initialize Capacitor native plugins (haptics, status bar, splash screen)
+initCapacitor();
 
 createRoot(document.getElementById("root")!).render(<App />);

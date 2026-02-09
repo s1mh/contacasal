@@ -1,9 +1,10 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
-import { Heart, ArrowRight, Sparkles, Loader2, Users, AtSign, Lock, HelpCircle, Eye, EyeOff, Globe, ChevronDown } from "lucide-react";
+import { Heart, ArrowRight, Sparkles, Loader2, Users, AtSign, Lock, HelpCircle, Eye, EyeOff, Globe, ChevronDown, ScanFace, Fingerprint } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { InputOTP, InputOTPGroup, InputOTPSlot, InputOTPSlotMasked } from "@/components/ui/input-otp";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { useAuthContext } from "@/contexts/AuthContext";
@@ -15,6 +16,7 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { SupportedLocale } from "@/lib/i18n";
 import { SupportedCurrency } from "@/lib/preferences";
 import { OnboardingTutorial, useTutorialState } from "@/components/OnboardingTutorial";
+import { isNative, isBiometricAvailable, authenticateBiometric, hapticNotification, loadCoupleSessions, saveCoupleSession } from "@/lib/capacitor";
 import { Avatar } from "@/components/Avatar";
 
 interface LastSpace {
@@ -63,6 +65,49 @@ export default function Index() {
   const [showRecovery, setShowRecovery] = useState(false);
   const [showUsernamePin, setShowUsernamePin] = useState(false);
 
+  // Biometric state
+  const [biometricAvailable, setBiometricAvailable] = useState(false);
+  const [biometricType, setBiometricType] = useState<string>('none');
+  const biometricCheckedRef = useRef(false);
+
+  // PIN fallback state (when biometric fails)
+  const [showPinFallback, setShowPinFallback] = useState(false);
+  const [fallbackPin, setFallbackPin] = useState('');
+  const [fallbackPinError, setFallbackPinError] = useState('');
+  const [fallbackPinLoading, setFallbackPinLoading] = useState(false);
+  const [showFallbackPin, setShowFallbackPin] = useState(false);
+
+  // Check biometric availability on mount
+  useEffect(() => {
+    if (!isNative || biometricCheckedRef.current) return;
+    biometricCheckedRef.current = true;
+    isBiometricAvailable().then(({ available, biometryType }) => {
+      setBiometricAvailable(available);
+      setBiometricType(biometryType);
+    });
+  }, []);
+
+  const handleBiometricUnlock = useCallback(async () => {
+    if (!lastSpace || !biometricAvailable) return;
+    const biometricEnabled = localStorage.getItem('biometric_enabled') !== 'false'; // default to true
+    if (!biometricEnabled) {
+      // Biometric disabled, show PIN fallback
+      setShowPinFallback(true);
+      return;
+    }
+
+    const success = await authenticateBiometric(
+      biometricType === 'faceId' ? 'Use Face ID para entrar' : 'Use biometria para entrar'
+    );
+    if (success) {
+      hapticNotification('success');
+      navigate(`/c/${lastSpace.shareCode}`);
+    } else {
+      // Face ID failed, show PIN fallback
+      setShowPinFallback(true);
+    }
+  }, [lastSpace, biometricAvailable, biometricType, navigate]);
+
   // Show tutorial for first-time users (no saved spaces and hasn't seen tutorial)
   useEffect(() => {
     if (!hasSeenTutorial && !lastSpace) {
@@ -73,36 +118,25 @@ export default function Index() {
   }, [hasSeenTutorial, lastSpace]);
 
   // Check for saved space on mount - get the most recent one
+  // Uses loadCoupleSessions which checks localStorage first, then Preferences (native backup)
   useEffect(() => {
-    const spaces: LastSpace[] = [];
-    
-    for (let i = 0; i < localStorage.length; i++) {
-      const key = localStorage.key(i);
-      if (key?.startsWith("couple_")) {
-        try {
-          const data = JSON.parse(localStorage.getItem(key) || "{}");
-          if (data.position && data.name) {
-            spaces.push({
-              shareCode: key.replace("couple_", ""),
-              position: data.position,
-              name: data.name,
-              avatarIndex: data.avatarIndex || 1,
-              username: data.username,
-              timestamp: data.timestamp || 0,
-            });
-          }
-        } catch (e) {
-          // Ignore invalid data
-        }
+    loadCoupleSessions().then((sessions) => {
+      const spaces: LastSpace[] = sessions.map(s => ({
+        shareCode: s.shareCode,
+        position: s.data.position,
+        name: s.data.name,
+        avatarIndex: s.data.avatarIndex || 1,
+        username: s.data.username,
+        timestamp: s.data.timestamp || 0,
+      }));
+
+      // Sort by timestamp descending (most recent first)
+      spaces.sort((a, b) => (b.timestamp || 0) - (a.timestamp || 0));
+
+      if (spaces.length > 0) {
+        setLastSpace(spaces[0]);
       }
-    }
-    
-    // Sort by timestamp descending (most recent first)
-    spaces.sort((a, b) => (b.timestamp || 0) - (a.timestamp || 0));
-    
-    if (spaces.length > 0) {
-      setLastSpace(spaces[0]);
-    }
+    });
   }, []);
 
   // Animate cats on mount
@@ -132,8 +166,62 @@ export default function Index() {
   };
 
   const handleContinue = async () => {
-    if (lastSpace) {
+    if (!lastSpace) return;
+
+    // On native with biometric available, require Face ID to continue
+    if (isNative && biometricAvailable) {
+      const biometricEnabled = localStorage.getItem('biometric_enabled') !== 'false';
+      if (biometricEnabled) {
+        const success = await authenticateBiometric(
+          biometricType === 'faceId' ? 'Use Face ID para entrar' : 'Use biometria para entrar'
+        );
+        if (success) {
+          hapticNotification('success');
+          navigate(`/c/${lastSpace.shareCode}`);
+        } else {
+          // Face ID failed, show PIN fallback
+          setShowPinFallback(true);
+        }
+        return;
+      }
+    }
+
+    // No biometric or not native - go directly
+    navigate(`/c/${lastSpace.shareCode}`);
+  };
+
+  const handleFallbackPinChange = (value: string) => {
+    setFallbackPin(value);
+    setFallbackPinError('');
+    if (value.length === 4) {
+      // Auto-verify when 4 digits entered
+      setTimeout(() => verifyFallbackPin(value), 100);
+    }
+  };
+
+  const verifyFallbackPin = async (pin: string) => {
+    if (!lastSpace) return;
+    setFallbackPinLoading(true);
+    setFallbackPinError('');
+    try {
+      const { data, error } = await supabase.functions.invoke('verify-pin', {
+        body: { share_code: lastSpace.shareCode, position: lastSpace.position, pin },
+      });
+      if (error || !data?.success) {
+        setFallbackPinError(data?.error || 'PIN incorreto');
+        setFallbackPin('');
+        return;
+      }
+      // PIN correct
+      hapticNotification('success');
+      setShowPinFallback(false);
+      setFallbackPin('');
       navigate(`/c/${lastSpace.shareCode}`);
+    } catch {
+      setFallbackPinError('Erro ao verificar PIN');
+      setFallbackPin('');
+    } finally {
+      setFallbackPinLoading(false);
     }
   };
 
@@ -174,17 +262,14 @@ export default function Index() {
       const shareCode = data.share_code;
       const profile = data.profile;
 
-      localStorage.setItem(
-        `couple_${shareCode}`,
-        JSON.stringify({
-          position: profile.position,
-          name: profile.name,
-          avatarIndex: profile.avatar_index,
-          color: profile.color,
-          username: username.trim().replace(/^@/, ""),
-          timestamp: Date.now(),
-        }),
-      );
+      saveCoupleSession(shareCode, {
+        position: profile.position,
+        name: profile.name,
+        avatarIndex: profile.avatar_index,
+        color: profile.color,
+        username: username.trim().replace(/^@/, ""),
+        timestamp: Date.now(),
+      });
 
       // Validate the share code to set up the session
       await validateShareCode(shareCode);
@@ -354,33 +439,49 @@ export default function Index() {
 
         {/* Continue as saved user - Vertical layout with avatar on top */}
         {lastSpace && !showUsernameLogin && (
-          <button
-            onClick={handleContinue}
-            className="w-full mb-4 p-4 bg-card rounded-3xl border-2 border-primary/30 hover:border-primary shadow-lg transition-all duration-300 group animate-fade-slide-up hover:scale-[1.02]"
-            style={{ animationDelay: "100ms" }}
-          >
-            <div className="flex flex-col items-center gap-3">
-              <div className="w-16 h-16 rounded-full overflow-hidden ring-2 ring-primary animate-bounce-gentle">
-                <Avatar
-                  avatarIndex={lastSpace.avatarIndex || 1}
-                  size="xl"
-                  className="w-16 h-16"
-                  animateOnHover={false}
-                  showBackground={false}
-                />
+          <div className="mb-4 animate-fade-slide-up" style={{ animationDelay: "100ms" }}>
+            <button
+              onClick={handleContinue}
+              className="w-full p-4 bg-card rounded-3xl border-2 border-primary/30 hover:border-primary shadow-lg transition-all duration-300 group hover:scale-[1.02]"
+            >
+              <div className="flex flex-col items-center gap-3">
+                <div className="w-16 h-16 rounded-full overflow-hidden ring-2 ring-primary animate-bounce-gentle">
+                  <Avatar
+                    avatarIndex={lastSpace.avatarIndex || 1}
+                    size="xl"
+                    className="w-16 h-16"
+                    animateOnHover={false}
+                    showBackground={false}
+                  />
+                </div>
+                <div className="text-center">
+                  <p className="text-xs text-muted-foreground">{t('Continuar como')}</p>
+                  <p className="font-semibold text-lg">{lastSpace.name}</p>
+                  {lastSpace.username && (
+                    <p className="text-sm text-muted-foreground">@{lastSpace.username}</p>
+                  )}
+                </div>
               </div>
-              <div className="text-center">
-                <p className="text-xs text-muted-foreground">{t('Continuar como')}</p>
-                <p className="font-semibold text-lg">{lastSpace.name}</p>
-                {lastSpace.username && (
-                  <p className="text-sm text-muted-foreground">@{lastSpace.username}</p>
+              <div className="flex justify-center mt-3">
+                {biometricAvailable ? (
+                  <ScanFace className="w-5 h-5 text-primary" />
+                ) : (
+                  <ArrowRight className="w-5 h-5 text-primary group-hover:translate-x-1 transition-transform" />
                 )}
               </div>
-            </div>
-            <div className="flex justify-center mt-3">
-              <ArrowRight className="w-5 h-5 text-primary group-hover:translate-x-1 transition-transform" />
-            </div>
-          </button>
+            </button>
+
+            {/* Face ID retry button */}
+            {biometricAvailable && (
+              <button
+                onClick={handleBiometricUnlock}
+                className="w-full mt-2 flex items-center justify-center gap-2 py-2 text-sm text-primary hover:text-primary/80 transition-colors"
+              >
+                <ScanFace className="w-4 h-4" />
+                <span>{biometricType === 'faceId' ? t('Usar Face ID') : t('Usar biometria')}</span>
+              </button>
+            )}
+          </div>
         )}
 
         {/* Username Login */}
@@ -616,6 +717,103 @@ export default function Index() {
           <p className="text-[10px] text-muted-foreground/60 mt-1">Feito por Samuel para o Juan</p>
         </div>
       </div>
+
+      {/* PIN Fallback Dialog (when Face ID fails) */}
+      <Dialog open={showPinFallback} onOpenChange={(open) => {
+        if (!open) {
+          setShowPinFallback(false);
+          setFallbackPin('');
+          setFallbackPinError('');
+        }
+      }}>
+        <DialogContent className="sm:max-w-xs">
+          <DialogHeader>
+            <DialogTitle className="text-center flex items-center justify-center gap-2">
+              <Lock className="w-5 h-5 text-primary" />
+              Digite seu PIN
+            </DialogTitle>
+            <DialogDescription className="text-center">
+              {biometricType === 'faceId'
+                ? 'Face ID não reconhecido. Use seu código.'
+                : 'Biometria falhou. Use seu código.'}
+            </DialogDescription>
+          </DialogHeader>
+          <div className="flex flex-col items-center gap-4 py-4">
+            {lastSpace && (
+              <div className="w-16 h-16 rounded-full overflow-hidden ring-2 ring-primary/30">
+                <img
+                  src={CAT_AVATARS[(lastSpace.avatarIndex || 1) - 1]}
+                  alt={lastSpace.name}
+                  className="w-full h-full object-cover"
+                />
+              </div>
+            )}
+            <div className="flex items-center gap-2">
+              <InputOTP
+                maxLength={4}
+                value={fallbackPin}
+                onChange={handleFallbackPinChange}
+                disabled={fallbackPinLoading}
+                autoFocus
+              >
+                <InputOTPGroup>
+                  {showFallbackPin ? (
+                    <>
+                      <InputOTPSlot index={0} className="w-12 h-12 text-xl" />
+                      <InputOTPSlot index={1} className="w-12 h-12 text-xl" />
+                      <InputOTPSlot index={2} className="w-12 h-12 text-xl" />
+                      <InputOTPSlot index={3} className="w-12 h-12 text-xl" />
+                    </>
+                  ) : (
+                    <>
+                      <InputOTPSlotMasked index={0} className="w-12 h-12 text-xl" />
+                      <InputOTPSlotMasked index={1} className="w-12 h-12 text-xl" />
+                      <InputOTPSlotMasked index={2} className="w-12 h-12 text-xl" />
+                      <InputOTPSlotMasked index={3} className="w-12 h-12 text-xl" />
+                    </>
+                  )}
+                </InputOTPGroup>
+              </InputOTP>
+              <Button
+                type="button"
+                variant="ghost"
+                size="icon"
+                onClick={() => setShowFallbackPin(!showFallbackPin)}
+                className="h-10 w-10"
+              >
+                {showFallbackPin ? (
+                  <EyeOff className="w-4 h-4 text-muted-foreground" />
+                ) : (
+                  <Eye className="w-4 h-4 text-muted-foreground" />
+                )}
+              </Button>
+            </div>
+            {fallbackPinLoading && (
+              <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                <Loader2 className="w-4 h-4 animate-spin" />
+                <span>Verificando...</span>
+              </div>
+            )}
+            {fallbackPinError && (
+              <p className="text-sm text-destructive animate-fade-in">{fallbackPinError}</p>
+            )}
+            {biometricAvailable && (
+              <Button
+                variant="ghost"
+                onClick={() => {
+                  setShowPinFallback(false);
+                  setFallbackPin('');
+                  handleBiometricUnlock();
+                }}
+                className="text-primary"
+              >
+                <Fingerprint className="w-4 h-4 mr-2" />
+                {biometricType === 'faceId' ? 'Tentar Face ID novamente' : 'Tentar biometria novamente'}
+              </Button>
+            )}
+          </div>
+        </DialogContent>
+      </Dialog>
 
       {/* Recovery Modal for username login */}
       <RecoveryModal open={showRecovery} onClose={() => setShowRecovery(false)} />

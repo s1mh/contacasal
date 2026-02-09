@@ -15,7 +15,11 @@ const isSupportedCurrency = (value: string): value is SupportedCurrency =>
 
 const getShareCodeFromPath = (): string | null => {
   if (typeof window === 'undefined') return null;
-  const match = window.location.pathname.match(/\/c\/([^/]+)/);
+  // Support both BrowserRouter (pathname) and HashRouter (hash) routing
+  const path = window.location.hash
+    ? window.location.hash.replace(/^#/, '')
+    : window.location.pathname;
+  const match = path.match(/\/c\/([^/]+)/);
   return match?.[1] ?? null;
 };
 

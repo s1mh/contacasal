@@ -2,10 +2,15 @@ import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { BrowserRouter, Routes, Route } from "react-router-dom";
+import { BrowserRouter, HashRouter, Routes, Route } from "react-router-dom";
 import { AuthProvider } from "@/contexts/AuthContext";
 import { PreferencesProvider } from "@/contexts/PreferencesContext";
+import { isNative } from "@/lib/capacitor";
 import { ErrorBoundary } from "@/components/ErrorBoundary";
+
+// Capacitor uses capacitor:// protocol which breaks BrowserRouter path-based routing.
+// HashRouter works with any protocol by using URL hash (#/path).
+const Router = isNative ? HashRouter : BrowserRouter;
 import Index from "./pages/Index";
 import CreateSpace from "./pages/CreateSpace";
 import CoupleLayout from "./pages/CoupleLayout";
@@ -21,7 +26,7 @@ const queryClient = new QueryClient();
 
 const AppRoutes = () => {
   return (
-    <BrowserRouter>
+    <Router>
       <Routes>
         <Route path="/" element={<Index />} />
         <Route path="/create" element={<CreateSpace />} />
@@ -35,7 +40,7 @@ const AppRoutes = () => {
         <Route path="/reset-pin/:token" element={<ResetPin />} />
         <Route path="*" element={<NotFound />} />
       </Routes>
-    </BrowserRouter>
+    </Router>
   );
 };
 

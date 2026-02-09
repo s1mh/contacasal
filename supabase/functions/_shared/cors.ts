@@ -3,6 +3,9 @@ const ALLOWED_ORIGINS = [
   'https://contacasal.vercel.app',
   'http://localhost:8080',
   'http://localhost:5173',
+  // Capacitor iOS/Android native app origins
+  'capacitor://localhost',
+  'https://localhost',
 ];
 
 export function getCorsHeaders(req: Request): Record<string, string> {

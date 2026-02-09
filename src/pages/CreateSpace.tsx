@@ -1,17 +1,18 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { InputOTP, InputOTPGroup, InputOTPSlot, InputOTPSlotMasked } from '@/components/ui/input-otp';
 import { cn } from '@/lib/utils';
-import { PERSON_COLORS } from '@/lib/constants';
+import { CAT_AVATARS, PERSON_COLORS } from '@/lib/constants';
 import { Avatar } from '@/components/Avatar';
 import { AvatarSelectionGrid } from '@/components/AvatarSelectionGrid';
-import { Check, Heart, Sparkles, Lock, ArrowRight, ArrowLeft, Mail, SkipForward, AtSign, Loader2, Eye, EyeOff } from 'lucide-react';
+import { Check, Heart, Sparkles, Lock, ArrowRight, ArrowLeft, Mail, SkipForward, AtSign, Loader2, Eye, EyeOff, Fingerprint, ShieldCheck } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { usePreferences } from '@/contexts/PreferencesContext';
+import { isNative, isBiometricAvailable, authenticateBiometric, hapticNotification, saveCoupleSession } from '@/lib/capacitor';
 
 // Validation functions
 const isValidName = (name: string): boolean => {
@@ -59,7 +60,7 @@ export default function CreateSpace() {
   const { toast } = useToast();
   const { t: prefT } = usePreferences();
 
-  const [step, setStep] = useState<'profile' | 'pin' | 'email'>('profile');
+  const [step, setStep] = useState<'profile' | 'pin' | 'biometric' | 'email'>('profile');
   const [name, setName] = useState('');
   const [avatarIndex, setAvatarIndex] = useState(1);
   const [color, setColor] = useState(PERSON_COLORS[0].value);
@@ -76,6 +77,18 @@ export default function CreateSpace() {
   const [compliment, setCompliment] = useState('');
   const [showCompliment, setShowCompliment] = useState(false);
   const [creating, setCreating] = useState(false);
+  const [biometricAvailable, setBiometricAvailable] = useState(false);
+  const [biometryType, setBiometryType] = useState('none');
+  const [biometricActivating, setBiometricActivating] = useState(false);
+
+  // Check biometric availability on mount
+  useEffect(() => {
+    if (!isNative) return;
+    isBiometricAvailable().then(({ available, biometryType: type }) => {
+      setBiometricAvailable(available);
+      setBiometryType(type);
+    });
+  }, []);
   const nameCompliments = [
     prefT('Que nome lindo! 💕'),
     prefT('Adorável! ✨'),
@@ -160,9 +173,50 @@ export default function CreateSpace() {
         setPinError(weakCheck.reason ? prefT(weakCheck.reason) : prefT('Código muito fraco'));
         return;
       }
-      // Skip email step - go directly to creating space
+      // If biometric is available on native, show biometric setup step
+      if (isNative && biometricAvailable) {
+        setStep('biometric');
+        return;
+      }
+      // Otherwise, create space directly
       await createSpaceWithProfile();
     }
+  };
+
+  const handleActivateBiometric = async () => {
+    setBiometricActivating(true);
+    try {
+      const biometricLabel = biometryType === 'faceId' ? 'Face ID' : biometryType === 'touchId' ? 'Touch ID' : 'Biometria';
+      const success = await authenticateBiometric(`Ativar ${biometricLabel} para Conta de Casal`);
+      if (success) {
+        localStorage.setItem('biometric_enabled', 'true');
+        await hapticNotification('success');
+        toast({
+          title: `${biometricLabel} ativado! 🔐`,
+          description: prefT('Você poderá entrar com biometria'),
+        });
+        await createSpaceWithProfile();
+      } else {
+        toast({
+          title: prefT('Não foi possível ativar'),
+          description: prefT('Tente novamente ou pule esta etapa'),
+          variant: 'destructive',
+        });
+      }
+    } catch {
+      toast({
+        title: prefT('Erro'),
+        description: prefT('Tente novamente'),
+        variant: 'destructive',
+      });
+    } finally {
+      setBiometricActivating(false);
+    }
+  };
+
+  const handleSkipBiometric = async () => {
+    localStorage.setItem('biometric_enabled', 'false');
+    await createSpaceWithProfile();
   };
 
   const handleComplete = async () => {
@@ -210,15 +264,51 @@ export default function CreateSpace() {
       // Refresh session to get new couple_id claim
       await supabase.auth.refreshSession();
 
-      // Save to localStorage
-      localStorage.setItem(`couple_${shareCode}`, JSON.stringify({
-        position: 1,
-        name: formattedName,
-        avatarIndex,
-        color,
-        username,
-        timestamp: Date.now()
-      }));
+      // Find the first profile and update it with user data
+      const { data: profiles } = await supabase
+        .from('profiles')
+        .select('id')
+        .eq('couple_id', coupleId)
+        .order('position')
+        .limit(1);
+
+      if (profiles && profiles.length > 0) {
+        const formattedName = name.trim()
+          .toLowerCase()
+          .split(' ')
+          .map(word => word.charAt(0).toUpperCase() + word.slice(1))
+          .join(' ');
+
+        const updateData: Record<string, unknown> = {
+          name: formattedName,
+          avatar_index: avatarIndex,
+          color,
+          pin_code: pinCode,
+        };
+
+        if (email.trim()) {
+          updateData.email = email.trim().toLowerCase();
+        }
+
+        if (username) {
+          updateData.username = username;
+        }
+
+        await supabase
+          .from('profiles')
+          .update(updateData)
+          .eq('id', profiles[0].id);
+
+        // Save to localStorage + native Preferences
+        saveCoupleSession(shareCode, {
+          position: 1,
+          name: formattedName,
+          avatarIndex,
+          color,
+          username,
+          timestamp: Date.now()
+        });
+      }
 
       toast({
         title: prefT('Espaço criado! 🎉'),
@@ -270,14 +360,22 @@ export default function CreateSpace() {
         <DialogContent className="sm:max-w-md overflow-hidden">
           <DialogHeader>
             <DialogTitle className="text-center flex items-center justify-center gap-2 animate-fade-in">
-              <Heart className="w-5 h-5 text-primary animate-pulse" />
+              {step === 'biometric' ? (
+                <ShieldCheck className="w-5 h-5 text-primary" />
+              ) : (
+                <Heart className="w-5 h-5 text-primary animate-pulse" />
+              )}
               {step === 'profile'
                 ? prefT('Crie seu perfil')
+                : step === 'biometric'
+                ? (biometryType === 'faceId' ? 'Face ID' : biometryType === 'touchId' ? 'Touch ID' : prefT('Biometria'))
                 : prefT('Crie seu código')}
             </DialogTitle>
             <DialogDescription className="text-center animate-fade-in">
               {step === 'profile'
                 ? prefT('Personalize como você aparecerá no app')
+                : step === 'biometric'
+                ? prefT('Entre mais rápido usando biometria')
                 : prefT('Código de 4 dígitos para entrar em outros dispositivos')
               }
             </DialogDescription>
@@ -473,6 +571,77 @@ export default function CreateSpace() {
                         <>
                           <Heart className="w-4 h-4 mr-2" />
                           {prefT('Criar espaço')}
+                        </>
+                      )}
+                    </Button>
+                  </div>
+                </div>
+              </>
+            ) : step === 'biometric' ? (
+              <>
+                {/* Biometric Setup Step */}
+                <div className="flex flex-col items-center gap-6 animate-fade-in">
+                  <div 
+                    className="w-20 h-20 rounded-full overflow-hidden ring-4"
+                    style={{ boxShadow: `0 0 0 4px ${color}` }}
+                  >
+                    <img src={CAT_AVATARS[avatarIndex - 1]} alt="Preview" className="w-full h-full object-cover" />
+                  </div>
+                  
+                  <div className="text-center space-y-2">
+                    <span className="font-semibold text-lg block">{name}</span>
+                    <p className="text-sm text-muted-foreground">
+                      {biometryType === 'faceId'
+                        ? prefT('Deseja ativar o Face ID para entrar mais rápido?')
+                        : biometryType === 'touchId'
+                        ? prefT('Deseja ativar o Touch ID para entrar mais rápido?')
+                        : prefT('Deseja ativar a biometria para entrar mais rápido?')
+                      }
+                    </p>
+                  </div>
+
+                  <div className="w-20 h-20 rounded-full bg-primary/10 flex items-center justify-center">
+                    <Fingerprint className="w-10 h-10 text-primary" />
+                  </div>
+
+                  <div className="flex flex-col gap-2 w-full">
+                    <Button
+                      onClick={handleActivateBiometric}
+                      disabled={biometricActivating || creating}
+                      className="w-full"
+                    >
+                      {biometricActivating ? (
+                        <>
+                          <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                          {prefT('Ativando...')}
+                        </>
+                      ) : (
+                        <>
+                          <Fingerprint className="w-4 h-4 mr-2" />
+                          {biometryType === 'faceId'
+                            ? prefT('Ativar Face ID')
+                            : biometryType === 'touchId'
+                            ? prefT('Ativar Touch ID')
+                            : prefT('Ativar Biometria')
+                          }
+                        </>
+                      )}
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      onClick={handleSkipBiometric}
+                      disabled={biometricActivating || creating}
+                      className="w-full text-muted-foreground"
+                    >
+                      {creating ? (
+                        <>
+                          <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                          {prefT('Criando...')}
+                        </>
+                      ) : (
+                        <>
+                          <SkipForward className="w-4 h-4 mr-2" />
+                          {prefT('Pular')}
                         </>
                       )}
                     </Button>
