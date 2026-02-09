@@ -1,10 +1,13 @@
 import { useState } from 'react';
-import { Copy, Share2, Heart, Users, Check } from 'lucide-react';
+import { Copy, Share2, Heart, Users, Check, LogOut, AlertTriangle } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
 import { Avatar } from '@/components/Avatar';
 import { Profile } from '@/contexts/CoupleContext';
 import { usePreferences } from '@/contexts/PreferencesContext';
 import { useToast } from '@/hooks/use-toast';
+import { buildShareUrl } from '@/lib/capacitor';
 
 interface WaitingForPartnerProps {
   shareCode: string;
@@ -14,7 +17,9 @@ interface WaitingForPartnerProps {
 export function WaitingForPartner({ shareCode, myProfile }: WaitingForPartnerProps) {
   const { t: prefT } = usePreferences();
   const { toast } = useToast();
+  const navigate = useNavigate();
   const [copied, setCopied] = useState(false);
+  const [showExitConfirm, setShowExitConfirm] = useState(false);
 
   const handleCopyCode = async () => {
     await navigator.clipboard.writeText(shareCode);
@@ -27,9 +32,7 @@ export function WaitingForPartner({ shareCode, myProfile }: WaitingForPartnerPro
   };
 
   const handleShare = async () => {
-    const url = window.location.origin + `/c/${shareCode}`;
-    const inviterName = myProfile?.name;
-    const shareUrl = inviterName ? `${url}?from=${encodeURIComponent(inviterName)}` : url;
+    const shareUrl = buildShareUrl(shareCode, myProfile?.name);
 
     if (navigator.share) {
       try {
@@ -109,7 +112,62 @@ export function WaitingForPartner({ shareCode, myProfile }: WaitingForPartnerPro
           <Heart className="w-5 h-5 text-primary/60 animate-bounce" style={{ animationDelay: '200ms' }} />
           <Heart className="w-5 h-5 text-primary/30 animate-bounce" style={{ animationDelay: '400ms' }} />
         </div>
+
+        {/* Exit space button */}
+        <div className="mt-8">
+          <Button
+            variant="ghost"
+            onClick={() => setShowExitConfirm(true)}
+            className="text-muted-foreground hover:text-destructive text-sm"
+          >
+            <LogOut className="w-4 h-4 mr-2" />
+            {prefT('Sair do espaço')}
+          </Button>
+        </div>
       </div>
+
+      {/* Exit Confirmation Dialog */}
+      <Dialog open={showExitConfirm} onOpenChange={setShowExitConfirm}>
+        <DialogContent className="sm:max-w-sm">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <AlertTriangle className="w-5 h-5 text-destructive" />
+              {prefT('Sair do espaço?')}
+            </DialogTitle>
+            <DialogDescription>
+              {prefT('Seu perfil será removido deste espaço. Você poderá criar um novo ou entrar em outro.')}
+            </DialogDescription>
+          </DialogHeader>
+          <div className="flex flex-col gap-2 pt-4">
+            <Button
+              variant="destructive"
+              onClick={() => {
+                // Clear localStorage for this space
+                localStorage.removeItem(`couple_${shareCode}`);
+                localStorage.removeItem(`onboarding_pending_${shareCode}`);
+                localStorage.removeItem(`onboarding_complete_${shareCode}`);
+                setShowExitConfirm(false);
+                toast({
+                  title: prefT('Espaço removido'),
+                  description: prefT('Você pode criar um novo espaço ou entrar em outro.'),
+                });
+                navigate('/');
+              }}
+              className="w-full"
+            >
+              <LogOut className="w-4 h-4 mr-2" />
+              {prefT('Sim, quero sair')}
+            </Button>
+            <Button
+              variant="outline"
+              onClick={() => setShowExitConfirm(false)}
+              className="w-full"
+            >
+              {prefT('Cancelar')}
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

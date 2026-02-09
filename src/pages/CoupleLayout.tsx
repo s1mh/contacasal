@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
-import { Outlet, useParams, Navigate, useNavigate, useSearchParams } from 'react-router-dom';
+import { Outlet, useParams, Navigate, useNavigate, useSearchParams, useLocation } from 'react-router-dom';
 import { BottomNav } from '@/components/BottomNav';
 import { OnboardingModal } from '@/components/OnboardingModal';
 import { ReconnectModal } from '@/components/ReconnectModal';
@@ -16,6 +16,7 @@ import { CAT_AVATARS } from '@/lib/constants';
 import { isConfiguredProfile } from '@/lib/utils';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
+import { isNative, updateNativeTab, onNativeTabSelected, onNativeFabTapped, setNativeTabBarVisible } from '@/lib/capacitor';
 
 interface SpaceInfo {
   coupleId: string;
@@ -29,6 +30,7 @@ function CoupleLayoutContent() {
   const { shareCode } = useParams();
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
+  const location = useLocation();
   const { toast } = useToast();
   const inviterFromUrl = searchParams.get('from');
   const { couple, loading, error, isSyncing, refetch } = useCoupleContext();
@@ -47,6 +49,57 @@ function CoupleLayoutContent() {
   const [guideName, setGuideName] = useState('');
   const hasValidatedRef = useRef(false);
   const timestampUpdatedRef = useRef(false);
+
+  // ─── Native Tab Bar Integration ─────────────────────────────────
+  // Show native tab bar when entering couple space, hide when leaving
+  useEffect(() => {
+    if (!isNative) return;
+    setNativeTabBarVisible(true);
+    return () => {
+      setNativeTabBarVisible(false);
+    };
+  }, []);
+
+  // Sync React Router route changes to the native UITabBar
+  useEffect(() => {
+    if (!isNative || !shareCode) return;
+
+    const path = location.pathname;
+    let route = 'summary';
+    if (path.includes('/historico')) route = 'historico';
+    else if (path.includes('/estatisticas')) route = 'estatisticas';
+    else if (path.includes('/ajustes')) route = 'ajustes';
+    else if (path.includes('/novo')) route = 'summary'; // FAB route, keep summary highlighted
+
+    updateNativeTab(route);
+  }, [location.pathname, shareCode]);
+
+  // Listen for native tab selection and FAB taps
+  useEffect(() => {
+    if (!isNative || !shareCode) return;
+
+    const basePath = `/c/${shareCode}`;
+    const routeMap: Record<string, string> = {
+      summary: basePath,
+      historico: `${basePath}/historico`,
+      estatisticas: `${basePath}/estatisticas`,
+      ajustes: `${basePath}/ajustes`,
+    };
+
+    const removeTabListener = onNativeTabSelected((route) => {
+      const target = routeMap[route];
+      if (target) navigate(target);
+    });
+
+    const removeFabListener = onNativeFabTapped(() => {
+      navigate(`${basePath}/novo`);
+    });
+
+    return () => {
+      removeTabListener();
+      removeFabListener();
+    };
+  }, [shareCode, navigate]);
 
   // Step 1: Validate share code publicly (no auth required)
   useEffect(() => {
@@ -157,6 +210,21 @@ function CoupleLayoutContent() {
       }
     }
   }, [couple, shareCode, myPosition]);
+
+  // Show onboarding guide when space becomes ready (2+ members) and user hasn't seen it
+  // NOTE: This hook MUST be before any conditional returns to respect Rules of Hooks
+  const cfgProfileCount = couple ? couple.profiles.filter(isConfiguredProfile).length : 0;
+  useEffect(() => {
+    if (!couple || !shareCode || cfgProfileCount < 2) return;
+    if (localStorage.getItem(`onboarding_complete_${shareCode}`)) return;
+
+    const pendingName = localStorage.getItem(`onboarding_pending_${shareCode}`);
+    if (pendingName) {
+      localStorage.removeItem(`onboarding_pending_${shareCode}`);
+      setGuideName(pendingName);
+      setShowGuide(true);
+    }
+  }, [couple, shareCode, cfgProfileCount]);
 
   // Handler: Complete onboarding (sign in + join space)
   const handleOnboardingComplete = async (
@@ -426,20 +494,6 @@ function CoupleLayoutContent() {
     );
   }
 
-  // Show onboarding guide when space becomes ready (2+ members) and user hasn't seen it
-  const cfgProfiles = couple.profiles.filter(isConfiguredProfile);
-  useEffect(() => {
-    if (!shareCode || cfgProfiles.length < 2) return;
-    if (localStorage.getItem(`onboarding_complete_${shareCode}`)) return;
-
-    const pendingName = localStorage.getItem(`onboarding_pending_${shareCode}`);
-    if (pendingName) {
-      localStorage.removeItem(`onboarding_pending_${shareCode}`);
-      setGuideName(pendingName);
-      setShowGuide(true);
-    }
-  }, [shareCode, cfgProfiles.length]);
-
   // Check if space has at least 2 configured profiles before unlocking app
   const configuredProfiles = couple.profiles.filter(isConfiguredProfile);
   const myProfile = couple.profiles.find(p => p.position === myPosition);
@@ -479,7 +533,7 @@ function CoupleLayoutContent() {
   }
 
   return (
-    <div className="min-h-screen bg-background pb-24">
+    <div className={`min-h-screen bg-background ${isNative ? 'pb-4' : 'pb-24'}`}>
       <SyncIndicator isSyncing={isSyncing} />
       <Outlet context={{ couple, myPosition }} />
       <BottomNav />

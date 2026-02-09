@@ -12,6 +12,7 @@ import { TopCategoriesCard } from '@/components/TopCategoriesCard';
 import { isConfiguredProfile } from '@/lib/utils';
 import { usePreferences } from '@/contexts/PreferencesContext';
 import { MonthlyBalanceCard } from '@/components/MonthlyBalanceCard';
+import { buildShareUrl } from '@/lib/capacitor';
 
 export default function Summary() {
   const { couple, myPosition } = useOutletContext<{ couple: Couple; myPosition: number | null }>();
@@ -37,9 +38,7 @@ export default function Summary() {
   const configuredProfiles = couple.profiles.filter(isConfiguredProfile);
 
   const handleShare = async () => {
-    const baseUrl = window.location.origin + `/c/${shareCode}`;
-    const inviterName = currentUserProfile?.name;
-    const url = inviterName ? `${baseUrl}?from=${encodeURIComponent(inviterName)}` : baseUrl;
+    const url = buildShareUrl(shareCode!, currentUserProfile?.name);
 
     if (navigator.share) {
       try {

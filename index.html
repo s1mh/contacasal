@@ -8,8 +8,8 @@
     <meta name="apple-mobile-web-app-status-bar-style" content="default" />
     <meta name="apple-mobile-web-app-title" content="Conta de Casal" />
 
-    <!-- Security -->
-    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; font-src 'self'; connect-src 'self' https://*.supabase.co wss://*.supabase.co; frame-ancestors 'none';" />
+    <!-- Security (relaxed for Capacitor native context) -->
+    <meta http-equiv="Content-Security-Policy" content="default-src 'self' capacitor: https://capacitor.localhost; script-src 'self' capacitor: https://capacitor.localhost; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; img-src 'self' data: blob: capacitor: https://capacitor.localhost; font-src 'self' https://fonts.gstatic.com; connect-src 'self' https://*.supabase.co wss://*.supabase.co capacitor: https://capacitor.localhost; frame-ancestors 'none';" />
     <meta http-equiv="X-Content-Type-Options" content="nosniff" />
     <meta name="referrer" content="strict-origin-when-cross-origin" />
 
