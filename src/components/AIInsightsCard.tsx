@@ -110,8 +110,9 @@ export function AIInsightsCard({ coupleId, expenseCount }: AIInsightsCardProps) 
     setDebugInfo(null);
     setInvokeError(null);
 
-    // Check cache first
-    if (!opts?.bypassCache) {
+    // Check cache first — but never serve cached insights if expense count is below minimum
+    const belowMinimum = expenseCount !== undefined && expenseCount < 3;
+    if (!opts?.bypassCache && !belowMinimum) {
       const cached = getCachedInsights(coupleId);
       if (cached) {
         if (cached.learning) {
@@ -126,6 +127,10 @@ export function AIInsightsCard({ coupleId, expenseCount }: AIInsightsCardProps) 
         return;
       }
     }
+    // If below minimum, also clear stale localStorage cache
+    if (belowMinimum) {
+      try { localStorage.removeItem(CACHE_KEY_PREFIX + coupleId); } catch {}
+    }
 
     try {
       // Evita header custom (pode causar preflight/CORS). O backend já suporta ?debug=1.
@@ -135,7 +140,7 @@ export function AIInsightsCard({ coupleId, expenseCount }: AIInsightsCardProps) 
       });
 
       if (fnError) {
-        const stale = getCachedInsights(coupleId, { allowStale: true });
+        const stale = !belowMinimum ? getCachedInsights(coupleId, { allowStale: true }) : null;
         if (stale && !stale.learning) {
           setLearning(false);
           setInsights(stale.insights || []);
@@ -184,7 +189,7 @@ export function AIInsightsCard({ coupleId, expenseCount }: AIInsightsCardProps) 
         setCachedInsights(coupleId, { learning: false, insights: data.insights || [] });
       }
     } catch {
-      const stale = getCachedInsights(coupleId, { allowStale: true });
+      const stale = !belowMinimum ? getCachedInsights(coupleId, { allowStale: true }) : null;
       if (stale && !stale.learning) {
         setLearning(false);
         setInsights(stale.insights || []);
