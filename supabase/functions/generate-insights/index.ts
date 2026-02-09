@@ -38,6 +38,8 @@ Deno.serve(async (req) => {
   if (corsResponse) return corsResponse;
 
   const corsHeaders = getCorsHeaders(req);
+  const debugEnabled = new URL(req.url).searchParams.get("debug") === "1" || req.headers.get("x-ai-debug") === "1";
+  const requestId = crypto.randomUUID();
 
   try {
     const authHeader = req.headers.get("Authorization");
@@ -92,11 +94,13 @@ Deno.serve(async (req) => {
         learning: false,
         cached: true,
         stale: false,
+        requestId,
         insights: cachedInsights.map(i => ({
           type: i.insight_type,
           message: i.message,
           priority: i.priority,
         })),
+        ...(debugEnabled ? { _debug: { requestId, path: "cache_hit" } } : {}),
       }), {
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
@@ -285,8 +289,10 @@ Deno.serve(async (req) => {
           learning: false,
           cached: true,
           stale: true,
+          requestId,
           insights: stale,
           warning: "AI not configured; returning last known insights",
+          ...(debugEnabled ? { _debug: { requestId, path: "ai_not_configured_stale" } } : {}),
         }), {
           headers: { ...corsHeaders, "Content-Type": "application/json" },
         });
@@ -415,8 +421,10 @@ Tipos: "celebration" (positivo), "tip" (dica de economia), "alert" (gasto alto)`
             learning: false,
             cached: true,
             stale: true,
+            requestId,
             insights: stale,
             warning: "AI rate limited; returning last known insights",
+            ...(debugEnabled ? { _debug: { requestId, path: "ai_429_stale", status: aiResponse.status } } : {}),
           }), {
             status: 200,
             headers: { ...corsHeaders, "Content-Type": "application/json" },
@@ -435,8 +443,10 @@ Tipos: "celebration" (positivo), "tip" (dica de economia), "alert" (gasto alto)`
           learning: false,
           cached: true,
           stale: true,
+          requestId,
           insights: stale,
           warning: "AI service error; returning last known insights",
+          ...(debugEnabled ? { _debug: { requestId, path: "ai_error_stale", status: aiResponse.status, errorBodyPreview: String(errorBody).slice(0, 400) } } : {}),
         }), {
           status: 200,
           headers: { ...corsHeaders, "Content-Type": "application/json" },
@@ -466,6 +476,8 @@ Tipos: "celebration" (positivo), "tip" (dica de economia), "alert" (gasto alto)`
     if (jsonLooking) content = jsonLooking;
 
     let insights: Array<{ type: string; message: string; priority: number }> = [];
+    let parseFailed = false;
+    let retryUsed = false;
     try {
       const cleanContent = String(content)
         .replace(/```json\n?/g, '')
@@ -476,10 +488,12 @@ Tipos: "celebration" (positivo), "tip" (dica de economia), "alert" (gasto alto)`
       const parsed = JSON.parse(jsonMatch ? jsonMatch[0] : cleanContent);
       insights = Array.isArray(parsed) ? parsed : [];
     } catch (parseError) {
+      parseFailed = true;
       console.error("[generate-insights] Parse failed:", String(parseError), "finishReason:", String(finishReason));
 
       // Retry único: prompt curto/estrito para evitar truncamento e “texto fora do JSON”
       try {
+        retryUsed = true;
         const retryPrompt = `Gere 2-3 insights curtos (máx 70 caracteres cada) em pt-BR.\n\nDados:\n- Total gasto: R$ ${totalMonth.toFixed(2)}\n- Total mês anterior: R$ ${totalPreviousMonth.toFixed(2)}\n- Tendência: ${trend === 'N/A' ? 'Primeiro mês com dados' : trend + '%'}\n- Top categorias: ${topCategories.map(c => `${c.name} (R$ ${c.amount.toFixed(2)})`).join(', ')}\n\nResponda APENAS com o array JSON válido.`;
         const retryRes = await callGemini(retryPrompt, { strict: true, maxTokens: 512, temperature: 0.2 });
         if (retryRes.ok) {
@@ -507,9 +521,11 @@ Tipos: "celebration" (positivo), "tip" (dica de economia), "alert" (gasto alto)`
             learning: false,
             cached: true,
             stale: true,
+            requestId,
             insights: stale,
             warning: "AI parse failed; returning last known insights",
             finishReason,
+            ...(debugEnabled ? { _debug: { requestId, path: "parse_failed_stale", finishReason, partsCount: Array.isArray(parts) ? parts.length : 0 } } : {}),
           }), {
             status: 200,
             headers: { ...corsHeaders, "Content-Type": "application/json" },
@@ -532,6 +548,11 @@ Tipos: "celebration" (positivo), "tip" (dica de economia), "alert" (gasto alto)`
         priority: Number.isFinite(Number(i.priority)) ? Number(i.priority) : 5,
       }));
 
+    const isGenericFallbackOnly =
+      insights.length === 1 &&
+      insights[0]?.type === "tip" &&
+      insights[0]?.message === "Continue registrando seus gastos!";
+
     // Save insights to database — delete old and insert new
     // (serviceClient already created above for cache check)
     await serviceClient
@@ -541,7 +562,8 @@ Tipos: "celebration" (positivo), "tip" (dica de economia), "alert" (gasto alto)`
       .lt('created_at', new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString());
 
     // Insert new insights
-    if (insights.length > 0) {
+    // Não sobrescrever o cache com o fallback genérico (evita “travar” 24h no texto genérico).
+    if (insights.length > 0 && !isGenericFallbackOnly) {
       await serviceClient.from('ai_insights').insert(
         insights.map((insight: { type: string; message: string; priority: number }) => ({
           couple_id: coupleId,
@@ -556,7 +578,19 @@ Tipos: "celebration" (positivo), "tip" (dica de economia), "alert" (gasto alto)`
     return new Response(JSON.stringify({
       success: true,
       learning: false,
+      requestId,
       insights,
+      ...(debugEnabled ? {
+        _debug: {
+          requestId,
+          finishReason,
+          parseFailed,
+          retryUsed,
+          partsCount: Array.isArray(parts) ? parts.length : 0,
+          contentPreview: String(content).slice(0, 400),
+          isGenericFallbackOnly,
+        }
+      } : {}),
       stats: {
         totalMonth,
         totalPreviousMonth,

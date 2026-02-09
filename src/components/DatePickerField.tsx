@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { format, isToday, isYesterday, isTomorrow } from 'date-fns';
+import { format, isToday, isYesterday, endOfDay } from 'date-fns';
 import { Calendar } from '@/components/ui/calendar';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Button } from '@/components/ui/button';
@@ -20,11 +20,11 @@ export function DatePickerField({ value, onChange, label }: DatePickerFieldProps
   const dateLocale = getDateFnsLocale(prefLocale);
   const relativeFormatter = new Intl.RelativeTimeFormat(prefLocale, { numeric: 'auto' });
   const selectDateLabel = prefT('Selecionar data');
+  const today = new Date();
 
   const getDisplayDate = (date: Date) => {
     if (isToday(date)) return relativeFormatter.format(0, 'day');
     if (isYesterday(date)) return relativeFormatter.format(-1, 'day');
-    if (isTomorrow(date)) return relativeFormatter.format(1, 'day');
     return format(date, "d 'de' MMM", { locale: dateLocale });
   };
 
@@ -57,6 +57,8 @@ export function DatePickerField({ value, onChange, label }: DatePickerFieldProps
               }
             }}
             locale={dateLocale}
+            toDate={endOfDay(today)}
+            disabled={{ after: endOfDay(today) }}
             initialFocus
           />
         </PopoverContent>
