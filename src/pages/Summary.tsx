@@ -119,7 +119,7 @@ export default function Summary() {
       {/* AI Insights */}
       <AnimatedItem delay={125}>
         <div className="mt-4">
-          <AIInsightsCard coupleId={couple.id} />
+          <AIInsightsCard coupleId={couple.id} expenseCount={couple.expenses.length} />
         </div>
       </AnimatedItem>
 

@@ -157,7 +157,11 @@ Deno.serve(async (req) => {
     // Check learning progress
     const uniqueDays = new Set(uniquePurchases.map(e => e.expense_date)).size;
     const uniqueCategories = new Set(uniquePurchases.filter(e => e.tag_id).map(e => e.tag_id)).size;
-    const hasEnoughData = uniqueDays >= 7 && uniquePurchases.length >= 5 && uniqueCategories >= 2;
+    // Thresholds reduzidos para MVP — a IA precisa de poucos dados para gerar insights úteis
+    const MIN_DAYS = 3;
+    const MIN_PURCHASES = 3;
+    const MIN_CATEGORIES = 2;
+    const hasEnoughData = uniqueDays >= MIN_DAYS && uniquePurchases.length >= MIN_PURCHASES && uniqueCategories >= MIN_CATEGORIES;
 
     if (!hasEnoughData) {
       return json({
@@ -165,11 +169,11 @@ Deno.serve(async (req) => {
         learning: true,
         progress: {
           days: uniqueDays,
-          expenses: expenses.length,
+          expenses: uniquePurchases.length,
           categories: uniqueCategories,
-          minDays: 7,
-          minExpenses: 5,
-          minCategories: 2,
+          minDays: MIN_DAYS,
+          minExpenses: MIN_PURCHASES,
+          minCategories: MIN_CATEGORIES,
         },
         insights: [],
         ...(debugEnabled

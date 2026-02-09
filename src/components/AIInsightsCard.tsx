@@ -1,4 +1,4 @@
-import { useMemo, useState, useEffect } from 'react';
+import React, { useMemo, useState, useEffect } from 'react';
 import { Sparkles, Brain, TrendingUp, AlertTriangle, PartyPopper, Copy } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { cn } from '@/lib/utils';
@@ -23,6 +23,8 @@ interface LearningProgress {
 
 interface AIInsightsCardProps {
   coupleId: string;
+  /** Passa o total de expenses para o card invalidar cache quando mudar */
+  expenseCount?: number;
 }
 
 type AIDebugInfo = {
@@ -40,7 +42,7 @@ type AIDebugInfo = {
 
 const CACHE_KEY_PREFIX = 'ai_insights_';
 const CACHE_DURATION_MS = 24 * 60 * 60 * 1000; // 24 hours
-const LEARNING_CACHE_DURATION_MS = 2 * 60 * 60 * 1000; // 2 hours
+const LEARNING_CACHE_DURATION_MS = 5 * 60 * 1000; // 5 minutes — re-check often while user is adding data
 
 function getCachedInsights(coupleId: string, opts?: { allowStale?: boolean }) {
   try {
@@ -65,7 +67,7 @@ function setCachedInsights(coupleId: string, data: { learning: boolean; insights
   } catch { /* ignore */ }
 }
 
-export function AIInsightsCard({ coupleId }: AIInsightsCardProps) {
+export function AIInsightsCard({ coupleId, expenseCount }: AIInsightsCardProps) {
   const { t } = usePreferences();
   const [insights, setInsights] = useState<AIInsight[]>([]);
   const [learning, setLearning] = useState(true);
@@ -197,6 +199,17 @@ export function AIInsightsCard({ coupleId }: AIInsightsCardProps) {
     fetchInsights();
   }, [coupleId]);
 
+  // Quando a quantidade de gastos muda (realtime/navegação), limpa cache learning e re-busca
+  const prevExpenseCount = React.useRef(expenseCount);
+  useEffect(() => {
+    if (expenseCount !== undefined && prevExpenseCount.current !== undefined && expenseCount !== prevExpenseCount.current) {
+      // Novo gasto adicionado — invalida cache e re-busca
+      try { localStorage.removeItem(CACHE_KEY_PREFIX + coupleId); } catch {}
+      fetchInsights({ bypassCache: true });
+    }
+    prevExpenseCount.current = expenseCount;
+  }, [expenseCount]);
+
   const getInsightIcon = (type: string) => {
     switch (type) {
       case 'celebration':
@@ -263,7 +276,8 @@ export function AIInsightsCard({ coupleId }: AIInsightsCardProps) {
           (() => {
             const daysProgress = Math.min((progress.days / progress.minDays) * 100, 100);
             const expensesProgress = Math.min((progress.expenses / progress.minExpenses) * 100, 100);
-            const overallProgress = Math.round((daysProgress + expensesProgress) / 2);
+            const categoriesProgress = Math.min((progress.categories / progress.minCategories) * 100, 100);
+            const overallProgress = Math.round((daysProgress + expensesProgress + categoriesProgress) / 3);
 
             const getIncentivePhrase = () => {
               if (overallProgress <= 25) return { emoji: '👀', text: t('Estou começando a te conhecer!') };
@@ -283,7 +297,10 @@ export function AIInsightsCard({ coupleId }: AIInsightsCardProps) {
                       style={{ width: `${overallProgress}%` }}
                     />
                   </div>
-                  <div className="flex justify-end">
+                  <div className="flex justify-between">
+                    <span className="text-[10px] text-orange-700/70">
+                      {progress.days}/{progress.minDays} {t('dias')} · {progress.expenses}/{progress.minExpenses} {t('gastos')} · {progress.categories}/{progress.minCategories} {t('categorias')}
+                    </span>
                     <span className="text-xs font-medium text-orange-700">{overallProgress}%</span>
                   </div>
                 </div>
