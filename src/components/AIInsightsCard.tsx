@@ -4,6 +4,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { cn } from '@/lib/utils';
 import { usePreferences } from '@/contexts/PreferencesContext';
 import { AIBackgroundBlob } from './AIBackgroundBlob';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 
 interface AIInsight {
   type: 'tip' | 'alert' | 'celebration';
@@ -23,6 +24,19 @@ interface LearningProgress {
 interface AIInsightsCardProps {
   coupleId: string;
 }
+
+type AIDebugInfo = {
+  requestId?: string;
+  finishReason?: string;
+  parseFailed?: boolean;
+  retryUsed?: boolean;
+  partsCount?: number;
+  contentPreview?: string;
+  isGenericFallbackOnly?: boolean;
+  path?: string;
+  status?: number;
+  errorBodyPreview?: string;
+};
 
 const CACHE_KEY_PREFIX = 'ai_insights_';
 const CACHE_DURATION_MS = 24 * 60 * 60 * 1000; // 24 hours
@@ -58,10 +72,29 @@ export function AIInsightsCard({ coupleId }: AIInsightsCardProps) {
   const [progress, setProgress] = useState<LearningProgress | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [debugInfo, setDebugInfo] = useState<AIDebugInfo | null>(null);
+  const [debugOpen, setDebugOpen] = useState(false);
+  const [tapCount, setTapCount] = useState(0);
+  const [tapTimer, setTapTimer] = useState<number | null>(null);
+
+  const registerTap = () => {
+    // “Easter egg”: 7 toques no título abre painel de diagnóstico.\n
+    // Não depende de inspecionar elemento.
+    if (tapTimer) window.clearTimeout(tapTimer);
+    const next = tapCount + 1;
+    setTapCount(next);
+    const timer = window.setTimeout(() => setTapCount(0), 1200);
+    setTapTimer(timer);
+    if (next >= 7) {
+      setTapCount(0);
+      setDebugOpen(true);
+    }
+  };
 
   const fetchInsights = async () => {
     setLoading(true);
     setError(null);
+    setDebugInfo(null);
 
     // Check cache first
     const cached = getCachedInsights(coupleId);
@@ -79,7 +112,9 @@ export function AIInsightsCard({ coupleId }: AIInsightsCardProps) {
     }
 
     try {
-      const { data, error: fnError } = await supabase.functions.invoke('generate-insights');
+      const { data, error: fnError } = await supabase.functions.invoke('generate-insights', {
+        headers: { 'x-ai-debug': '1' },
+      });
 
       if (fnError) {
         const stale = getCachedInsights(coupleId, { allowStale: true });
@@ -92,6 +127,8 @@ export function AIInsightsCard({ coupleId }: AIInsightsCardProps) {
         setError(t('Não foi possível gerar insights'));
         return;
       }
+
+      if (data?._debug) setDebugInfo(data._debug as AIDebugInfo);
 
       if (data.learning) {
         setLearning(true);
@@ -213,9 +250,15 @@ export function AIInsightsCard({ coupleId }: AIInsightsCardProps) {
     <div className="relative rounded-3xl p-4 shadow-lg overflow-hidden">
       <AIBackgroundBlob />
       <div className="relative z-10">
-        <div className="flex items-center gap-2 mb-3">
+        <div className="flex items-center gap-2 mb-3 select-none">
           <Sparkles className="w-5 h-5 text-orange-600" />
-          <span className="font-semibold text-sm text-orange-900">{t('Insights')}</span>
+          <button
+            type="button"
+            onClick={registerTap}
+            className="font-semibold text-sm text-orange-900"
+          >
+            {t('Insights')}
+          </button>
         </div>
 
         {insights.length === 0 ? (
@@ -246,6 +289,53 @@ export function AIInsightsCard({ coupleId }: AIInsightsCardProps) {
           </div>
         )}
       </div>
+
+      <Dialog open={debugOpen} onOpenChange={setDebugOpen}>
+        <DialogContent className="sm:max-w-lg">
+          <DialogHeader>
+            <DialogTitle>{t('Diagnóstico de Insights')}</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-3">
+            <div className="text-xs text-muted-foreground">
+              {t('Toque 7x em “Insights” para abrir este painel.')}
+            </div>
+
+            <div className="rounded-xl border bg-muted/40 p-3 text-xs font-mono whitespace-pre-wrap">
+              {JSON.stringify(
+                {
+                  coupleId,
+                  hasInsights: insights.length > 0,
+                  learning,
+                  error,
+                  debugInfo,
+                },
+                null,
+                2
+              )}
+            </div>
+
+            <div className="flex gap-2 justify-end">
+              <button
+                type="button"
+                className="text-xs underline text-muted-foreground"
+                onClick={() => setDebugOpen(false)}
+              >
+                {t('Fechar')}
+              </button>
+              <button
+                type="button"
+                className="text-xs underline"
+                onClick={() => {
+                  try { localStorage.removeItem(CACHE_KEY_PREFIX + coupleId); } catch {}
+                  fetchInsights();
+                }}
+              >
+                {t('Limpar cache e tentar novamente')}
+              </button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

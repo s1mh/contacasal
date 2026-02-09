@@ -1,5 +1,14 @@
 import { z } from 'zod';
 
+const isNotFutureDate = (yyyyMmDd: string): boolean => {
+  // Expect "YYYY-MM-DD"
+  const d = new Date(`${yyyyMmDd}T00:00:00`);
+  if (Number.isNaN(d.getTime())) return false;
+  const now = new Date();
+  const endToday = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 23, 59, 59, 999);
+  return d.getTime() <= endToday.getTime();
+};
+
 // Expense validation schema
 export const expenseSchema = z.object({
   description: z.string().max(500, 'Descrição muito longa').nullable(),
@@ -11,7 +20,9 @@ export const expenseSchema = z.object({
     person2: z.number().min(0).max(100),
   }),
   tag_id: z.string().uuid().nullable(),
-  expense_date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, 'Data inválida'),
+  expense_date: z.string()
+    .regex(/^\d{4}-\d{2}-\d{2}$/, 'Data inválida')
+    .refine(isNotFutureDate, 'A data do gasto não pode ser no futuro'),
   payment_type: z.enum(['debit', 'credit']),
   card_id: z.string().uuid().nullable(),
   billing_month: z.string().nullable(),
