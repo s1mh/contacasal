@@ -6,3 +6,10 @@ ios/
 *.pbxproj
 *.xcuserstate
 *.xcscheme
+
+# Not needed for web deploy context
+.cursor/
+.lovable/
+supabase/
+brand/
+docs/
