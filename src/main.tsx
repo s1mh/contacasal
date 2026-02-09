@@ -25,47 +25,14 @@ if (!import.meta.env.DEV) {
     // Don't preventDefault - let normal error handling work
   });
 
-  // Anti-inspection: Disable common dev tools shortcuts
-  document.addEventListener('keydown', (e) => {
-    // Block F12, Ctrl+Shift+I, Ctrl+Shift+J, Ctrl+Shift+C, Ctrl+U
-    if (
-      e.key === 'F12' ||
-      (e.ctrlKey && e.shiftKey && ['I', 'J', 'C'].includes(e.key)) ||
-      (e.ctrlKey && e.key === 'u') ||
-      (e.metaKey && e.altKey && ['I', 'J', 'C'].includes(e.key)) ||
-      (e.metaKey && e.key === 'u')
-    ) {
-      e.preventDefault();
-      return false;
-    }
-  });
-
-  // Disable right-click context menu
-  document.addEventListener('contextmenu', (e) => {
-    e.preventDefault();
-    return false;
-  });
-
-  // Detect DevTools opening via debugger statement timing
-  // If someone opens DevTools, the debugger pause will cause a measurable delay
-  let devToolsOpen = false;
-  const detectDevTools = () => {
-    const start = performance.now();
-    // This will pause if DevTools is open with the debugger tab active
-    // Using a more subtle detection method
-    const el = new Image();
-    Object.defineProperty(el, 'id', {
-      get: () => {
-        devToolsOpen = true;
-      }
-    });
-    console.debug(el);
-    if (devToolsOpen) {
-      // Clear sensitive data from memory when DevTools is detected
-      document.title = 'Conta de Casal';
-    }
-  };
-  setInterval(detectDevTools, 3000);
+  /**
+   * Importante:
+   * - Não existe “segurança” real em bloquear Inspecionar Elemento / DevTools.
+   * - A segurança do app deve estar no backend (RLS no Supabase, validações, rate-limit).
+   * - Bloqueios de UI atrapalham usabilidade (botão direito, copiar/colar, acessibilidade).
+   *
+   * Por isso, mantemos apenas hardening não-invasivo (sem segredos no bundle).
+   */
 
   // Disable text selection on non-interactive elements only
   const style = document.createElement('style');
