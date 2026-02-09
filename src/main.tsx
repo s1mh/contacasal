@@ -1,7 +1,12 @@
 import { createRoot } from "react-dom/client";
 import App from "./App.tsx";
 import "./index.css";
-import { initCapacitor } from "./lib/capacitor";
+import { initCapacitor, isNative } from "./lib/capacitor";
+
+// Mark native runtime for CSS (selection, safe-area tweaks, etc.)
+if (isNative) {
+  document.documentElement.dataset.native = '1';
+}
 
 // Production security hardening
 if (!import.meta.env.DEV) {

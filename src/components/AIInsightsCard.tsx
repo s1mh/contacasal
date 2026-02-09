@@ -73,6 +73,12 @@ export function AIInsightsCard({ coupleId }: AIInsightsCardProps) {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [debugInfo, setDebugInfo] = useState<AIDebugInfo | null>(null);
+  const [invokeError, setInvokeError] = useState<null | {
+    name?: string;
+    message?: string;
+    status?: number;
+    contextBodyPreview?: string;
+  }>(null);
   const [debugOpen, setDebugOpen] = useState(false);
   const [debugEnabled, setDebugEnabled] = useState(false);
   const [tapCount, setTapCount] = useState(0);
@@ -100,6 +106,7 @@ export function AIInsightsCard({ coupleId }: AIInsightsCardProps) {
     setLoading(true);
     setError(null);
     setDebugInfo(null);
+    setInvokeError(null);
 
     // Check cache first
     if (!opts?.bypassCache) {
@@ -131,17 +138,36 @@ export function AIInsightsCard({ coupleId }: AIInsightsCardProps) {
           setError(null);
           return;
         }
+        const status = (fnError as any)?.context?.status;
+        const body = (fnError as any)?.context?.body;
+        const bodyText = body ? String(body) : undefined;
+
         setError(t('Não foi possível gerar insights'));
-        setDebugInfo({
-          ...(debugInfo ?? {}),
-          path: (fnError as any)?.context?.path,
-          status: (fnError as any)?.context?.status,
-          errorBodyPreview: (fnError as any)?.context?.body ? String((fnError as any)?.context?.body).slice(0, 600) : undefined,
+        setInvokeError({
+          name: (fnError as any)?.name,
+          message: (fnError as any)?.message,
+          status: typeof status === 'number' ? status : undefined,
+          contextBodyPreview: bodyText ? bodyText.slice(0, 1200) : undefined,
         });
+
+        // Se o body trouxer JSON com _debug, tenta extrair
+        if (bodyText) {
+          try {
+            const parsed = JSON.parse(bodyText);
+            if (parsed?._debug) setDebugInfo(parsed._debug as AIDebugInfo);
+          } catch {
+            // ignore
+          }
+        }
         return;
       }
 
       if (data?._debug) setDebugInfo(data._debug as AIDebugInfo);
+
+      // Função pode retornar success=false (mas com 200), então trate como erro “rico”
+      if (data && data.success === false) {
+        setError(typeof data.error === 'string' ? data.error : t('Não foi possível gerar insights'));
+      }
 
       if (data.learning) {
         setLearning(true);
@@ -195,8 +221,9 @@ export function AIInsightsCard({ coupleId }: AIInsightsCardProps) {
       loading,
       error,
       debugInfo,
+      invokeError,
     };
-  }, [coupleId, insights.length, learning, loading, error, debugInfo]);
+  }, [coupleId, insights.length, learning, loading, error, debugInfo, invokeError]);
 
   const copyDiagnostics = async () => {
     try {

@@ -41,12 +41,18 @@ Deno.serve(async (req) => {
   const debugEnabled = new URL(req.url).searchParams.get("debug") === "1" || req.headers.get("x-ai-debug") === "1";
   const requestId = crypto.randomUUID();
 
+  const json = (payload: unknown) =>
+    new Response(JSON.stringify(payload), {
+      headers: { ...corsHeaders, "Content-Type": "application/json" },
+    });
+
   try {
     const authHeader = req.headers.get("Authorization");
     if (!authHeader?.startsWith("Bearer ")) {
-      return new Response(JSON.stringify({ error: "Unauthorized" }), {
-        status: 401,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      return json({
+        success: false,
+        error: "Unauthorized",
+        ...(debugEnabled ? { _debug: { requestId, path: "missing_auth_header" } } : {}),
       });
     }
 
@@ -59,37 +65,43 @@ Deno.serve(async (req) => {
     // Get couple_id from JWT
     const { data: { user }, error: userError } = await supabaseClient.auth.getUser();
     if (userError || !user) {
-      return new Response(JSON.stringify({ error: "Unauthorized" }), {
-        status: 401,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      return json({
+        success: false,
+        error: "Unauthorized",
+        ...(debugEnabled ? { _debug: { requestId, path: "get_user_failed", message: userError?.message } } : {}),
       });
     }
 
     const coupleId = user.app_metadata?.couple_id;
     if (!coupleId) {
-      return new Response(JSON.stringify({ error: "No couple_id found" }), {
-        status: 400,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      return json({
+        success: false,
+        error: "No couple_id found",
+        ...(debugEnabled ? { _debug: { requestId, path: "missing_couple_id" } } : {}),
       });
     }
 
     // Check for cached insights (valid within last 24 hours)
-    const serviceClient = createClient(
-      Deno.env.get("SUPABASE_URL") ?? "",
-      Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? ""
-    );
+    const serviceRoleKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "";
+    const serviceClient = serviceRoleKey
+      ? createClient(Deno.env.get("SUPABASE_URL") ?? "", serviceRoleKey)
+      : null;
 
-    const { data: cachedInsights } = await serviceClient
-      .from('ai_insights')
-      .select('insight_type, message, priority, created_at')
-      .eq('couple_id', coupleId)
-      .gte('valid_until', new Date().toISOString())
-      .order('priority', { ascending: false })
-      .limit(5);
+    const cachedInsightsRes = serviceClient
+      ? await serviceClient
+          .from('ai_insights')
+          .select('insight_type, message, priority, created_at')
+          .eq('couple_id', coupleId)
+          .gte('valid_until', new Date().toISOString())
+          .order('priority', { ascending: false })
+          .limit(5)
+      : { data: null, error: null };
+
+    const cachedInsights = cachedInsightsRes.data;
 
     if (cachedInsights && cachedInsights.length > 0) {
       // Return cached insights without calling the AI
-      return new Response(JSON.stringify({
+      return json({
         success: true,
         learning: false,
         cached: true,
@@ -101,12 +113,11 @@ Deno.serve(async (req) => {
           priority: i.priority,
         })),
         ...(debugEnabled ? { _debug: { requestId, path: "cache_hit" } } : {}),
-      }), {
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
 
     const getStaleInsights = async () => {
+      if (!serviceClient) return null;
       const { data } = await serviceClient
         .from('ai_insights')
         .select('insight_type, message, priority, created_at')
@@ -149,7 +160,7 @@ Deno.serve(async (req) => {
     const hasEnoughData = uniqueDays >= 7 && uniquePurchases.length >= 5 && uniqueCategories >= 2;
 
     if (!hasEnoughData) {
-      return new Response(JSON.stringify({
+      return json({
         success: true,
         learning: true,
         progress: {
@@ -161,8 +172,17 @@ Deno.serve(async (req) => {
           minCategories: 2,
         },
         insights: [],
-      }), {
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
+        ...(debugEnabled
+          ? {
+              _debug: {
+                requestId,
+                path: "learning_mode",
+                uniqueDays,
+                uniquePurchases: uniquePurchases.length,
+                uniqueCategories,
+              },
+            }
+          : {}),
       });
     }
 
@@ -284,7 +304,7 @@ Deno.serve(async (req) => {
     if (!GOOGLE_AI_API_KEY) {
       const stale = await getStaleInsights();
       if (stale && stale.length > 0) {
-        return new Response(JSON.stringify({
+        return json({
           success: true,
           learning: false,
           cached: true,
@@ -292,14 +312,16 @@ Deno.serve(async (req) => {
           requestId,
           insights: stale,
           warning: "AI not configured; returning last known insights",
-          ...(debugEnabled ? { _debug: { requestId, path: "ai_not_configured_stale" } } : {}),
-        }), {
-          headers: { ...corsHeaders, "Content-Type": "application/json" },
+          ...(debugEnabled ? { _debug: { requestId, path: "ai_not_configured_stale", missingEnv: ["GOOGLE_AI_API_KEY"] } } : {}),
         });
       }
-      return new Response(JSON.stringify({ error: "AI not configured" }), {
-        status: 500,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      return json({
+        success: false,
+        learning: false,
+        requestId,
+        insights: [],
+        error: "AI not configured",
+        ...(debugEnabled ? { _debug: { requestId, path: "ai_not_configured", missingEnv: ["GOOGLE_AI_API_KEY"] } } : {}),
       });
     }
 
@@ -416,7 +438,7 @@ Tipos: "celebration" (positivo), "tip" (dica de economia), "alert" (gasto alto)`
       if (aiResponse.status === 429) {
         const stale = await getStaleInsights();
         if (stale && stale.length > 0) {
-          return new Response(JSON.stringify({
+          return json({
             success: true,
             learning: false,
             cached: true,
@@ -425,20 +447,21 @@ Tipos: "celebration" (positivo), "tip" (dica de economia), "alert" (gasto alto)`
             insights: stale,
             warning: "AI rate limited; returning last known insights",
             ...(debugEnabled ? { _debug: { requestId, path: "ai_429_stale", status: aiResponse.status } } : {}),
-          }), {
-            status: 200,
-            headers: { ...corsHeaders, "Content-Type": "application/json" },
           });
         }
-        return new Response(JSON.stringify({ error: "Rate limit exceeded" }), {
-          status: 429,
-          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        return json({
+          success: false,
+          learning: false,
+          requestId,
+          insights: [],
+          error: "Rate limit exceeded",
+          ...(debugEnabled ? { _debug: { requestId, path: "ai_429_no_cache", status: aiResponse.status, errorBodyPreview: String(errorBody).slice(0, 400) } } : {}),
         });
       }
 
       const stale = await getStaleInsights();
       if (stale && stale.length > 0) {
-        return new Response(JSON.stringify({
+        return json({
           success: true,
           learning: false,
           cached: true,
@@ -447,15 +470,16 @@ Tipos: "celebration" (positivo), "tip" (dica de economia), "alert" (gasto alto)`
           insights: stale,
           warning: "AI service error; returning last known insights",
           ...(debugEnabled ? { _debug: { requestId, path: "ai_error_stale", status: aiResponse.status, errorBodyPreview: String(errorBody).slice(0, 400) } } : {}),
-        }), {
-          status: 200,
-          headers: { ...corsHeaders, "Content-Type": "application/json" },
         });
       }
 
-      return new Response(JSON.stringify({ error: "AI service error" }), {
-        status: 500,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      return json({
+        success: false,
+        learning: false,
+        requestId,
+        insights: [],
+        error: "AI service error",
+        ...(debugEnabled ? { _debug: { requestId, path: "ai_error_no_cache", status: aiResponse.status, errorBodyPreview: String(errorBody).slice(0, 400) } } : {}),
       });
     }
 
@@ -516,7 +540,7 @@ Tipos: "celebration" (positivo), "tip" (dica de economia), "alert" (gasto alto)`
       if (!insights || insights.length === 0) {
         const stale = await getStaleInsights();
         if (stale && stale.length > 0) {
-          return new Response(JSON.stringify({
+          return json({
             success: true,
             learning: false,
             cached: true,
@@ -526,9 +550,6 @@ Tipos: "celebration" (positivo), "tip" (dica de economia), "alert" (gasto alto)`
             warning: "AI parse failed; returning last known insights",
             finishReason,
             ...(debugEnabled ? { _debug: { requestId, path: "parse_failed_stale", finishReason, partsCount: Array.isArray(parts) ? parts.length : 0 } } : {}),
-          }), {
-            status: 200,
-            headers: { ...corsHeaders, "Content-Type": "application/json" },
           });
         }
       }
@@ -555,15 +576,17 @@ Tipos: "celebration" (positivo), "tip" (dica de economia), "alert" (gasto alto)`
 
     // Save insights to database — delete old and insert new
     // (serviceClient already created above for cache check)
-    await serviceClient
-      .from('ai_insights')
-      .delete()
-      .eq('couple_id', coupleId)
-      .lt('created_at', new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString());
+    if (serviceClient) {
+      await serviceClient
+        .from('ai_insights')
+        .delete()
+        .eq('couple_id', coupleId)
+        .lt('created_at', new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString());
+    }
 
     // Insert new insights
     // Não sobrescrever o cache com o fallback genérico (evita “travar” 24h no texto genérico).
-    if (insights.length > 0 && !isGenericFallbackOnly) {
+    if (serviceClient && insights.length > 0 && !isGenericFallbackOnly) {
       await serviceClient.from('ai_insights').insert(
         insights.map((insight: { type: string; message: string; priority: number }) => ({
           couple_id: coupleId,
@@ -575,7 +598,7 @@ Tipos: "celebration" (positivo), "tip" (dica de economia), "alert" (gasto alto)`
       );
     }
 
-    return new Response(JSON.stringify({
+    return json({
       success: true,
       learning: false,
       requestId,
@@ -598,15 +621,25 @@ Tipos: "celebration" (positivo), "tip" (dica de economia), "alert" (gasto alto)`
         profileSummary,
         equalSplitPercentage,
       }
-    }), {
-      headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
 
   } catch (e) {
     console.error("[generate-insights] Error:", e instanceof Error ? e.message : String(e));
-    return new Response(JSON.stringify({ error: "Erro ao gerar insights" }), {
-      status: 500,
-      headers: { ...corsHeaders, "Content-Type": "application/json" },
+    return json({
+      success: false,
+      error: "Erro ao gerar insights",
+      requestId,
+      insights: [],
+      ...(debugEnabled
+        ? {
+            _debug: {
+              requestId,
+              path: "catch",
+              message: e instanceof Error ? e.message : String(e),
+              stack: e instanceof Error ? e.stack : undefined,
+            },
+          }
+        : {}),
     });
   }
 });
