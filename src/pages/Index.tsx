@@ -740,13 +740,12 @@ export default function Index() {
           </DialogHeader>
           <div className="flex flex-col items-center gap-4 py-4">
             {lastSpace && (
-              <div className="w-16 h-16 rounded-full overflow-hidden ring-2 ring-primary/30">
-                <img
-                  src={CAT_AVATARS[(lastSpace.avatarIndex || 1) - 1]}
-                  alt={lastSpace.name}
-                  className="w-full h-full object-cover"
-                />
-              </div>
+              <Avatar
+                avatarIndex={lastSpace.avatarIndex || 1}
+                size="lg"
+                animateOnHover={false}
+                className="ring-2 ring-primary/30 ring-offset-0"
+              />
             )}
             <div className="flex items-center gap-2">
               <InputOTP

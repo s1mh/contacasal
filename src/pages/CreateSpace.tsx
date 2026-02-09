@@ -5,7 +5,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { InputOTP, InputOTPGroup, InputOTPSlot, InputOTPSlotMasked } from '@/components/ui/input-otp';
 import { cn } from '@/lib/utils';
-import { CAT_AVATARS, PERSON_COLORS } from '@/lib/constants';
+import { PERSON_COLORS } from '@/lib/constants';
 import { Avatar } from '@/components/Avatar';
 import { AvatarSelectionGrid } from '@/components/AvatarSelectionGrid';
 import { Check, Heart, Sparkles, Lock, ArrowRight, ArrowLeft, Mail, SkipForward, AtSign, Loader2, Eye, EyeOff, Fingerprint, ShieldCheck } from 'lucide-react';
@@ -581,12 +581,14 @@ export default function CreateSpace() {
               <>
                 {/* Biometric Setup Step */}
                 <div className="flex flex-col items-center gap-6 animate-fade-in">
-                  <div 
-                    className="w-20 h-20 rounded-full overflow-hidden ring-4"
-                    style={{ boxShadow: `0 0 0 4px ${color}` }}
-                  >
-                    <img src={CAT_AVATARS[avatarIndex - 1]} alt="Preview" className="w-full h-full object-cover" />
-                  </div>
+                  <Avatar
+                    avatarIndex={avatarIndex}
+                    size="lg"
+                    ringColor={color}
+                    ringWidth={4}
+                    animateOnHover={false}
+                    className="w-20 h-20 ring-offset-0"
+                  />
                   
                   <div className="text-center space-y-2">
                     <span className="font-semibold text-lg block">{name}</span>
