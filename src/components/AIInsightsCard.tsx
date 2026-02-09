@@ -126,9 +126,9 @@ export function AIInsightsCard({ coupleId }: AIInsightsCardProps) {
     }
 
     try {
-      const { data, error: fnError } = await supabase.functions.invoke('generate-insights', {
-        headers: (opts?.debug || debugEnabled) ? { 'x-ai-debug': '1' } : undefined,
-      });
+      // Evita header custom (pode causar preflight/CORS). O backend já suporta ?debug=1.
+      const fnName = (opts?.debug || debugEnabled) ? 'generate-insights?debug=1' : 'generate-insights';
+      const { data, error: fnError } = await supabase.functions.invoke(fnName);
 
       if (fnError) {
         const stale = getCachedInsights(coupleId, { allowStale: true });

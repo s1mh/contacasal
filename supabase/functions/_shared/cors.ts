@@ -12,7 +12,10 @@ export function getCorsHeaders(req: Request): Record<string, string> {
   const origin = req.headers.get('Origin') || '';
   // Only reflect the origin if it's in our allowlist; reject unknown origins
   const headers: Record<string, string> = {
-    'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
+    // Include custom debug header used by some functions (e.g. insights)
+    'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type, x-ai-debug',
+    'Access-Control-Allow-Methods': 'GET,POST,OPTIONS',
+    'Access-Control-Max-Age': '86400',
     'Vary': 'Origin',
   };
   if (ALLOWED_ORIGINS.includes(origin)) {
