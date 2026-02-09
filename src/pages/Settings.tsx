@@ -11,7 +11,7 @@ import { AgreementManager } from '@/components/AgreementManager';
 import { MemberManagement } from '@/components/MemberManagement';
 import { AnimatedPage, AnimatedItem } from '@/components/AnimatedPage';
 import { Couple, useCoupleContext } from '@/contexts/CoupleContext';
-import { PERSON_COLORS, TAG_ICONS } from '@/lib/constants';
+import { CAT_AVATARS, PERSON_COLORS, TAG_ICONS } from '@/lib/constants';
 import { cn, isConfiguredProfile } from '@/lib/utils';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
@@ -21,8 +21,6 @@ import { useI18n } from '@/contexts/I18nContext';
 import { SupportedLocale } from '@/lib/i18n';
 import { SupportedCurrency } from '@/lib/preferences';
 import { isNative, isBiometricAvailable, authenticateBiometric, hapticNotification, removeCoupleSession } from '@/lib/capacitor';
-import { getAvatarIndices } from '@/lib/avatar-registry';
-import { colorFallbacks } from '@/design-system/tokens';
 
 export default function Settings() {
   const { couple, myPosition } = useOutletContext<{ couple: Couple; myPosition: number | null }>();
@@ -54,7 +52,7 @@ export default function Settings() {
   const [checkingUsername, setCheckingUsername] = useState(false);
   const [newTagName, setNewTagName] = useState('');
   const [newTagIcon, setNewTagIcon] = useState('tag');
-  const [newTagColor, setNewTagColor] = useState(colorFallbacks.tagDefault);
+  const [newTagColor, setNewTagColor] = useState('#94A3B8');
   const [showAddTag, setShowAddTag] = useState(false);
 
   // Biometric state
@@ -80,13 +78,13 @@ export default function Settings() {
         localStorage.setItem('biometric_enabled', 'true');
         setBiometricEnabled(true);
         hapticNotification('success');
-        toast({ title: prefT('Biometria ativada') });
+        toast({ title: prefT('🔓 Biometria ativada') });
       }
     } else {
       // Deactivating
       localStorage.setItem('biometric_enabled', 'false');
       setBiometricEnabled(false);
-      toast({ title: prefT('Biometria desativada') });
+      toast({ title: prefT('🔒 Biometria desativada') });
     }
   };
 
@@ -96,14 +94,14 @@ export default function Settings() {
   const handleLocaleChange = (newLocale: SupportedLocale) => {
     setLocale(newLocale);
     toast({ 
-      title: prefT('Preferências atualizadas'),
+      title: prefT('⚙️ Preferências atualizadas'),
     });
   };
 
   const handleCurrencyChange = (newCurrency: SupportedCurrency) => {
     setCurrency(newCurrency);
     toast({ 
-      title: prefT('Preferências atualizadas'),
+      title: prefT('⚙️ Preferências atualizadas'),
     });
   };
 
@@ -172,7 +170,7 @@ export default function Settings() {
     });
     setNewTagName('');
     setNewTagIcon('tag');
-    setNewTagColor(colorFallbacks.tagDefault);
+    setNewTagColor('#94A3B8');
     setShowAddTag(false);
   };
 
@@ -187,7 +185,7 @@ export default function Settings() {
   const handleRegenerateCode = async () => {
     if (!myProfile || !isAdmin(myProfile.id)) {
       toast({ 
-        title: prefT('Sem permissão'),
+        title: prefT('🚫 Sem permissão'),
         description: prefT('Apenas administradores podem regenerar o código'),
         variant: 'destructive'
       });
@@ -267,17 +265,17 @@ export default function Settings() {
             <div className="flex-1">
               <p className="text-sm text-muted-foreground mb-2">{prefT('Escolha o gatinho')}</p>
               <div className="flex gap-2 flex-wrap">
-                {getAvatarIndices().map((avatarIndex) => (
+                {CAT_AVATARS.map((_, idx) => (
                   <button
-                    key={avatarIndex}
-                    onClick={() => handleUpdateAvatar(avatarIndex)}
+                    key={idx}
+                    onClick={() => handleUpdateAvatar(idx + 1)}
                     className={cn(
                       'rounded-full transition-all',
-                      myProfile.avatar_index === avatarIndex && 'ring-2 ring-primary ring-offset-2'
+                      myProfile.avatar_index === idx + 1 && 'ring-2 ring-primary ring-offset-2'
                     )}
                   >
                     <Avatar
-                      avatarIndex={avatarIndex}
+                      avatarIndex={idx + 1}
                       size="sm"
                     />
                   </button>
@@ -609,8 +607,15 @@ export default function Settings() {
                       {profile.id === myProfile?.id && (
                         <span className="text-xs text-muted-foreground">({prefT('você')})</span>
                       )}
-                      {isAdmin(profile.id) && (
-                        <Crown className="w-4 h-4 text-amber-500" />
+                      {isAdmin(profile.id) ? (
+                        <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-amber-100 dark:bg-amber-900/30 text-amber-600 dark:text-amber-400">
+                          <Crown className="w-3 h-3" />
+                          <span className="text-[10px] font-semibold uppercase tracking-wide">Admin</span>
+                        </span>
+                      ) : (
+                        <span className="inline-flex items-center px-2 py-0.5 rounded-full bg-muted text-muted-foreground">
+                          <span className="text-[10px] font-medium">{prefT('Membro')}</span>
+                        </span>
                       )}
                     </div>
                     {profile.username && (

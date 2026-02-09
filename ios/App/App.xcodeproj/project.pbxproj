@@ -11,6 +11,8 @@
 		4CD8BFD32F39808800F66098 /* BiometricPlugin.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4CD8BFD02F39808800F66098 /* BiometricPlugin.swift */; };
 		4CD8BFD42F39808800F66098 /* MyViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4CD8BFD12F39808800F66098 /* MyViewController.swift */; };
 		4CD8BFD52F39808800F66098 /* NativeNavPlugin.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4CD8BFD22F39808800F66098 /* NativeNavPlugin.swift */; };
+		4CD8BFD62F39808800F66098 /* SharePlugin.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4CD8BFD72F39808800F66098 /* SharePlugin.swift */; };
+		4CD8BFDB2F39808800F66098 /* SceneDelegate.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4CD8BFDC2F39808800F66098 /* SceneDelegate.swift */; };
 		4D22ABE92AF431CB00220026 /* CapApp-SPM in Frameworks */ = {isa = PBXBuildFile; productRef = 4D22ABE82AF431CB00220026 /* CapApp-SPM */; };
 		50379B232058CBB4000EE86E /* capacitor.config.json in Resources */ = {isa = PBXBuildFile; fileRef = 50379B222058CBB4000EE86E /* capacitor.config.json */; };
 		504EC3081FED79650016851F /* AppDelegate.swift in Sources */ = {isa = PBXBuildFile; fileRef = 504EC3071FED79650016851F /* AppDelegate.swift */; };
@@ -25,6 +27,8 @@
 		4CD8BFD02F39808800F66098 /* BiometricPlugin.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BiometricPlugin.swift; sourceTree = "<group>"; };
 		4CD8BFD12F39808800F66098 /* MyViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MyViewController.swift; sourceTree = "<group>"; };
 		4CD8BFD22F39808800F66098 /* NativeNavPlugin.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NativeNavPlugin.swift; sourceTree = "<group>"; };
+		4CD8BFD72F39808800F66098 /* SharePlugin.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SharePlugin.swift; sourceTree = "<group>"; };
+		4CD8BFDC2F39808800F66098 /* SceneDelegate.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SceneDelegate.swift; sourceTree = "<group>"; };
 		50379B222058CBB4000EE86E /* capacitor.config.json */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.json; path = capacitor.config.json; sourceTree = "<group>"; };
 		504EC3041FED79650016851F /* App.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = App.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		504EC3071FED79650016851F /* AppDelegate.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppDelegate.swift; sourceTree = "<group>"; };
@@ -71,6 +75,8 @@
 				4CD8BFD02F39808800F66098 /* BiometricPlugin.swift */,
 				4CD8BFD12F39808800F66098 /* MyViewController.swift */,
 				4CD8BFD22F39808800F66098 /* NativeNavPlugin.swift */,
+				4CD8BFD72F39808800F66098 /* SharePlugin.swift */,
+				4CD8BFDC2F39808800F66098 /* SceneDelegate.swift */,
 				50379B222058CBB4000EE86E /* capacitor.config.json */,
 				504EC3071FED79650016851F /* AppDelegate.swift */,
 				504EC30B1FED79650016851F /* Main.storyboard */,
@@ -167,6 +173,8 @@
 				4CD8BFD32F39808800F66098 /* BiometricPlugin.swift in Sources */,
 				4CD8BFD42F39808800F66098 /* MyViewController.swift in Sources */,
 				4CD8BFD52F39808800F66098 /* NativeNavPlugin.swift in Sources */,
+				4CD8BFD62F39808800F66098 /* SharePlugin.swift in Sources */,
+				4CD8BFDB2F39808800F66098 /* SceneDelegate.swift in Sources */,
 				504EC3081FED79650016851F /* AppDelegate.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;

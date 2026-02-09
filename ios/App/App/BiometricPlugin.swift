@@ -28,6 +28,8 @@ public class BiometricPlugin: CAPPlugin, CAPBridgedPlugin {
                 biometryType = "touchId"
             case .opticID:
                 biometryType = "opticId"
+            case .none:
+                biometryType = "none"
             @unknown default:
                 biometryType = "unknown"
             }

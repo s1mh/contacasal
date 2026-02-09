@@ -5,7 +5,7 @@ import { Button } from '@/components/ui/button';
 import { Loader2, Lock, CheckCircle, AlertCircle, ArrowRight } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
-import { Avatar } from '@/components/Avatar';
+import { CAT_AVATARS } from '@/lib/constants';
 import { cn } from '@/lib/utils';
 import { saveCoupleSession } from '@/lib/capacitor';
 
@@ -82,7 +82,7 @@ export default function ResetPin() {
   const handleSubmit = async (confirmedPin: string) => {
     if (newPin !== confirmedPin) {
       toast({
-        title: 'Códigos não conferem',
+        title: '⚠️ Códigos não conferem',
         description: 'Digite o mesmo código nas duas etapas',
         variant: 'destructive',
       });
@@ -105,7 +105,7 @@ export default function ResetPin() {
 
       if (!data.success) {
         toast({
-          title: 'Erro',
+          title: '❌ Erro',
           description: data.error || 'Não foi possível redefinir o código',
           variant: 'destructive',
         });
@@ -140,7 +140,7 @@ export default function ResetPin() {
       }, 2000);
     } catch {
       toast({
-        title: 'Erro',
+        title: '❌ Erro',
         description: 'Não foi possível redefinir o código. Tente novamente.',
         variant: 'destructive',
       });
@@ -219,13 +219,10 @@ export default function ResetPin() {
                 className="w-20 h-20 rounded-full overflow-hidden ring-4 animate-cat-idle"
                 style={{ boxShadow: `0 0 0 4px ${profile.color}` }}
               >
-                <Avatar
-                  avatarIndex={profile.avatar_index}
-                  size="xl"
-                  className="w-20 h-20"
-                  selected
-                  animateOnHover={false}
-                  showBackground={false}
+                <img 
+                  src={CAT_AVATARS[profile.avatar_index - 1]} 
+                  alt={profile.name}
+                  className="w-full h-full object-cover"
                 />
               </div>
               <div className="text-center">

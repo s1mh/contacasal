@@ -6,8 +6,6 @@ import { Input } from '@/components/ui/input';
 import { InputOTP, InputOTPGroup, InputOTPSlot, InputOTPSlotMasked } from '@/components/ui/input-otp';
 import { cn } from '@/lib/utils';
 import { CAT_AVATARS, PERSON_COLORS } from '@/lib/constants';
-import { Avatar } from '@/components/Avatar';
-import { AvatarSelectionGrid } from '@/components/AvatarSelectionGrid';
 import { Check, Heart, Sparkles, Lock, ArrowRight, ArrowLeft, Mail, SkipForward, AtSign, Loader2, Eye, EyeOff, Fingerprint, ShieldCheck } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
@@ -198,14 +196,14 @@ export default function CreateSpace() {
         await createSpaceWithProfile();
       } else {
         toast({
-          title: prefT('Não foi possível ativar'),
+          title: prefT('⚠️ Não foi possível ativar'),
           description: prefT('Tente novamente ou pule esta etapa'),
           variant: 'destructive',
         });
       }
     } catch {
       toast({
-        title: prefT('Erro'),
+        title: prefT('❌ Erro'),
         description: prefT('Tente novamente'),
         variant: 'destructive',
       });
@@ -237,22 +235,9 @@ export default function CreateSpace() {
   const createSpaceWithProfile = async () => {
     setCreating(true);
     try {
-      const formattedName = name.trim()
-        .toLowerCase()
-        .split(' ')
-        .map(word => word.charAt(0).toUpperCase() + word.slice(1))
-        .join(' ');
-
-      // Create the couple space with profile data (server-side, bypasses RLS timing issues)
+      // Create the couple space
       const { data, error } = await supabase.functions.invoke('create-couple', {
-        body: {
-          name: formattedName,
-          avatar_index: avatarIndex,
-          color,
-          pin: pinCode,
-          email: email.trim() || undefined,
-          username: username || undefined,
-        }
+        body: {}
       });
 
       if (error || !data?.success || !data?.share_code) {
@@ -260,6 +245,7 @@ export default function CreateSpace() {
       }
 
       const shareCode = data.share_code;
+      const coupleId = data.couple_id;
 
       // Refresh session to get new couple_id claim
       await supabase.auth.refreshSession();
@@ -320,7 +306,7 @@ export default function CreateSpace() {
       navigate(`/c/${shareCode}`);
     } catch {
       toast({
-        title: prefT('Erro ao criar espaço'),
+        title: prefT('❌ Erro ao criar espaço'),
         description: prefT('Tente novamente'),
         variant: 'destructive'
       });
@@ -405,29 +391,46 @@ export default function CreateSpace() {
                 </div>
 
                 {/* Avatar Selection */}
-                <div className="space-y-2 animate-fade-in" style={{ animationDelay: '150ms' }}>
+                <div className="space-y-2 animate-fade-in">
                   <label className="text-sm font-medium text-muted-foreground">{prefT('Escolha seu gatinho')}</label>
-                  <AvatarSelectionGrid value={avatarIndex} onChange={setAvatarIndex} />
+                  <div className="grid grid-cols-4 gap-3">
+                    {CAT_AVATARS.map((avatar, index) => (
+                      <button
+                        key={index}
+                        onClick={() => setAvatarIndex(index + 1)}
+                        className={cn(
+                          "relative w-14 h-14 rounded-full overflow-hidden ring-2 transition-all",
+                          avatarIndex === index + 1 
+                            ? "ring-primary ring-offset-2 shadow-lg" 
+                            : "ring-border hover:ring-primary/50"
+                        )}
+                      >
+                        <img src={avatar} alt={`Avatar ${index + 1}`} className="w-full h-full object-cover" />
+                        {avatarIndex === index + 1 && (
+                          <div className="absolute inset-0 bg-primary/20 flex items-center justify-center">
+                            <Check className="w-6 h-6 text-primary" />
+                          </div>
+                        )}
+                      </button>
+                    ))}
+                  </div>
                 </div>
 
                 {/* Color Selection */}
-                <div className="space-y-2 animate-fade-in" style={{ animationDelay: '250ms' }}>
+                <div className="space-y-2 animate-fade-in">
                   <label className="text-sm font-medium text-muted-foreground">{prefT('Sua cor')}</label>
                   <div className="flex gap-2 justify-center flex-wrap">
-                    {PERSON_COLORS.map((c, index) => (
+                    {PERSON_COLORS.map((c) => (
                       <button
                         key={c.value}
                         onClick={() => setColor(c.value)}
                         className={cn(
-                          "w-8 h-8 rounded-full transition-all duration-300",
+                          "w-8 h-8 rounded-full transition-all",
                           color === c.value 
-                            ? "ring-2 ring-offset-2 ring-primary scale-125 shadow-lg" 
+                            ? "ring-2 ring-offset-2 ring-primary scale-125" 
                             : "hover:scale-110"
                         )}
-                        style={{ 
-                          backgroundColor: c.value,
-                          animationDelay: `${index * 50}ms`
-                        }}
+                        style={{ backgroundColor: c.value }}
                         title={c.name}
                       />
                     ))}
@@ -440,14 +443,7 @@ export default function CreateSpace() {
                     className="w-14 h-14 rounded-full overflow-hidden ring-4"
                     style={{ boxShadow: `0 0 0 4px ${color}` }}
                   >
-                    <Avatar
-                      avatarIndex={avatarIndex}
-                      size="md"
-                      className="w-14 h-14"
-                      selected
-                      animateOnHover={false}
-                      showBackground={false}
-                    />
+                    <img src={CAT_AVATARS[avatarIndex - 1]} alt="Preview" className="w-full h-full object-cover" />
                   </div>
                   <span className="font-semibold text-lg">{name.trim() || prefT('Seu nome')}</span>
                 </div>
@@ -466,17 +462,10 @@ export default function CreateSpace() {
                 {/* PIN Step */}
                 <div className="flex flex-col items-center gap-6 animate-fade-in">
                   <div 
-                    className="w-20 h-20 rounded-full overflow-hidden ring-4 animate-cat-idle"
+                    className="w-20 h-20 rounded-full overflow-hidden ring-4"
                     style={{ boxShadow: `0 0 0 4px ${color}` }}
                   >
-                    <Avatar
-                      avatarIndex={avatarIndex}
-                      size="xl"
-                      className="w-20 h-20"
-                      selected
-                      animateOnHover={false}
-                      showBackground={false}
-                    />
+                    <img src={CAT_AVATARS[avatarIndex - 1]} alt="Preview" className="w-full h-full object-cover" />
                   </div>
                   <div className="text-center">
                     <span className="font-semibold text-lg block">{name}</span>
@@ -501,23 +490,20 @@ export default function CreateSpace() {
                         {checkingUsername && <Loader2 className="w-4 h-4 animate-spin" />}
                       </div>
                     ) : (
-                      <div className="flex flex-col items-center gap-1">
-                        <button
-                          onClick={() => setEditingUsername(true)}
-                          className="text-sm text-muted-foreground flex items-center justify-center gap-1 hover:text-foreground transition-colors"
-                        >
-                          <AtSign className="w-3 h-3" />
-                          {generatingUsername ? (
-                            <span className="flex items-center gap-1">
-                              <Loader2 className="w-3 h-3 animate-spin" />
-                              {prefT('Gerando seu @...')}
-                            </span>
-                          ) : (
-                            <span>{username || prefT('Clique para definir')}</span>
-                          )}
-                        </button>
-                        <span className="text-xs text-muted-foreground/60">{prefT('Toque para personalizar')}</span>
-                      </div>
+                      <button
+                        onClick={() => setEditingUsername(true)}
+                        className="text-sm text-muted-foreground flex items-center justify-center gap-1 hover:text-foreground transition-colors"
+                      >
+                        <AtSign className="w-3 h-3" />
+                        {generatingUsername ? (
+                          <span className="flex items-center gap-1">
+                            <Loader2 className="w-3 h-3 animate-spin" />
+                            {prefT('Gerando seu @...')}
+                          </span>
+                        ) : (
+                          <span>{username || prefT('Clique para definir')}</span>
+                        )}
+                      </button>
                     )}
                     {usernameError && (
                       <p className="text-xs text-destructive mt-1">{usernameError}</p>
@@ -659,14 +645,7 @@ export default function CreateSpace() {
                     className="w-20 h-20 rounded-full overflow-hidden ring-4"
                     style={{ boxShadow: `0 0 0 4px ${color}` }}
                   >
-                    <Avatar
-                      avatarIndex={avatarIndex}
-                      size="xl"
-                      className="w-20 h-20"
-                      selected
-                      animateOnHover={false}
-                      showBackground={false}
-                    />
+                    <img src={CAT_AVATARS[avatarIndex - 1]} alt="Preview" className="w-full h-full object-cover" />
                   </div>
                   <div className="text-center">
                     <span className="font-semibold text-lg block">{name}</span>

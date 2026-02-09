@@ -7,7 +7,7 @@ import { Avatar } from '@/components/Avatar';
 import { Profile } from '@/contexts/CoupleContext';
 import { usePreferences } from '@/contexts/PreferencesContext';
 import { useToast } from '@/hooks/use-toast';
-import { buildShareUrl, removeCoupleSession } from '@/lib/capacitor';
+import { buildShareUrl, removeCoupleSession, nativeShare } from '@/lib/capacitor';
 
 interface WaitingForPartnerProps {
   shareCode: string;
@@ -25,7 +25,7 @@ export function WaitingForPartner({ shareCode, myProfile }: WaitingForPartnerPro
     await navigator.clipboard.writeText(shareCode);
     setCopied(true);
     toast({
-      title: prefT('Copiado!'),
+      title: prefT('📋 Copiado!'),
       description: prefT('Compartilhe o código com seu parceiro(a)')
     });
     setTimeout(() => setCopied(false), 2000);
@@ -33,21 +33,16 @@ export function WaitingForPartner({ shareCode, myProfile }: WaitingForPartnerPro
 
   const handleShare = async () => {
     const shareUrl = buildShareUrl(shareCode, myProfile?.name);
-
-    if (navigator.share) {
-      try {
-        await navigator.share({
-          title: prefT('Conta de Casal'),
-          text: prefT('Entre no nosso espaço compartilhado!'),
-          url: shareUrl,
-        });
-      } catch {
-        // User cancelled
-      }
-    } else {
+    const shared = await nativeShare({
+      title: prefT('Conta de Casal'),
+      text: prefT('Entre no nosso espaço compartilhado!'),
+      url: shareUrl,
+    });
+    if (!shared) {
+      // Fallback: copy to clipboard
       await navigator.clipboard.writeText(shareUrl);
       toast({
-        title: prefT('Link copiado!'),
+        title: prefT('📋 Link copiado!'),
         description: prefT('Compartilhe com seu parceiro(a).'),
       });
     }
@@ -148,7 +143,7 @@ export function WaitingForPartner({ shareCode, myProfile }: WaitingForPartnerPro
                 localStorage.removeItem(`onboarding_complete_${shareCode}`);
                 setShowExitConfirm(false);
                 toast({
-                  title: prefT('Espaço removido'),
+                  title: prefT('👋 Espaço removido'),
                   description: prefT('Você pode criar um novo espaço ou entrar em outro.'),
                 });
                 navigate('/');

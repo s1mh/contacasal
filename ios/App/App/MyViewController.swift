@@ -1,117 +1,110 @@
 import UIKit
 import Capacitor
 
-class MyViewController: CAPBridgeViewController, UITabBarDelegate {
+class MyViewController: CAPBridgeViewController {
 
     // MARK: - UI Elements
+
+    /// Native UITabBar with automatic Liquid Glass on iOS 26+
     private let nativeTabBar = UITabBar()
     private let fabButton = UIButton(type: .custom)
-    private var currentTabIndex: Int = 0
     private var tabBarVisible: Bool = false
 
-    // Tab identifiers matching web routes
-    private let tabRoutes = ["summary", "historico", "placeholder", "estatisticas", "ajustes"]
+    // Tab config: route, icon, selectedIcon, title
+    private let tabs: [(route: String, icon: String, selectedIcon: String, title: String)] = [
+        ("summary",      "house",                        "house.fill",                       "Resumo"),
+        ("historico",     "clock",                        "clock.fill",                       "Histórico"),
+        ("estatisticas",  "chart.line.uptrend.xyaxis",    "chart.line.uptrend.xyaxis",        "Estatísticas"),
+        ("ajustes",       "gearshape",                    "gearshape.fill",                   "Ajustes"),
+    ]
 
-    private let fabSize: CGFloat = 44
+    private let fabSize: CGFloat = 48
+    private let primaryColor = UIColor(red: 232/255, green: 130/255, blue: 92/255, alpha: 1.0)
 
     // MARK: - Lifecycle
 
     override func capacitorDidLoad() {
         super.capacitorDidLoad()
-        // Register custom Capacitor plugins
         bridge?.registerPluginInstance(NativeNavPlugin())
         bridge?.registerPluginInstance(BiometricPlugin())
+        bridge?.registerPluginInstance(SharePlugin())
     }
 
     override func viewDidLoad() {
         super.viewDidLoad()
         setupNativeTabBar()
         setupFABButton()
-        // Start hidden — JS will call setVisible(true) when entering a couple space
         nativeTabBar.isHidden = true
         fabButton.isHidden = true
     }
 
     override func viewDidLayoutSubviews() {
         super.viewDidLayoutSubviews()
-        updateLayout()
-    }
-
-    override func viewSafeAreaInsetsDidChange() {
-        super.viewSafeAreaInsetsDidChange()
-        updateLayout()
-    }
-
-    private func updateLayout() {
-        layoutTabBar()
+        layoutNativeTabBar()
         layoutFAB()
         adjustWebViewForTabBar()
     }
 
-    // MARK: - Tab Bar Setup
+    // MARK: - Native UITabBar (Liquid Glass on iOS 26+)
 
     private func setupNativeTabBar() {
+        // Create tab bar items: 2 left, placeholder center, 2 right
+        var items: [UITabBarItem] = []
+
+        for (index, tab) in tabs.enumerated() {
+            let config = UIImage.SymbolConfiguration(pointSize: 18, weight: .medium)
+            let image = UIImage(systemName: tab.icon, withConfiguration: config)
+            let selectedImage = UIImage(systemName: tab.selectedIcon, withConfiguration: config)
+            let item = UITabBarItem(title: tab.title, image: image, selectedImage: selectedImage)
+            item.tag = index
+            items.append(item)
+
+            // Insert a blank spacer item between left 2 and right 2 tabs (index 1 → 2)
+            if index == 1 {
+                let spacer = UITabBarItem(title: nil, image: nil, selectedImage: nil)
+                spacer.isEnabled = false
+                spacer.tag = 999  // Spacer tag
+                items.append(spacer)
+            }
+        }
+
+        nativeTabBar.items = items
         nativeTabBar.delegate = self
-        nativeTabBar.translatesAutoresizingMaskIntoConstraints = false
+        nativeTabBar.selectedItem = items.first
 
-        // Tab bar items
-        let summaryItem = UITabBarItem(title: "Resumo", image: UIImage(systemName: "house"), selectedImage: UIImage(systemName: "house.fill"))
-        summaryItem.tag = 0
-
-        let historyItem = UITabBarItem(title: "Histórico", image: UIImage(systemName: "clock"), selectedImage: UIImage(systemName: "clock.fill"))
-        historyItem.tag = 1
-
-        // Placeholder for FAB (invisible spacer)
-        let placeholderItem = UITabBarItem(title: nil, image: nil, selectedImage: nil)
-        placeholderItem.tag = 2
-        placeholderItem.isEnabled = false
-
-        let statsItem = UITabBarItem(title: "Estatísticas", image: UIImage(systemName: "chart.line.uptrend.xyaxis"), selectedImage: UIImage(systemName: "chart.line.uptrend.xyaxis"))
-        statsItem.tag = 3
-
-        let settingsItem = UITabBarItem(title: "Ajustes", image: UIImage(systemName: "gearshape"), selectedImage: UIImage(systemName: "gearshape.fill"))
-        settingsItem.tag = 4
-
-        nativeTabBar.items = [summaryItem, historyItem, placeholderItem, statsItem, settingsItem]
-        nativeTabBar.selectedItem = summaryItem
-
-        // Tint color matching the web primary color (coral/peach)
-        nativeTabBar.tintColor = UIColor(red: 232/255, green: 130/255, blue: 92/255, alpha: 1.0)
+        // Native translucent appearance — Liquid Glass is automatic on iOS 26+
+        nativeTabBar.isTranslucent = true
+        nativeTabBar.tintColor = primaryColor
+        nativeTabBar.unselectedItemTintColor = UIColor.secondaryLabel
 
         view.addSubview(nativeTabBar)
     }
 
-    // MARK: - FAB Button Setup
+    // MARK: - FAB Button
 
     private func setupFABButton() {
         fabButton.frame = CGRect(x: 0, y: 0, width: fabSize, height: fabSize)
         fabButton.layer.cornerRadius = fabSize / 2
+        fabButton.backgroundColor = primaryColor
 
-        // Gradient-like solid color matching web's primary
-        fabButton.backgroundColor = UIColor(red: 232/255, green: 130/255, blue: 92/255, alpha: 1.0)
-
-        // Plus icon (smaller)
         let config = UIImage.SymbolConfiguration(pointSize: 20, weight: .semibold)
-        let plusImage = UIImage(systemName: "plus", withConfiguration: config)
-        fabButton.setImage(plusImage, for: .normal)
+        fabButton.setImage(UIImage(systemName: "plus", withConfiguration: config), for: .normal)
         fabButton.tintColor = .white
 
-        // Shadow (subtler)
-        fabButton.layer.shadowColor = UIColor(red: 232/255, green: 130/255, blue: 92/255, alpha: 0.3).cgColor
+        fabButton.layer.shadowColor = primaryColor.withAlphaComponent(0.4).cgColor
         fabButton.layer.shadowOffset = CGSize(width: 0, height: 4)
         fabButton.layer.shadowRadius = 8
         fabButton.layer.shadowOpacity = 1.0
 
         fabButton.addTarget(self, action: #selector(fabTapped), for: .touchUpInside)
-
         view.addSubview(fabButton)
     }
 
     // MARK: - Layout
 
-    private func layoutTabBar() {
+    private func layoutNativeTabBar() {
         let safeBottom = view.safeAreaInsets.bottom
-        let tabBarHeight: CGFloat = 49 + safeBottom
+        let tabBarHeight: CGFloat = 49 + safeBottom  // Standard UITabBar height + safe area
         nativeTabBar.frame = CGRect(
             x: 0,
             y: view.bounds.height - tabBarHeight,
@@ -121,32 +114,42 @@ class MyViewController: CAPBridgeViewController, UITabBarDelegate {
     }
 
     private func layoutFAB() {
-        // The visible tab bar content is 49pt tall, sitting above the safe area.
-        // Center the FAB within that 49pt area (+ 1pt optical correction).
-        let safeBottom = view.safeAreaInsets.bottom
-        let tabBarContentTop = view.bounds.height - 49 - safeBottom
-        let centerY = tabBarContentTop + (49 - fabSize) / 2 + 1
-        fabButton.frame = CGRect(
-            x: (view.bounds.width - fabSize) / 2,
-            y: centerY,
-            width: fabSize,
-            height: fabSize
-        )
+        let tabBarFrame = nativeTabBar.frame
+        // Center FAB horizontally, vertically aligned with the tab bar content area (above safe area)
+        let contentCenterY = tabBarFrame.origin.y + 49.0 / 2.0
+        fabButton.bounds = CGRect(x: 0, y: 0, width: fabSize, height: fabSize)
+        fabButton.center = CGPoint(x: view.bounds.width / 2.0, y: contentCenterY)
     }
 
     private func adjustWebViewForTabBar() {
         guard let webView = self.webView else { return }
         if tabBarVisible {
-            let tabBarHeight: CGFloat = 49
-            webView.scrollView.contentInset.bottom = tabBarHeight
-            webView.scrollView.verticalScrollIndicatorInsets.bottom = tabBarHeight
+            webView.scrollView.contentInset.bottom = 49
+            webView.scrollView.verticalScrollIndicatorInsets.bottom = 49
         } else {
             webView.scrollView.contentInset.bottom = 0
             webView.scrollView.verticalScrollIndicatorInsets.bottom = 0
         }
     }
 
-    // MARK: - Show / Hide Tab Bar
+    // MARK: - Actions
+
+    @objc private func fabTapped() {
+        let generator = UIImpactFeedbackGenerator(style: .medium)
+        generator.impactOccurred()
+
+        UIView.animate(withDuration: 0.1, animations: {
+            self.fabButton.transform = CGAffineTransform(scaleX: 0.9, y: 0.9)
+        }) { _ in
+            UIView.animate(withDuration: 0.1) {
+                self.fabButton.transform = .identity
+            }
+        }
+
+        notifyWebView(eventName: "fabTapped", data: [:])
+    }
+
+    // MARK: - Show / Hide
 
     func setTabBarVisible(_ visible: Bool) {
         guard visible != tabBarVisible else { return }
@@ -159,39 +162,6 @@ class MyViewController: CAPBridgeViewController, UITabBarDelegate {
                 self.adjustWebViewForTabBar()
             }
         }
-    }
-
-    // MARK: - UITabBarDelegate
-
-    func tabBar(_ tabBar: UITabBar, didSelect item: UITabBarItem) {
-        let tag = item.tag
-        // Don't select the placeholder
-        if tag == 2 { return }
-
-        currentTabIndex = tag
-        let route = tabRoutes[tag]
-
-        // Notify JavaScript about tab selection
-        notifyWebView(eventName: "tabSelected", data: ["route": route, "index": tag])
-    }
-
-    // MARK: - FAB Action
-
-    @objc private func fabTapped() {
-        // Haptic feedback
-        let generator = UIImpactFeedbackGenerator(style: .medium)
-        generator.impactOccurred()
-
-        // Animate press
-        UIView.animate(withDuration: 0.1, animations: {
-            self.fabButton.transform = CGAffineTransform(scaleX: 0.9, y: 0.9)
-        }) { _ in
-            UIView.animate(withDuration: 0.1) {
-                self.fabButton.transform = .identity
-            }
-        }
-
-        notifyWebView(eventName: "fabTapped", data: [:])
     }
 
     // MARK: - Bridge Communication
@@ -208,10 +178,37 @@ class MyViewController: CAPBridgeViewController, UITabBarDelegate {
 
     /// Called from NativeNavPlugin to update the selected tab
     func updateSelectedTab(index: Int) {
-        guard index >= 0, index < (nativeTabBar.items?.count ?? 0), index != 2 else { return }
-        currentTabIndex = index
         DispatchQueue.main.async {
-            self.nativeTabBar.selectedItem = self.nativeTabBar.items?[index]
+            // Map route index (0,1,3,4) to tab bar items (0,1, skip spacer at 2, 3,4)
+            let items = self.nativeTabBar.items ?? []
+            let itemIndex: Int
+            if index < 2 {
+                itemIndex = index
+            } else {
+                itemIndex = index  // 3→3, 4→4 (spacer is at 2)
+            }
+            if itemIndex < items.count {
+                self.nativeTabBar.selectedItem = items[itemIndex]
+            }
         }
+    }
+}
+
+// MARK: - UITabBarDelegate
+
+extension MyViewController: UITabBarDelegate {
+    func tabBar(_ tabBar: UITabBar, didSelect item: UITabBarItem) {
+        let tag = item.tag
+        guard tag != 999 else {
+            // Spacer item tapped — ignore and reselect previous
+            return
+        }
+
+        // Map tab tag (0,1,2,3 from tabs array) to route index
+        // tabs[0]=summary→0, tabs[1]=historico→1, tabs[2]=estatisticas→3, tabs[3]=ajustes→4
+        let routeIndex = tag < 2 ? tag : tag + 1
+
+        let route = tabs[tag].route
+        notifyWebView(eventName: "tabSelected", data: ["route": route, "index": routeIndex])
     }
 }
