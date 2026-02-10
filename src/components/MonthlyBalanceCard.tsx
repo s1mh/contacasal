@@ -5,6 +5,7 @@ import { Profile, Expense, Agreement, Settlement } from '@/contexts/CoupleContex
 import { isConfiguredProfile, maskCurrencyValue } from '@/lib/utils';
 import { usePreferences } from '@/contexts/PreferencesContext';
 import { useI18n } from '@/contexts/I18nContext';
+import { startOfMonth, endOfMonth, isWithinInterval, parseISO } from 'date-fns';
 
 interface MonthlyBalanceCardProps {
   profiles: Profile[];
@@ -41,15 +42,19 @@ export function MonthlyBalanceCard({ profiles = [], expenses = [], agreements = 
   // Calculate monthly balance for all people
   const { monthlySettlements, currentMonth } = useMemo(() => {
     const now = new Date();
-    const startOfMonthDate = new Date(now.getFullYear(), now.getMonth(), 1);
-    const monthName = startOfMonthDate.toLocaleString('pt-BR', { month: 'long' });
+    const monthStart = startOfMonth(now);
+    const monthEnd = endOfMonth(now);
+    const monthName = monthStart.toLocaleString('pt-BR', { month: 'long' });
 
     // Filter expenses for current month only
+    // Use billing_month for credit card expenses, expense_date for others
     const monthExpenses = safeExpenses.filter(e => {
       if (!e?.expense_date) return false;
       try {
-        const expenseDate = new Date(e.expense_date);
-        return expenseDate >= startOfMonthDate;
+        const dateToCheck = e.billing_month
+          ? parseISO(e.billing_month)
+          : parseISO(e.expense_date);
+        return isWithinInterval(dateToCheck, { start: monthStart, end: monthEnd });
       } catch {
         return false;
       }
@@ -59,8 +64,8 @@ export function MonthlyBalanceCard({ profiles = [], expenses = [], agreements = 
     const monthSettlementsData = safeSettlements.filter(s => {
       if (!s?.settled_at) return false;
       try {
-        const settlementDate = new Date(s.settled_at);
-        return settlementDate >= startOfMonthDate;
+        const settlementDate = parseISO(s.settled_at);
+        return isWithinInterval(settlementDate, { start: monthStart, end: monthEnd });
       } catch {
         return false;
       }
