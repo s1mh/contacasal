@@ -54,7 +54,7 @@ Funciona na web e como app iOS (Capacitor).
 
 **No produto.** Os insights são gerados por uma Edge Function que usa Groq ou Google AI, se houver chave configurada. Sem chave, o app mostra "nenhum insight disponível" e segue funcionando. Os cálculos de divisão e de acerto não passam por modelo de linguagem.
 
-**No processo.** Eu me considero um vibe coder com base técnica. Boa parte do código foi construída com ferramentas de IA (Lovable, Claude e Cursor), e o histórico do Git mostra isso de forma transparente. As decisões de produto, de dados e de segurança passam por mim, e nesta fase de portfólio eu revisei e reforcei o projeto: lint, tipos, testes, correção de bugs e limpeza do repositório.
+**No processo.** Eu idealizei o Conta de Casal e o construí com várias ferramentas de IA (Lovable, Claude e Cursor), guiando cada uma com prompts detalhados, e o histórico do Git mostra isso de forma transparente. As decisões de produto, de dados e de segurança passam por mim, e nesta fase de portfólio eu revisei e reforcei o projeto: lint, tipos, testes, correção de bugs e limpeza do repositório.
 
 ### Segurança
 
@@ -140,7 +140,7 @@ It runs on the web and as an iOS app (Capacitor).
 
 **In the product.** Insights come from an Edge Function that calls Groq or Google AI when a key is configured. Without a key the app shows "no insights available" and keeps working. Split and settlement math never goes through a language model.
 
-**In the process.** I consider myself a vibe coder with a technical foundation. A good part of the code was built with AI tools (Lovable, Claude and Cursor), and the Git history shows that openly. Product, data and security decisions go through me, and in this portfolio phase I reviewed and hardened the project: lint, types, tests, bug fixes and repository cleanup.
+**In the process.** I came up with Conta de Casal and built it with several AI tools (Lovable, Claude and Cursor), guiding each one with detailed prompts, and the Git history shows that openly. Product, data and security decisions go through me, and in this portfolio phase I reviewed and hardened the project: lint, types, tests, bug fixes and repository cleanup.
 
 ### Security
 
