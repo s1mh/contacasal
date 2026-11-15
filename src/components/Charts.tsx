@@ -2,7 +2,7 @@ import { useMemo } from 'react';
 import { PieChart, Pie, Cell, BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, LineChart, Line, Legend } from 'recharts';
 import { Expense, Profile, Tag } from '@/hooks/useCouple';
 import { formatCurrency } from '@/lib/constants';
-import { isConfiguredProfile } from '@/lib/utils';
+import { isConfiguredProfile, parseDateOnly } from '@/lib/utils';
 import { format, subMonths, startOfMonth, endOfMonth, isWithinInterval } from 'date-fns';
 import { getCurrencySymbol, getDateFnsLocale } from '@/lib/preferences';
 import { usePreferences } from '@/contexts/PreferencesContext';
@@ -156,7 +156,7 @@ export function MonthlyEvolutionChart({ expenses }: { expenses: Expense[] }) {
       const monthStart = startOfMonth(month);
       const monthEnd = endOfMonth(month);
       const monthExpenses = expenses.filter(e => {
-        const expenseDate = new Date(e.expense_date);
+        const expenseDate = parseDateOnly(e.expense_date);
         return isWithinInterval(expenseDate, { start: monthStart, end: monthEnd });
       });
       const total = monthExpenses.reduce((sum, e) => sum + e.total_amount, 0);

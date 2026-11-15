@@ -10,7 +10,7 @@ import { subMonths, startOfMonth, endOfMonth, isWithinInterval, format } from 'd
 import { getDateFnsLocale } from '@/lib/preferences';
 import { usePreferences } from '@/contexts/PreferencesContext';
 import { formatCurrency } from '@/lib/constants';
-import { isConfiguredProfile } from '@/lib/utils';
+import { isConfiguredProfile, parseDateOnly } from '@/lib/utils';
 import { useI18n } from '@/contexts/I18nContext';
 
 type Period = 'current' | 'last3' | 'last6' | 'year' | 'all';
@@ -51,7 +51,7 @@ export default function Statistics() {
 
     if (startDate) {
       expenses = expenses.filter(e => {
-        const expenseDate = new Date(e.expense_date);
+        const expenseDate = parseDateOnly(e.expense_date);
         return isWithinInterval(expenseDate, { start: startDate!, end: endDate });
       });
     }

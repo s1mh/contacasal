@@ -5,6 +5,7 @@ import { Download, FileSpreadsheet, FileText } from 'lucide-react';
 import { Expense, Profile, Tag } from '@/hooks/useCouple';
 import { formatCurrency, formatDate } from '@/lib/constants';
 import { format } from 'date-fns';
+import { parseDateOnly } from '@/lib/utils';
 import { getDateFnsLocale } from '@/lib/preferences';
 import { usePreferences } from '@/contexts/PreferencesContext';
 
@@ -43,7 +44,7 @@ export function ExportButton({ expenses, profiles, tags, period }: ExportButtonP
         prefT('Divisão'),
       ];
       const rows = expenses.map(expense => [
-        format(new Date(expense.expense_date), 'dd/MM/yyyy'),
+        format(parseDateOnly(expense.expense_date), 'dd/MM/yyyy'),
         expense.description || '',
         getTagName(expense.tag_id),
         expense.total_amount.toFixed(2).replace('.', ','),
@@ -106,7 +107,7 @@ export function ExportButton({ expenses, profiles, tags, period }: ExportButtonP
 
       expenses.forEach((expense, index) => {
         content += `${index + 1}. ${expense.description || 'Sem descrição'}\n`;
-        content += `   ${prefT('Data')}: ${format(new Date(expense.expense_date), 'dd/MM/yyyy')}\n`;
+        content += `   ${prefT('Data')}: ${format(parseDateOnly(expense.expense_date), 'dd/MM/yyyy')}\n`;
         content += `   ${prefT('Valor')}: ${formatCurrency(expense.total_amount)}\n`;
         content += `   ${prefT('Categoria')}: ${getTagName(expense.tag_id)}\n`;
         content += `   ${prefT('Pago por')}: ${getProfileName(expense.paid_by)}\n`;

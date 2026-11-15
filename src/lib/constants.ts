@@ -1,3 +1,4 @@
+import { parseDateOnly } from '@/lib/utils';
 import catAvatar1 from '@/assets/cat-avatar-1.png';
 import catAvatar2 from '@/assets/cat-avatar-2.png';
 import catAvatar3 from '@/assets/cat-avatar-3.png';
@@ -63,7 +64,7 @@ export const formatDate = (date: string | Date): string => {
   return new Intl.DateTimeFormat(locale, {
     day: '2-digit',
     month: 'short',
-  }).format(new Date(date));
+  }).format(parseDateOnly(date));
 };
 
 // Cores de fundo para cada avatar de gatinho

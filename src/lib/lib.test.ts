@@ -1,5 +1,5 @@
-import { describe, expect, it } from 'vitest';
-import { isConfiguredProfile, maskCurrencyValue } from './utils';
+import { afterAll, beforeAll, describe, expect, it } from 'vitest';
+import { isConfiguredProfile, maskCurrencyValue, parseDateOnly } from './utils';
 import { AVATAR_COUNT, getAvatarSrc, normalizeAvatarIndex } from './avatar-registry';
 import { expenseSchema, profileSchema } from './validation';
 
@@ -87,5 +87,32 @@ describe('profileSchema', () => {
 
   it('rejeita nome vazio ou só com espaços', () => {
     expect(profileSchema.safeParse({ name: '   ', color: '#F27F5C', avatar_index: 1 }).success).toBe(false);
+  });
+});
+
+describe('parseDateOnly', () => {
+  const previousTz = process.env.TZ;
+  beforeAll(() => {
+    process.env.TZ = 'America/Sao_Paulo';
+  });
+  afterAll(() => {
+    if (previousTz === undefined) delete process.env.TZ;
+    else process.env.TZ = previousTz;
+  });
+
+  it('mantém o dia exato de uma data sem hora, mesmo em UTC-3', () => {
+    const d = parseDateOnly('2026-11-14');
+    expect([d.getFullYear(), d.getMonth() + 1, d.getDate()]).toEqual([2026, 11, 14]);
+  });
+
+  it('não empurra o dia 1º para o mês anterior', () => {
+    const d = parseDateOnly('2026-11-01');
+    expect(d.getMonth() + 1).toBe(11);
+    expect(d.getDate()).toBe(1);
+  });
+
+  it('devolve a mesma data quando já recebe um Date', () => {
+    const original = new Date(2026, 0, 5, 10, 30);
+    expect(parseDateOnly(original)).toBe(original);
   });
 });
