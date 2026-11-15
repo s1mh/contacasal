@@ -23,7 +23,7 @@ export function CardManager({ profile, cards, onAddCard, onDeleteCard }: CardMan
   const [type, setType] = useState<'credit' | 'debit'>('credit');
   const [closingDay, setClosingDay] = useState('');
   const [dueDay, setDueDay] = useState('');
-  const [color, setColor] = useState(cardColorOptions[0].value);
+  const [color, setColor] = useState<string>(cardColorOptions[0].value);
   const [isLoading, setIsLoading] = useState(false);
 
   const profileCards = cards.filter(c => c.profile_id === profile.id);

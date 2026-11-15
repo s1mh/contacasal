@@ -29,7 +29,7 @@ export default function Statistics() {
     // Filter by period
     const now = new Date();
     let startDate: Date | null = null;
-    let endDate: Date = endOfMonth(now);
+    const endDate: Date = endOfMonth(now);
 
     switch (period) {
       case 'current':

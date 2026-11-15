@@ -123,7 +123,7 @@ Deno.serve(async (req) => {
 
       if (!profilesError && foundProfiles) {
         // Transform the array couples to single object
-        profiles = foundProfiles.map((p: any) => ({
+        profiles = foundProfiles.map((p: { couples: unknown } & Record<string, unknown>) => ({
           ...p,
           couples: Array.isArray(p.couples) ? p.couples[0] : p.couples
         })) as ProfileWithCouple[];

@@ -6,6 +6,12 @@ import { usePreferences } from '@/contexts/PreferencesContext';
 import { AIBackgroundBlob } from './AIBackgroundBlob';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 
+interface InvokeErrorLike {
+  name?: string;
+  message?: string;
+  context?: { status?: number; body?: unknown };
+}
+
 interface AIInsight {
   type: 'tip' | 'alert' | 'celebration';
   message: string;
@@ -129,7 +135,7 @@ export function AIInsightsCard({ coupleId, expenseCount }: AIInsightsCardProps) 
     }
     // If below minimum, also clear stale localStorage cache
     if (belowMinimum) {
-      try { localStorage.removeItem(CACHE_KEY_PREFIX + coupleId); } catch {}
+      try { localStorage.removeItem(CACHE_KEY_PREFIX + coupleId); } catch { /* localStorage indisponível (modo privado); ignorar */ }
     }
 
     try {
@@ -147,14 +153,14 @@ export function AIInsightsCard({ coupleId, expenseCount }: AIInsightsCardProps) 
           setError(null);
           return;
         }
-        const status = (fnError as any)?.context?.status;
-        const body = (fnError as any)?.context?.body;
+        const status = (fnError as InvokeErrorLike | null)?.context?.status;
+        const body = (fnError as InvokeErrorLike | null)?.context?.body;
         const bodyText = body ? String(body) : undefined;
 
         setError(t('Não foi possível gerar insights'));
         setInvokeError({
-          name: (fnError as any)?.name,
-          message: (fnError as any)?.message,
+          name: (fnError as InvokeErrorLike | null)?.name,
+          message: (fnError as InvokeErrorLike | null)?.message,
           status: typeof status === 'number' ? status : undefined,
           contextBodyPreview: bodyText ? bodyText.slice(0, 1200) : undefined,
         });
@@ -211,7 +217,7 @@ export function AIInsightsCard({ coupleId, expenseCount }: AIInsightsCardProps) 
   useEffect(() => {
     if (expenseCount !== undefined && prevExpenseCount.current !== undefined && expenseCount !== prevExpenseCount.current) {
       // Novo gasto adicionado — invalida cache e re-busca
-      try { localStorage.removeItem(CACHE_KEY_PREFIX + coupleId); } catch {}
+      try { localStorage.removeItem(CACHE_KEY_PREFIX + coupleId); } catch { /* localStorage indisponível (modo privado); ignorar */ }
       fetchInsights({ bypassCache: true });
     }
     prevExpenseCount.current = expenseCount;
@@ -384,7 +390,7 @@ export function AIInsightsCard({ coupleId, expenseCount }: AIInsightsCardProps) 
                 type="button"
                 className="text-xs underline"
                 onClick={() => {
-                  try { localStorage.removeItem(CACHE_KEY_PREFIX + coupleId); } catch {}
+                  try { localStorage.removeItem(CACHE_KEY_PREFIX + coupleId); } catch { /* localStorage indisponível (modo privado); ignorar */ }
                   fetchInsights({ bypassCache: true, debug: debugEnabled });
                 }}
               >

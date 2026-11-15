@@ -14,6 +14,9 @@ import { useToast } from '@/hooks/use-toast';
 import { usePreferences } from '@/contexts/PreferencesContext';
 import { isNative, isBiometricAvailable, authenticateBiometric, hapticNotification, saveCoupleSession } from '@/lib/capacitor';
 
+// Passo de e-mail desativado por enquanto; mantido para uso futuro.
+const EMAIL_STEP_ENABLED = false;
+
 // Validation functions
 const isValidName = (name: string): boolean => {
   if (!name.trim()) return false;
@@ -260,6 +263,7 @@ export default function CreateSpace() {
       }
 
       const shareCode = data.share_code;
+      const coupleId = data.couple_id;
 
       // Refresh session to get new couple_id claim
       await supabase.auth.refreshSession();
@@ -653,7 +657,7 @@ export default function CreateSpace() {
             ) : null}
 
             {/* Email Step - DISABLED but kept for future use */}
-            {false && (
+            {EMAIL_STEP_ENABLED && (
               <>
                 {/* Email Step */}
                 <div className="flex flex-col items-center gap-6 animate-fade-in">

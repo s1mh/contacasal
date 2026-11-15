@@ -2,7 +2,7 @@
 // Uses the rate_limits table to track request counts per IP+endpoint
 
 export async function checkRateLimit(
-  supabase: any,
+  supabase: any, // eslint-disable-line @typescript-eslint/no-explicit-any -- cliente Supabase
   req: Request,
   endpoint: string,
   maxRequests = 10,

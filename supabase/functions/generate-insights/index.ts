@@ -581,7 +581,7 @@ Tipos: "celebration" (positivo), "tip" (dica de economia), "alert" (gasto alto)`
     // ======================== PARSE DA RESPOSTA ========================
     const aiData = await aiResponse.json();
     const { content: rawContent, finishReason } = extractContent(aiData as Record<string, unknown>, aiProvider);
-    let content = rawContent;
+    const content = rawContent;
 
     let insights: Array<{ type: string; message: string; priority: number }> = [];
     let parseFailed = false;

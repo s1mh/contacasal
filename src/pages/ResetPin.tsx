@@ -5,7 +5,7 @@ import { Button } from '@/components/ui/button';
 import { Loader2, Lock, CheckCircle, AlertCircle, ArrowRight } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
-import { CAT_AVATARS } from '@/lib/constants';
+import { getAvatarSrc } from '@/lib/avatar-registry';
 import { cn } from '@/lib/utils';
 import { saveCoupleSession } from '@/lib/capacitor';
 
@@ -220,7 +220,7 @@ export default function ResetPin() {
                 style={{ boxShadow: `0 0 0 4px ${profile.color}` }}
               >
                 <img 
-                  src={CAT_AVATARS[profile.avatar_index - 1]} 
+                  src={getAvatarSrc(profile.avatar_index)} 
                   alt={profile.name}
                   className="w-full h-full object-cover"
                 />

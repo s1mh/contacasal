@@ -11,7 +11,8 @@ import { AgreementManager } from '@/components/AgreementManager';
 import { MemberManagement } from '@/components/MemberManagement';
 import { AnimatedPage, AnimatedItem } from '@/components/AnimatedPage';
 import { Couple, useCoupleContext } from '@/contexts/CoupleContext';
-import { CAT_AVATARS, PERSON_COLORS, TAG_ICONS } from '@/lib/constants';
+import { PERSON_COLORS, TAG_ICONS } from '@/lib/constants';
+import { AVATAR_COUNT } from '@/lib/avatar-registry';
 import { cn, isConfiguredProfile } from '@/lib/utils';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
@@ -265,7 +266,7 @@ export default function Settings() {
             <div className="flex-1">
               <p className="text-sm text-muted-foreground mb-2">{prefT('Escolha o gatinho')}</p>
               <div className="flex gap-2 flex-wrap">
-                {CAT_AVATARS.map((_, idx) => (
+                {Array.from({ length: AVATAR_COUNT }, (_, idx) => (
                   <button
                     key={idx}
                     onClick={() => handleUpdateAvatar(idx + 1)}

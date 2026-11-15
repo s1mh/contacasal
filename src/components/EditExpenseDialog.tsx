@@ -77,9 +77,10 @@ export function EditExpenseDialog({
         return { person1: splitPerson1, person2: 100 - splitPerson1 };
       case 'full':
         return splitPerson1 === 100 ? { person1: 100, person2: 0 } : { person1: 0, person2: 100 };
-      case 'fixed':
+      case 'fixed': {
         const p1Amount = (splitPerson1 / 100) * numericAmount;
         return { person1: p1Amount, person2: numericAmount - p1Amount };
+      }
       default:
         return { person1: 50, person2: 50 };
     }

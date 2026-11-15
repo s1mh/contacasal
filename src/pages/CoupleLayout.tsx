@@ -12,7 +12,7 @@ import { useAuthContext } from '@/contexts/AuthContext';
 import { Loader2, AlertCircle, RefreshCw, Trash2, UserX, Hand } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
-import { CAT_AVATARS } from '@/lib/constants';
+import { getAvatarSrc } from '@/lib/avatar-registry';
 import { isConfiguredProfile } from '@/lib/utils';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
@@ -375,12 +375,12 @@ function CoupleLayoutContent() {
         <div className="flex flex-col items-center gap-4 animate-fade-in">
           <div className="flex gap-2">
             <img 
-              src={CAT_AVATARS[0]} 
+              src={getAvatarSrc(1)} 
               alt="" 
               className="w-12 h-12 rounded-full shadow-lg animate-bounce-gentle" 
             />
             <img 
-              src={CAT_AVATARS[1]} 
+              src={getAvatarSrc(2)} 
               alt="" 
               className="w-12 h-12 rounded-full shadow-lg animate-bounce-gentle" 
               style={{ animationDelay: '200ms' }}
