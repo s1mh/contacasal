@@ -50,3 +50,7 @@ verify_jwt = false
 
 [functions.generate-insights]
 verify_jwt = false
+
+# O app cria uma sessão anônima antes de o casal definir PIN e @username.
+[auth]
+enable_anonymous_sign_ins = true
