@@ -48,3 +48,4 @@ ios/App/Pods/
 
 # Archived native Swift code
 ios-native-archived/
+supabase/.branches/
