@@ -12,9 +12,9 @@ O objetivo deste guia é reduzir bagunça: **branch certa**, **nome certo** e **
 - **Branch de produção (Vercel)**: `main`
 - Preview deployments: PRs / branches de feature (se você quiser habilitar)
 
-> Se o Vercel “não está deployando o main”, isso normalmente é:\n
-> - configuração do projeto (Production Branch ≠ `main`)\n
-> - erro de install (ex.: `npm E401` por token inválido)\n
+> Se o Vercel “não está deployando o main”, isso normalmente é:
+> - configuração do projeto (Production Branch ≠ `main`)
+> - erro de install (ex.: `npm E401` por token inválido)
 > - cache de build
 
 ## Branches oficiais
@@ -28,9 +28,9 @@ O objetivo deste guia é reduzir bagunça: **branch certa**, **nome certo** e **
 
 ### App (Capacitor)
 
-- **`release/app-vX.Y.Z`**: preparar release de app (build de store)\n
+- **`release/app-vX.Y.Z`**: preparar release de app (build de store)
   (mantém alterações específicas de app isoladas quando necessário)
-- **`native/*`**: trabalhos específicos (plugins, iOS, Android)\n
+- **`native/*`**: trabalhos específicos (plugins, iOS, Android)
   Ex.: `native/ios-splash`, `native/biometrics`
 
 ### Trabalhos do dia a dia

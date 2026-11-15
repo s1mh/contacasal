@@ -17,16 +17,16 @@ Usar SemVer: `X.Y.Z`
 
 ### Web
 
-1. Branch `release/web-vX.Y.Z` a partir de `main` (opcional)\n
-2. Ajustes finais\n
-3. Merge em `main`\n
-4. Criar tag `web-vX.Y.Z` no commit do merge\n
+1. Branch `release/web-vX.Y.Z` a partir de `main` (opcional)
+2. Ajustes finais
+3. Merge em `main`
+4. Criar tag `web-vX.Y.Z` no commit do merge
 5. Vercel deploya `main`
 
 ### App
 
-1. Branch `release/app-vX.Y.Z` a partir de `main`\n
-2. Alterações específicas do Capacitor/iOS/Android\n
-3. Criar tag `app-vX.Y.Z`\n
+1. Branch `release/app-vX.Y.Z` a partir de `main`
+2. Alterações específicas do Capacitor/iOS/Android
+3. Criar tag `app-vX.Y.Z`
 4. Build e submissão na store
 
