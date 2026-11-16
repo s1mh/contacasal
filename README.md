@@ -67,6 +67,8 @@ Funciona na web e como app iOS (Capacitor).
 
 **Limitações conhecidas.** Um código de 4 dígitos tem só 10 mil combinações. Por isso a defesa real está no bloqueio por tentativas e no rate limit, e não no hash em si. Um próximo passo natural é usar uma função de derivação de chave lenta (como Argon2) e permitir códigos maiores.
 
+**Dependências.** O CI roda lint, tipos, testes e build, e o Dependabot acompanha as atualizações. Dois avisos de produção seguem abertos de propósito, porque a correção exige troca de versão major e o risco prático é baixo aqui: `react-router` (redirecionamento aberto com URL externa em `<Link>`, e uma falha que só existe com renderização no servidor, que este app não usa) e `zod` (consumo de memória ao validar coleções enormes, e aqui ele só valida formulários no navegador). A migração do `zod` 3 para 4 depende de atualizar também o `@hookform/resolvers`.
+
 ### Stack
 
 React 18, TypeScript, Vite, Tailwind CSS e shadcn/ui no front. Supabase no back (Postgres, RLS e 17 Edge Functions em Deno). Capacitor para o app iOS. Vercel para a web.
@@ -152,6 +154,8 @@ It runs on the web and as an iOS app (Capacitor).
 - **No secrets in the repository.** Only the public Supabase key reaches the browser, and `.env` is gitignored.
 
 **Known limitations.** A 4-digit code has only 10,000 combinations, so the real defense is lockout and rate limiting, not the hash itself. A natural next step is a slow key derivation function (such as Argon2) and longer codes.
+
+**Dependencies.** CI runs lint, types, tests and build, and Dependabot tracks updates. Two production advisories are intentionally left open because the fix requires a major version bump and the practical risk is low here: `react-router` (open redirect with an external URL in `<Link>`, and a flaw that only exists with server-side rendering, which this app does not use) and `zod` (memory use when validating huge collections, and here it only validates forms in the browser). Moving `zod` from 3 to 4 also requires updating `@hookform/resolvers`.
 
 ### Stack
 
